@@ -1,0 +1,373 @@
+---Segment 1---
+# Project-centered compact to-do management design draft (lite version)
+
+## 1. Goals and Scope
+- Goal: Manage by "Project → Matter", support efficient filtering, compact table view and full process tracking.
+- Scope: Creation/editing/filtering/grouping/import/export/batch operations of projects and matters.
+
+## 2. Information architecture and UI
+- Left side: Project list (supports creation, renaming, archiving, and search).
+- Top: Search box, filters (project/status/responsible person/deadline/label), sorting, import/export, batch operation buttons.
+- Main area: task table (compact density, inline editing, supports column customization and fixation).
+- Right side (optional): Details drawer (Notes/Attachments/History), closed by default to keep it compact.
+- Table default columns:
+  - project (`project`)
+  - title (`title`)
+  - Status (`status`: todo/doing/done)
+  - Priority (`priority`: high/medium/low)
+  - due date (`dueDate`)
+  - Creation time (`createdAt`)
+  - Task site owner (`onsiteOwner`)
+  - Task production line owner (`lineOwner`)
+  - Next step plan (`nextStep`)
+  - Tags (`tags`)
+- Interaction:
+  - Quickly add new rows (optional fields are automatically completed after typing the title).
+  - Inline editing, keyboard navigation (↑↓, Enter to edit, Ctrl+S to save).
+  - Batch modification of multiple selected rows (status/responsible person/deadline/project).
+  - Filtering: Supports saving filters (such as "due this week", "Zhang San is responsible for in progress").
+- Grouping: Group by item or status, expand/collapse count display.
+
+### UI wireframe (ASCII)
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Top bar: Search [???] | Filter [Project|Status|Site|Production Line|Deadline|Tag|Priority] | Sort | Import | Export | Batch │
+---Segment 2---
+├─────────────────────────────────────────────────────────────────────┤
+│ Sidebar (Project) │ Main area: Task table (compact, inline editing) │
+│ ? Item A (12) │ ┌───────────────────────────────────────┐ │
+│ ? Project B (7) │ │ Project | Title | Status | Priority | Due Date ... │ │
+│ ? New project │ │------------------------------------------------│ │
+│ Search items: [........] │ │ A | Document Approval | doing | high | 2025-11-20│ │
+│ Archive (folded) │ │ B | Equipment acceptance | todo | medium| 2025-11-22│ │
+│ │ │ … │ │
+├─────────────────────────────────────────────────────────────────────┤
+│ Group switching: [By item] [By status] | Expand/collapse | Count display │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+```
+┌ Main area: Task table ──────────────────────────────┬ Details drawer (closed by default) ───────────────┐
+---Segment 3---
+│ Row selection: A / Document Approval │ Remarks: … │
+│ Shortcut keys: Enter to edit, Ctrl+S to save │ Attachment: [Add] list │
+│ Multiple selection: Shift/Ctrl │ History: Status/field change timeline │
+└───────────────────────────────────────────────────────────────────────────────────
+```
+
+```
+┌ Select 3 items ─ Batch: Move projects | Change responsible person | Change status | Change due date | Clear tags ────────────────┐
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+Note:
+- Overdue rows are marked with a highlighted background or "!"; status is displayed in color capsules.
+- Column fixation supports moving `project`, `title`, and `dueDate` to the top and to the left.
+- Table density switching: `[Compact|Normal]`; keyboard ↑↓ to move rows, Enter to edit in-line, Ctrl+S to save.
+
+## 3. Function modules and rules
+- Project management: Add/Rename/Archive, archived projects are not displayed in the default filter.
+- Issue management: CRUD, copy as new issue, move to other projects.
+- Filter and sort:
+  - Filter fields: project, status, responsible person (site/production line), deadline range, label, priority.
+  - Sorting: deadline/priority/creation time; supports multi-column sorting (priority by status → deadline).
+- Overdue and reminder: Only overdue rows are highlighted in the table; no notification system is used.
+- Batch operations: move projects in batches, change responsible person/status/deadline in batches.
+- Import and export:
+  - Import CSV: Maps to table header; if columns are not provided, use default value (e.g. status=todo).
+---Segment 4---
+- Export CSV: Follow the current column order and filter results; support full export.
+- Permissions and privacy: local data, single use; does not include team sharing function.
+
+## 4. Data structure
+```
+type Status = 'todo'|'doing'|'done';
+type Priority = 'high'|'medium'|'low';
+
+type Project = {
+  id: string;
+  name: string;
+  archived?: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+type Task = {
+  id: string;
+  projectId: string;
+  title: string;
+  status: Status;
+  priority?: Priority;
+  dueDate?: string; // ISO date
+  createdAt: number;
+  updatedAt: number;
+  onsiteOwner?: string;
+  lineOwner?: string;
+  nextStep?: string;
+  tags?: string[];
+  attachments?: { id:string; name:string; path:string }[]; // optional
+  notes?: string; // Notes, optional
+};
+
+type AppState = {
+  projects: Project[];
+  tasks: Task[];
+  filters: {
+    search: string;
+    projectId?: string;
+    status?: Status|"all";
+    onsiteOwner?: string;
+    lineOwner?: string;
+---Segment 5---
+dueRange?: { from?: string; to?: string };
+    tags?: string[];
+    priority?: Priority|"all";
+  };
+  table: { density: 'compact'|'normal'; columns: string[]; pinned: string[] };
+  settings: { dateFormat: string };
+};
+```
+
+## 5. CSV specification
+- Column: `project,title,status,priority,dueDate,createdAt,onsiteOwner,lineOwner,nextStep,tags`
+- Import rules:
+  - If `project` does not match, create a new project; if `status` is illegal, fall back to `todo`;
+  - `tags` is separated by commas; if `createdAt` is empty, the current time will be generated by the system.
+- Export rules:
+  - Export according to the current filtering and column order; the date is unified `YYYY-MM-DD`;
+  - Null values are exported as empty strings.
+
+## 6. Non-functional and success indicators
+- Operation efficiency: New items are added in ≤ 2 steps, and in-line editing can be saved with one keystroke.
+- Filtering accuracy: Combined filtering millisecond-level feedback, overdue highlights are clearly visible.
+- Import and export consistency: no duplicate or missing fields will be generated after two imports (based on `id` and column mapping).
+
+## 7. Implementation plan
+1. Replace the existing content with this design (remove review/tomato/diary, etc. chapters).
+2. Rewrite the "Information Architecture/Modules/Data Structures/CSV Specifications/Constraints" chapter into the simplified version above.
+3. Verification: Complete the import/export self-test with two sample CSVs to ensure that field mapping and filtering are effective.
+
+## 8. Delivery
+- Output: concise, compact, project-centered product design draft (single file).
+- Do not change other files (only update the design draft content).
+ 
+## 9. Extended functions and detailed specifications
+ 
+### 9.1 Save filter view (SavedFilter)
+---Segment 6---
+- Entrance: "Save View" button on the top bar; enter the name in the pop-up window and save the current filters/sort/groupBy.
+ - Behavior:
+  - Overriding filters/sort/groupBy when applying views does not affect table column configuration.
+  - Allows updating and renaming; deletion will not affect the original data.
+ - Verification: Name is 1-30 characters, unique; up to 50 views can be saved.
+ - Boundary: `projectId` can be null when filtering across projects; the saved view is bound to the user's local settings.
+ 
+### 9.2 Multi-column sorting and scheme saving
+ - Entrance: "Sort" drop-down in the top bar (sort key can be added), supports direction asc/desc; "Save scheme".
+ - Default: `status asc -> dueDate asc -> priority desc`.
+ - Rules:
+  - Sort key range: `status,dueDate,priority,createdAt,onsiteOwner,lineOwner`.
+  - The scheme naming and quantity are the same as SavedFilter; they can be bound to the view or saved independently.
+ 
+### 9.3 New batch paste in Excel
+ - Entrance: "Batch Paste" button in the top bar or Ctrl+V with focus on an empty line.
+ - Behavior:
+  - Parse multiple clipboard lines based on current column order, with multiple columns separated by tabs/commas.
+  - Use default values ??for columns not provided: `status=todo, priority=medium, createdAt=now`.
+ - Verification: required `title, project`; illegal `status` fallback `todo`; illegal date rejects and prompts for line number.
+ - Failure handling: Pops up a failure details dialog box and supports exporting failure CSV.
+ 
+### 9.4 Import Preview and Error Report
+ - Entrance: "Import" in the top bar → Select CSV → Mapping preview (showing source columns and target fields).
+ - Behavior:
+  - The preview page shows 20 lines of samples and mapping results, and the user can adjust the mapping.
+  - Failed to generate CSV after import: `row,field,error,rawValue,suggestion`.
+ - Verification:
+---Segment 7---
+- Overdue dates can still be imported but highlighted; unknown items are created automatically; empty `createdAt` uses the current time.
+  - Tags are separated by commas and deduplicated; whitespace before and after the value is cleaned.
+ 
+### 9.5 Custom columns and column templates
+ - Behavior:
+  - Columns can be added or deleted in column settings (the system retains core columns: `project, title, status, dueDate`).
+  - Column template: Save a set of column configurations (sequential, fixed, density) and support quick switching.
+ - Constraints: Maximum of 10 customized columns; maximum of 10 templates; column names of 1-20 characters.
+ 
+### 9.6 Template rows and quick addition
+ - Behavior:
+  - Define template lines (pre-populated with `status/priority/onsiteOwner/lineOwner/tags/nextStep`).
+  - Select the template from the "Add using template" drop-down menu in the top bar and insert a new row.
+ - Constraints: The template has a maximum of 50 items; the title is still entered by the user.
+ 
+### 9.7 Directory of responsible persons and automatic suggestions
+ - Data: `Dictionary.onsiteOwners/lineOwners/tags` maintains common items.
+ - Behavior: drop-down suggestions while typing; new words cannot be automatically added to the dictionary (automatic addition can be turned off).
+ - Constraints: Each category has a maximum of 500 items; duplicate items are removed and merged.
+ 
+### 9.8 Overdue threshold and color strategy
+ - Settings: `settings.overdueThresholdDays` (default 0=overdue on the due date).
+ - Display: overdue highlighted background; approaching (≤3 days) yellow prompt; status capsule is colored by `status`.
+ - Custom: `settings.colorScheme` (light/dark/high contrast).
+ 
+### 9.9 Subtasks and dependencies
+ - Subtasks (checklists): managed in the details drawer, with summary completion ratio displayed in the main table row.
+ - Dependencies:
+  - Mark `blocks` (A blocks B) to display prompts and jumps on blocked lines.
+  - Automatically clear the "blocking" prompt after the dependency is closed.
+ - Constraints: Each task has a maximum of 50 subtasks and 20 dependencies; circular dependencies are prohibited.
+ 
+### 9.10 Undo and History
+---Segment 8---
+- Undo: Supports undo/redo of the last 10 steps (including batch operations).
+ - History: The details drawer displays a timeline of field changes, which can be viewed by batch.
+ 
+### 9.11 Search Syntax (Lightweight DSL)
+ - Syntax: `key:value` or comparison `key:<value`, `key:>value`; multiple conditions separated by spaces; strings can be quoted.
+ - Supported keys: `project,status,priority,onsiteOwner,lineOwner,tag,due,created`.
+ - Example:
+  - `status:doing onsiteOwner:"Zhang San" due:<2025-12-01`
+  - `project:equipment upgrade priority:high tag:supplier`.
+ 
+### 9.12 Attachment drag and drop and lightweight preview
+ - Behavior: Drag and drop to the attachment area of the details drawer; supports image/PDF/audio; thumbnail and file size display.
+ - Limits: single file ≤10MB; total occupation ≤1GB; pop-up window prompts when the limit is exceeded.
+ 
+## 10. Data structure extension
+```
+type SortKey = 'status'|'dueDate'|'priority'|'createdAt'|'onsiteOwner'|'lineOwner';
+
+type SavedFilter = {
+  id: string;
+  name: string; // 1-30 characters, unique
+  filters: AppState['filters'];
+  sort?: { keys: SortKey[]; directions: ('asc'|'desc')[] };
+  groupBy?: 'project'|'status'|null;
+};
+
+type ColumnConfig = {
+  columns: string[]; // Display columns
+  pinned: string[]; // Fixed column
+  density: 'compact'|'normal';
+---Segment 9---
+templates?: { id:string; name:string; columns:string[]; pinned:string[] }[];
+};
+
+type Dictionary = {
+  onsiteOwners: string[];
+  lineOwners: string[];
+  tags: string[];
+  autoAppend?: boolean; // Whether to automatically add new words when entering
+};
+
+type ChecklistItem = { id:string; title:string; done:boolean; dueDate?:string; owner?:string; note?:string };
+
+type Dependency = { fromTaskId:string; toTaskId:string; type:'blocks'|'relates'; status:'clear'|'blocked' };
+
+type HistoryLog = {
+  id:string;
+  taskId: string;
+  at:number;
+  changes:{ field:string; from:any; to:any }[];
+  batchId?:string;
+};
+
+// Expand in Task
+type Task = Task & {
+  checklist?: ChecklistItem[];
+  dependencies?: Dependency[];
+  history?: HistoryLog[];
+};
+
+// Expand in AppState
+type AppState = AppState & {
+  savedFilters: SavedFilter[];
+  columnConfig: ColumnConfig;
+  dictionary: Dictionary;
+---Segment 10---
+settings: AppState['settings'] & {
+    overdueThresholdDays: number;
+    colorScheme: 'light'|'dark'|'high-contrast';
+    undoDepth: number;
+  };
+};
+```
+ 
+## 11. Import/export and error reporting specifications
+ - Import process: Select CSV→Field mapping preview→Validation→Execute→Result summary (number of successful/failed rows).
+ - Mapping rules: Any source column can be mapped to the target field; unmapped fields use default values ??or leave blank.
+ - Error report CSV: `row,field,error,rawValue,suggestion`
+  - `error` enumeration: `MissingRequired, InvalidStatus, InvalidDate, ValueTooLong, Unknown`.
+  - `suggestion` Examples: `todo`, `2025-11-30`, etc.
+ - Export rules: Follow the current filter and column order; support UTF-8 and GBK encoding options.
+ 
+## 12. Search syntax specifications
+ - Format: `expr := term { ' ' term }`; `term := key ':' value | key ':' comparator value`
+ - Comparison operators: `<, <=, >, >=` supports `due/created` date;
+ - Sample collection:
+  - `status:todo priority:high due:<2025-12-01`
+  - `project:"Production line transformation" lineOwner:"李思"`
+  - `tag:supplier onsiteOwner:王五`
+ 
+## 13. Shortcut keys and interaction matrix
+ - Table: ↑↓ to move, Enter to edit, Esc to cancel, Ctrl+S to save, Ctrl+D to copy rows.
+ - Batch: Shift/Ctrl multiple selection; Ctrl+G group switching; Ctrl+B batch panel.
+---Segment 11---
+- View: Ctrl+F to focus search; Alt+S to save filtered view; Alt+O to apply view.
+ - Undo: Ctrl+Z to undo, Ctrl+Y to redo; batch operations as a single batch.
+ 
+## 14. Acceptance use case (development self-test)
+ - Use case 1: Paste 20 rows from Excel containing `project/title/status/dueDate`, the illegal status is rolled back, and an error report pops up for 3 rows with wrong dates.
+ - Use case 2: Save the filter view "Expired this week", and it can still be applied with one click after opening the app again, and the sorting scheme is correct.
+ - Use case 3: The overdue threshold is set to 2 days, with the last 2 days highlighted in yellow and overdue in red; switch to the high-contrast scheme and the color changes significantly.
+ - Use case 4: Task A blocks B. After clearing the dependency, B's blocking prompt disappears; circular dependencies are prohibited and prompted.
+ - Use case 5: Undo the last 10 operations (including two batches), and the data after redo will be consistent with history.
+
+## 15. Attachments and pictures (collection/display/storage/export)
+
+### 15.1 Entrance and interaction
+- "Attachments" area of the details drawer:
+  - Buttons: `Upload` (file selection), `Paste image` (clipboard), `Drag and drop here` (highlight drop area).
+  - List: Thumbnail (picture)/File Icon + File Name + Size + Creation Time.
+  - Operations: Preview (embedded image, PDF new window, audio lightweight playback), download, rename, delete (secondary confirmation), copy path.
+- Shortcut keys: Delete to delete, F2 to rename.
+
+### 15.2 Support types and restrictions
+- Type: Picture (png/jpg/webp), PDF, audio (mp3/wav).
+- Limitations:
+  - Single file ≤ 10MB; maximum 100 attachments per task; global usage ≤ 1GB.
+  - Reject unknown or executable types (such as `.exe`); filename length ≤ 120 characters.
+
+### 15.3 Storage and path
+- Structure:
+  - Main file: `data/attachments/{taskId}/{fileName}`
+  - Thumbnail: `data/attachments/{taskId}/thumbs/{fileName}.png`
+---Segment 12---
+- File name security: remove illegal characters (`/\:*?"<>|`), retain extensions, and automatically append `-1,-2` to duplicate names.
+- Deduplication: Calculate SHA-256 (`hash`) before saving; if the same `hash` exists in the same task, only create a reference and not store it repeatedly.
+
+### 15.4 Data structure
+- `Task.attachments: { id,name,type,size,path,createdAt,hash? }[]`
+- The thumbnail address can be derived from `path`: `thumbPath = path.replace(/\\(?!.*\\)/, '\\thumbs\\') + '.png'`
+- History: Record batches of new/deleted/renamed attachments in `HistoryLog`.
+
+### 15.5 Import/Export
+- Export ZIP:
+  - Structure: `tasks.csv` + `attachments/{taskId}/files...` + `attachments/{taskId}/thumbs...`
+  - Entrance: Top bar `Export` drop down and select `Export ZIP (including attachments)`.
+- Import ZIP:
+  - Process: First import `tasks.csv` → parse the `attachments/` directory → mount to the corresponding `taskId`.
+  - Error: If the target task is missing or the file is damaged, the failure will be recorded and an error report will be generated.
+
+### 15.6 Error handling and prompts
+- Super type/excess size/excess quota/read and write failure: a pop-up with clear error cause and suggestions (compression/cleaning).
+- Deletion is irreversible and requires a second confirmation; confirm again when renaming and changing the extension.
+- When generating thumbnails fails, uploading will not be blocked, common icons will be displayed and logs will be recorded.
+
+### 15.7 Acceptance use case (attachment)
+- Use case A: Pasting the screenshot successfully generates PNG, and the thumbnail and size appear; after deletion, the history record contains the deletion event.
+- Use case B: Drag and drop PDF successfully, click preview to open a new window; audio can be played lightly.
+- Use case C: Uploading a 12MB file is rejected and prompts; uploading 100+ files is rejected and prompts the upper limit.
+- Use case D: Duplicate files (with the same content) are deduplicated and only references are established; renaming keeps the extension.
+---Segment 13---
+- Use case E: After exporting the ZIP, it contains CSV and attachment directories; after importing the ZIP, the attachment relationship is restored and a preview is generated.
+
