@@ -60,6 +60,9 @@
 
 .project-sidebar {
   width: 240px;
+  flex: 0 0 240px;
+  flex-shrink: 0;
+  min-width: 240px;
   border-right: 1px solid var(--border-color);
   background: #fff;
   padding: 16px;
