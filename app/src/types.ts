@@ -100,11 +100,13 @@ export interface RecurringTemplate {
     daysOfWeek?: number[];
     dayOfMonth?: number;
     flexible?: boolean;
+    interval?: number;
+    anchorDate?: string;
   };
   dueStrategy: 'sameDay' | 'endOfWeek' | 'endOfMonth' | 'none';
+  onsiteOwner?: string;
+  lineOwner?: string;
   defaults?: {
-    onsiteOwner?: string;
-    lineOwner?: string;
     nextStep?: string;
     tags?: string[];
     notes?: string;

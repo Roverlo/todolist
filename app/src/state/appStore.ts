@@ -699,6 +699,23 @@ export const useAppStore = create<AppStore>()(
         withHistory(set, (state) => {
           state.recurringTemplates.filter((t) => t.active).forEach((tpl) => {
             const isWeekly = tpl.schedule.type === 'weekly';
+            const interval = Math.max(tpl.schedule.interval ?? 1, 1);
+            const anchorDate = tpl.schedule.anchorDate ? dayjs(tpl.schedule.anchorDate) : null;
+            const anchorStart =
+              anchorDate && anchorDate.isValid()
+                ? isWeekly
+                  ? anchorDate.subtract((anchorDate.day() + 6) % 7, 'day')
+                  : anchorDate.startOf('month')
+                : null;
+            if (interval > 1 && anchorStart) {
+              const diff = (isWeekly ? startOfWeek : startOfMonth).diff(
+                anchorStart,
+                isWeekly ? 'week' : 'month',
+              );
+              if (diff < 0 || diff % interval !== 0) {
+                return;
+              }
+            }
             const dates: string[] = [];
             if (isWeekly) {
               if (tpl.schedule.flexible) {
@@ -738,8 +755,8 @@ export const useAppStore = create<AppStore>()(
                 dueDate: due,
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
-                onsiteOwner: tpl.defaults?.onsiteOwner,
-                lineOwner: tpl.defaults?.lineOwner,
+                onsiteOwner: tpl.onsiteOwner,
+                lineOwner: tpl.lineOwner,
                 nextStep: tpl.defaults?.nextStep,
                 tags: tpl.defaults?.tags ?? [],
                 notes: tpl.defaults?.notes,
@@ -754,7 +771,7 @@ export const useAppStore = create<AppStore>()(
     }),
     {
       name: 'project-todo-app',
-      version: 7,
+      version: 8,
       storage: createJSONStorage(() => {
         if (typeof window === 'undefined') {
           return noopStorage;
@@ -833,6 +850,29 @@ export const useAppStore = create<AppStore>()(
           const filtered = cols.filter((c) => c !== 'checklist');
           const pinned = (state.columnConfig?.pinned ?? []).filter((c) => c !== 'checklist');
           state.columnConfig = { ...state.columnConfig, columns: filtered, pinned } as ColumnConfig;
+        }
+        if (version < 8) {
+          state.recurringTemplates = (state.recurringTemplates ?? []).map((tpl) => {
+            const defaults = (tpl.defaults ?? {}) as Record<string, any>;
+            const { onsiteOwner, lineOwner, ...restDefaults } = defaults;
+            const cleanedEntries = Object.entries(restDefaults).filter(
+              ([, value]) => value !== undefined && value !== null,
+            );
+            const cleanedDefaults = cleanedEntries.length
+              ? (Object.fromEntries(cleanedEntries) as RecurringTemplate['defaults'])
+              : undefined;
+            return {
+              ...tpl,
+              onsiteOwner: tpl.onsiteOwner ?? onsiteOwner,
+              lineOwner: tpl.lineOwner ?? lineOwner,
+              defaults: cleanedDefaults,
+              schedule: {
+                ...tpl.schedule,
+                interval: tpl.schedule.interval ?? 1,
+                anchorDate: tpl.schedule.anchorDate ?? dayjs().format('YYYY-MM-DD'),
+              },
+            } as RecurringTemplate;
+          });
         }
         return state as any;
       },

@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import { Modal } from '../common/Modal';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, RecurringTemplate, Status } from '../../types';
@@ -16,7 +17,9 @@ const dueStrategyOptions: Array<{
   { value: 'none', label: '不设置', hint: '生成后自行补充' },
 ];
 
-type DefaultFieldKey = 'onsiteOwner' | 'lineOwner' | 'nextStep' | 'notes';
+const defaultAnchorDate = () => dayjs().format('YYYY-MM-DD');
+
+type DefaultFieldKey = 'nextStep' | 'notes';
 
 interface RecurringTaskModalProps {
   open: boolean;
@@ -41,12 +44,18 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
 
   const scheduleSummary = useMemo(() => {
     if (!tpl) return '';
+    const interval = Math.max(tpl.schedule.interval ?? 1, 1);
+    const unit = tpl.schedule.type === 'weekly' ? '周' : '月';
+    const prefix = interval > 1 ? `每${interval}${unit}` : `每${unit}`;
+    const anchorLabel = tpl.schedule.anchorDate
+      ? `（自 ${dayjs(tpl.schedule.anchorDate).format('YYYY-MM-DD')} 起）`
+      : '';
     if (tpl.schedule.type === 'weekly') {
       const days = (tpl.schedule.daysOfWeek ?? []).sort((a, b) => a - b);
       if (!days.length) return '请选择执行日';
-      return `每周 · ${days.map((d) => `周${WEEK_LABELS[d]}`).join(' / ')}`;
+      return `${prefix} · ${days.map((d) => `周${WEEK_LABELS[d]}`).join(' / ')}${anchorLabel}`;
     }
-    return `每月 · ${tpl.schedule.dayOfMonth ?? 1} 日`;
+    return `${prefix} · ${tpl.schedule.dayOfMonth ?? 1} 日${anchorLabel}`;
   }, [tpl]);
 
   useEffect(() => {
@@ -57,7 +66,13 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
       title: '',
       status: 'paused' as Status,
       priority: 'medium' as Priority,
-      schedule: { type: 'weekly', daysOfWeek: [1], flexible: false },
+      schedule: {
+        type: 'weekly',
+        daysOfWeek: [1],
+        flexible: false,
+        interval: 1,
+        anchorDate: defaultAnchorDate(),
+      },
       dueStrategy: 'endOfWeek',
       defaults: {},
       active: true,
@@ -106,11 +121,15 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                 ? [...(tpl.schedule.daysOfWeek ?? [])]
                 : [1]),
               flexible: tpl.schedule.flexible,
+              interval: tpl.schedule.interval ?? 1,
+              anchorDate: tpl.schedule.anchorDate ?? defaultAnchorDate(),
             }
           : {
               type: 'monthly',
               dayOfMonth: tpl.schedule.dayOfMonth ?? 1,
               flexible: tpl.schedule.flexible,
+              interval: tpl.schedule.interval ?? 1,
+              anchorDate: tpl.schedule.anchorDate ?? defaultAnchorDate(),
             },
     });
   };
@@ -221,6 +240,28 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                   <option value="low">低</option>
                 </select>
               </div>
+              <div className="field-control">
+                <div className="field-label">
+                  <span>现场责任人</span>
+                  <span className="field-note">任务生成时自动带入</span>
+                </div>
+                <input
+                  value={tpl.onsiteOwner ?? ''}
+                  onChange={(event) => setTpl({ ...tpl, onsiteOwner: event.target.value })}
+                  placeholder="可选"
+                />
+              </div>
+              <div className="field-control">
+                <div className="field-label">
+                  <span>产线责任人</span>
+                  <span className="field-note">方便跨班组协作</span>
+                </div>
+                <input
+                  value={tpl.lineOwner ?? ''}
+                  onChange={(event) => setTpl({ ...tpl, lineOwner: event.target.value })}
+                  placeholder="可选"
+                />
+              </div>
             </div>
           </section>
 
@@ -269,6 +310,45 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                   />
                 </div>
               )}
+              <div className="field-control">
+                <div className="field-label">
+                  <span>重复节奏</span>
+                  <span className="field-note">支持双周 / 多月任务</span>
+                </div>
+                <div className="interval-editor">
+                  <span>每</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={tpl.schedule.interval ?? 1}
+                    onChange={(event) => {
+                      const raw = Number(event.target.value);
+                      const safe = Number.isNaN(raw) ? 1 : Math.max(1, raw);
+                      setTpl({
+                        ...tpl,
+                        schedule: { ...tpl.schedule, interval: safe },
+                      });
+                    }}
+                  />
+                  <span>{tpl.schedule.type === 'weekly' ? '周' : '个月'}</span>
+                </div>
+              </div>
+              <div className="field-control">
+                <div className="field-label">
+                  <span>锚点日期</span>
+                  <span className="field-note">决定复杂周期的起点</span>
+                </div>
+                <input
+                  type="date"
+                  value={tpl.schedule.anchorDate ?? defaultAnchorDate()}
+                  onChange={(event) =>
+                    setTpl({
+                      ...tpl,
+                      schedule: { ...tpl.schedule, anchorDate: event.target.value },
+                    })
+                  }
+                />
+              </div>
             </div>
 
             {tpl.schedule.type === 'weekly' && (
@@ -341,34 +421,17 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
               </div>
             </div>
             <div className="defaults-grid">
-              <div className="field-control">
-                <div className="field-label">
-                  <span>现场责任人</span>
-                </div>
-                <input
-                  value={tpl.defaults?.onsiteOwner ?? ''}
-                  onChange={(event) => updateDefaults('onsiteOwner', event.target.value)}
-                  placeholder="可选"
-                />
-              </div>
-              <div className="field-control">
-                <div className="field-label">
-                  <span>产线责任人</span>
-                </div>
-                <input
-                  value={tpl.defaults?.lineOwner ?? ''}
-                  onChange={(event) => updateDefaults('lineOwner', event.target.value)}
-                  placeholder="可选"
-                />
-              </div>
-              <div className="field-control">
+              <div className="field-control full">
                 <div className="field-label">
                   <span>下一步</span>
+                  <span className="field-note">提示协作者的下一行动</span>
                 </div>
-                <input
+                <textarea
+                  className="next-step-textarea"
+                  rows={3}
                   value={tpl.defaults?.nextStep ?? ''}
                   onChange={(event) => updateDefaults('nextStep', event.target.value)}
-                  placeholder="提示协作者的下一行动"
+                  placeholder="把下一阶段的计划写清楚（支持多行）"
                 />
               </div>
             </div>

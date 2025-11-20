@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, useRef } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useVisibleTasks } from '../../hooks/useVisibleTasks';
@@ -78,6 +78,7 @@ export const TaskTable = ({
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoCompact, setAutoCompact] = useState(false);
+  const [tableScale, setTableScale] = useState(1);
 
   useEffect(() => {
     if (!editingId && selectedIds.length === 1) {
@@ -118,7 +119,15 @@ export const TaskTable = ({
       if (!el) return;
       const requiredWidth = SELECTION_WIDTH + columnConfig.columns.reduce((sum, col) => sum + (computedWidths[col] ?? 160), 0);
       const available = el.clientWidth;
-      setAutoCompact(requiredWidth > available);
+      if (!requiredWidth || !available) {
+        setAutoCompact(false);
+        setTableScale(1);
+        return;
+      }
+      const ratio = available / requiredWidth;
+      const nextScale = ratio < 1 ? Math.max(0.85, Number(ratio.toFixed(2))) : 1;
+      setAutoCompact(nextScale < 0.999);
+      setTableScale(nextScale);
     };
     computeAutoCompact();
     const onResize = () => computeAutoCompact();
@@ -143,6 +152,7 @@ export const TaskTable = ({
         className={clsx('task-table-container', columnConfig.density, {
           compact: autoCompact || columnConfig.density === 'compact',
         })}
+        style={{ '--table-scale': tableScale } as CSSProperties}
       >
         <table>
           <thead>
@@ -171,7 +181,9 @@ export const TaskTable = ({
                   {columnConfig.labels?.[column] ?? columnMeta[column]?.label ?? column}
                 </th>
               ))}
-              <th style={{ width: 120 }}>操作</th>
+              <th className='actions-column' style={{ width: 140 }}>
+                操作
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -399,8 +411,8 @@ const TaskRow = ({
               : renderDisplay(column, task, project, settings)}
           </td>
         ))}
-        <td>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <td className='actions-column'>
+          <div className='row-actions'>
             {editing ? (
               <>
                 <button type='button' onClick={handleSave}>保存</button>
