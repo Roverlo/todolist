@@ -6,6 +6,8 @@
   --text-muted: #6b7280;
   --danger: #dc2626;
   --warning: #f97316;
+  --right-gutter: 16px;
+  --actions-width: 180px;
 }
 
 .app-shell {
@@ -24,6 +26,7 @@
   flex-direction: column;
   padding: 16px clamp(20px, 3vw, 32px) 16px 16px;
   gap: 12px;
+  padding-right: var(--right-gutter);
 }
 
 .sidebar-header {
@@ -116,10 +119,13 @@
   white-space: nowrap; 
 }
 .project-list.compact td:last-child { 
-  width: 50px; 
+  width: 60px; 
   text-align: right; 
   color: #64748b; 
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .project-list.compact table.archived { 
   margin-top: 8px; 
@@ -219,12 +225,19 @@
   flex-direction: column;
   gap: 12px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  padding-right: var(--right-gutter);
 }
 
 .toolbar-row {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  align-items: center;
+}
+
+/* 顶部主行改为两列网格，按钮固定在最右侧 */
+.toolbar-row.main {
+  display: flex;
   align-items: center;
 }
 
@@ -250,9 +263,11 @@
 }
 
 .toolbar-actions {
-  margin-left: auto;
+  margin-left: 0;
   display: flex;
   gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .toolbar-actions button {
@@ -317,11 +332,23 @@
   --table-scale: 1;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-sizing: border-box;
   scrollbar-gutter: stable both-edges;
   position: relative;
   font-size: calc(14px * var(--table-scale));
+  padding-right: calc(var(--right-gutter) + var(--actions-width));
+}
+
+/* 为右侧留出占位，防止贴边遮挡 */
+.task-table-container::after {
+  content: '';
+  position: sticky;
+  right: 0;
+  width: var(--right-gutter);
+  height: 100%;
+  pointer-events: none;
 }
 
 .task-table-container table {
@@ -359,13 +386,14 @@
   z-index: 1;
 }
 
-.task-table-container .actions-column {
-  position: sticky;
-  right: 0;
-  background: inherit;
-  min-width: 140px;
-  box-shadow: inset 1px 0 0 var(--border-color), -2px 0 8px rgba(15, 23, 42, 0.06);
-  z-index: 2;
+.task-table-container thead .actions-column {
+  position: static;
+  width: var(--actions-width);
+}
+
+.task-table-container tbody .actions-column {
+  position: static;
+  width: var(--actions-width);
 }
 
 .task-table-container .row-actions {
@@ -378,6 +406,29 @@
 .task-table-container .row-actions button {
   width: 100%;
   font-size: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 编辑时居中显示保存/取消 */
+.task-table-container tr.editing td.actions-column .row-actions {
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+.task-table-container tr.editing td.actions-column .row-actions button {
+  width: auto;
+}
+
+/* 抽屉打开时扩大右侧安全区，避免遮挡 */
+.app-shell.drawer-open {
+  --right-gutter: calc(360px + 16px);
+}
+
+/* 窄视口下略微压缩表格密度，避免内容逼近右缘 */
+@media (max-width: 1200px) {
+  .task-table-container { --table-scale: 0.9; }
 }
 
 @media (min-width: 1400px) {
@@ -890,4 +941,26 @@
 .row-bottom .label {
   font-size: 12px;
   color: #64748b;
+}
+.task-table-container tr.editing td {
+  padding: 4px;
+}
+
+.task-table-container tr.editing td input,
+.task-table-container tr.editing td select,
+.task-table-container tr.editing td textarea {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.task-table-container tr.editing td textarea {
+  resize: vertical;
+  overflow: hidden;
+  min-height: 64px;
+}
+
+.task-table-container tr.editing td input,
+.task-table-container tr.editing td select {
+  min-height: 38px;
 }

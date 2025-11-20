@@ -38,20 +38,23 @@ const priorityLabels: Record<string, string> = {
   low: '低',
 };
 
-const SELECTION_WIDTH = 48;
+const SELECTION_WIDTH = 0;
 const TOP_COLUMNS = ['project','title','notes','latestProgress','nextStep'];
+const HEADER_RATIOS: Record<string, number> = {
+  project: 0.10,
+  title: 0.16,
+  notes: 0.28,
+  latestProgress: 0.26,
+  nextStep: 0.20,
+};
 const BOTTOM_BASE_FIELDS = ['status','priority','dueDate','onsiteOwner','lineOwner','createdAt','attachments'];
 
 export interface TaskTableProps {
-  selectedIds: string[];
-  onSelectionChange: (ids: string[]) => void;
   onTaskFocus: (taskId: string) => void;
   onOpenProgress?: (taskId: string) => void;
 }
 
 export const TaskTable = ({
-  selectedIds,
-  onSelectionChange,
   onTaskFocus,
   onOpenProgress,
 }: TaskTableProps) => {
@@ -79,61 +82,64 @@ export const TaskTable = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoCompact, setAutoCompact] = useState(false);
   const [tableScale, setTableScale] = useState(1);
+  const [headerWidths, setHeaderWidths] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (!editingId && selectedIds.length === 1) {
+    if (!editingId) {
       setEditingId(null);
     }
-  }, [editingId, selectedIds]);
+  }, [editingId]);
 
-  const computedWidths = useMemo(() => computeColumnWidths(tasks, columnConfig, settings, false), [tasks, columnConfig, settings]);
-  const pinnedOffsets = useMemo(() => computePinnedOffsets(columnConfig, computedWidths), [columnConfig, computedWidths]);
+  const pinnedOffsets = useMemo(() => computePinnedOffsets(columnConfig, headerWidths), [columnConfig, headerWidths]);
 
   const toggleGroup = (key: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      onSelectionChange(tasks.map((task) => task.id));
-    } else {
-      onSelectionChange([]);
-    }
-  };
-
-  const handleSelectRow = (taskId: string, checked: boolean) => {
-    if (checked) {
-      if (!selectedIds.includes(taskId)) {
-        onSelectionChange([...selectedIds, taskId]);
-      }
-    } else {
-      onSelectionChange(selectedIds.filter((id) => id !== taskId));
-    }
-  };
+  
 
   
 
   useEffect(() => {
-    const computeAutoCompact = () => {
-      const el = containerRef.current;
-      if (!el) return;
-      const requiredWidth = SELECTION_WIDTH + columnConfig.columns.reduce((sum, col) => sum + (computedWidths[col] ?? 160), 0);
-      const available = el.clientWidth;
-      if (!requiredWidth || !available) {
-        setAutoCompact(false);
-        setTableScale(1);
-        return;
-      }
-      const ratio = available / requiredWidth;
-      const nextScale = ratio < 1 ? Math.max(0.85, Number(ratio.toFixed(2))) : 1;
-      setAutoCompact(nextScale < 0.999);
-      setTableScale(nextScale);
+    const el = containerRef.current;
+    if (!el) return;
+    const actionsWidth = 180;
+    const available = el.clientWidth - SELECTION_WIDTH - actionsWidth;
+    const min: Record<string, number> = {
+      project: 120,
+      title: 140,
+      notes: 180,
+      latestProgress: 200,
+      nextStep: 180,
     };
-    computeAutoCompact();
-    const onResize = () => computeAutoCompact();
+    const widths: Record<string, number> = {};
+    TOP_COLUMNS.forEach((col) => {
+      const w = Math.max(min[col], Math.floor(HEADER_RATIOS[col] * available));
+      widths[col] = w;
+    });
+    setHeaderWidths(widths);
+    const requiredWidth = SELECTION_WIDTH + Object.values(widths).reduce((a, b) => a + b, 0) + actionsWidth;
+    const ratio = el.clientWidth / requiredWidth;
+    const nextScale = ratio < 1 ? Math.max(0.85, Number(ratio.toFixed(2))) : 1;
+    setAutoCompact(nextScale < 0.999);
+    setTableScale(nextScale);
+    const onResize = () => {
+      const available2 = el.clientWidth - SELECTION_WIDTH - actionsWidth;
+      const widths2: Record<string, number> = {};
+      TOP_COLUMNS.forEach((col) => {
+        const w = Math.max(min[col], Math.floor(HEADER_RATIOS[col] * available2));
+        widths2[col] = w;
+      });
+      setHeaderWidths(widths2);
+      const req2 = SELECTION_WIDTH + Object.values(widths2).reduce((a, b) => a + b, 0) + actionsWidth;
+      const r2 = el.clientWidth / req2;
+      const ns2 = r2 < 1 ? Math.max(0.85, Number(r2.toFixed(2))) : 1;
+      setAutoCompact(ns2 < 0.999);
+      setTableScale(ns2);
+    };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [columnConfig, computedWidths]);
+  }, [columnConfig]);
 
   return (
     <section className='task-table-panel'>
@@ -155,25 +161,20 @@ export const TaskTable = ({
         style={{ '--table-scale': tableScale } as CSSProperties}
       >
         <table>
+          <colgroup>
+            {TOP_COLUMNS.map((column) => (
+              <col key={`col-${column}`} style={{ width: headerWidths[column] ?? 160 }} />
+            ))}
+            <col style={{ width: 'var(--actions-width)' }} />
+          </colgroup>
           <thead>
             <tr>
-              <th
-                className='select-column pinned'
-                style={{ width: SELECTION_WIDTH, left: 0 }}
-              >
-                <input
-                  type='checkbox'
-                  aria-label='Select all'
-                  checked={selectedIds.length === tasks.length && tasks.length > 0}
-                  onChange={(event) => handleSelectAll(event.target.checked)}
-                />
-              </th>
               {TOP_COLUMNS.map((column) => (
                 <th
                   key={column}
                   className={clsx({ pinned: ['project','title'].includes(column) })}
                   style={{
-                    width: computedWidths[column] ?? 160,
+                    width: headerWidths[column] ?? 160,
                     left: ['project','title'].includes(column) ? pinnedOffsets[column] : undefined,
                     textAlign: columnMeta[column]?.align ?? 'left',
                   }}
@@ -181,7 +182,7 @@ export const TaskTable = ({
                   {columnConfig.labels?.[column] ?? columnMeta[column]?.label ?? column}
                 </th>
               ))}
-              <th className='actions-column' style={{ width: 140 }}>
+              <th className='actions-column' style={{ width: 'var(--actions-width)' }}>
                 操作
               </th>
             </tr>
@@ -190,7 +191,7 @@ export const TaskTable = ({
             {grouped.map((group) => (
               <Fragment key={group.key}>
                 <tr className='group-row'>
-                  <td colSpan={TOP_COLUMNS.length + 2}>
+                  <td colSpan={TOP_COLUMNS.length + 1}>
                     <button type='button' onClick={() => toggleGroup(group.key)} aria-label='切换分组展开'>
                       {collapsedGroups[group.key] ? '▶' : '▼'}
                     </button>
@@ -207,8 +208,6 @@ export const TaskTable = ({
                       columns={columnConfig}
                       project={projectMap[task.projectId]}
                       pinnedOffsets={pinnedOffsets}
-                      selected={selectedIds.includes(task.id)}
-                      onSelect={(checked) => handleSelectRow(task.id, checked)}
                       editing={editingId === task.id}
                       onEnterEdit={() => setEditingId(task.id)}
                       onSave={(updates) => {
@@ -224,11 +223,11 @@ export const TaskTable = ({
                       onOpenProgress={onOpenProgress}
                     />
                   ))}
-                </Fragment>
+              </Fragment>
               ))}
               {!tasks.length && (
               <tr className='empty-row'>
-                <td colSpan={TOP_COLUMNS.length + 2}>暂无匹配事项</td>
+                <td colSpan={TOP_COLUMNS.length + 1}>暂无匹配事项</td>
               </tr>
               )}
             </tbody>
@@ -240,7 +239,7 @@ export const TaskTable = ({
 
 const computePinnedOffsets = (config: ColumnConfig, widths: Record<string, number>) => {
   const offsets: Record<string, number> = {};
-  let offset = SELECTION_WIDTH;
+  let offset = 0;
   config.columns.forEach((column) => {
     if (config.pinned.includes(column)) {
       offsets[column] = offset;
@@ -250,61 +249,6 @@ const computePinnedOffsets = (config: ColumnConfig, widths: Record<string, numbe
   return offsets;
 };
 
-const computeColumnWidths = (
-  tasks: Task[],
-  config: ColumnConfig,
-  settings: Settings,
-  compact: boolean,
-): Record<string, number> => {
-  const char = compact ? 7 : 8;
-  const min = (col: string) => (['status', 'priority'].includes(col) ? 90 : 110);
-  const max = (col: string) => (['title', 'notes', 'latestProgress', 'nextStep'].includes(col) ? 320 : 200);
-  const sampleText = (col: string, t: Task) => {
-    switch (col) {
-      case 'project':
-        return t.projectId;
-      case 'title':
-        return t.title;
-      case 'status':
-        return statusLabels[t.status];
-      case 'priority':
-        return priorityLabels[t.priority ?? 'medium'];
-      case 'createdAt':
-        return dayjs(t.createdAt).format(settings.dateFormat);
-      case 'dueDate':
-        return t.dueDate ? dayjs(t.dueDate).format(settings.dateFormat) : '';
-      case 'onsiteOwner':
-        return t.onsiteOwner ?? '';
-      case 'lineOwner':
-        return t.lineOwner ?? '';
-      case 'nextStep':
-        return t.nextStep ?? '';
-      case 'notes':
-        return t.notes ?? '';
-      case 'latestProgress':
-        return t.progress?.length ? t.progress[t.progress.length - 1].note : '';
-    case 'tags':
-      return (t.tags ?? []).join(',');
-    default:
-      return (
-        (t.extras && t.extras[col]) ?? String(((t as unknown as Record<string, unknown>)[col]) ?? '')
-      );
-    }
-  };
-  const widths: Record<string, number> = {};
-  config.columns.forEach((col) => {
-    let longest = 0;
-    tasks.forEach((t) => {
-      const s = sampleText(col, t);
-      if (s.length > longest) longest = s.length;
-    });
-    const w = Math.min(max(col), Math.max(min(col), longest * char + 40));
-    widths[col] = w;
-  });
-  // project列使用项目名称真实长度（通过映射补偿）
-  if (widths['project'] < 160) widths['project'] = 160;
-  return widths;
-};
 
  
 
@@ -313,8 +257,6 @@ interface TaskRowProps {
   project?: Project;
   columns: ColumnConfig;
   pinnedOffsets: Record<string, number>;
-  selected: boolean;
-  onSelect: (checked: boolean) => void;
   editing: boolean;
   onEnterEdit: () => void;
   onSave: (updates: Partial<Task>) => void;
@@ -332,8 +274,6 @@ const TaskRow = ({
   project,
   columns,
   pinnedOffsets,
-  selected,
-  onSelect,
   editing,
   onEnterEdit,
   onSave,
@@ -383,13 +323,10 @@ const TaskRow = ({
   return (
     <>
       <tr
-        className={clsx('task-row', { selected, overdue, 'due-soon': dueSoon })}
+        className={clsx('task-row', { overdue, 'due-soon': dueSoon, editing })}
         onClick={() => onFocus()}
         onDoubleClick={onEnterEdit}
       >
-        <td className='select-column pinned' style={{ left: 0, width: SELECTION_WIDTH }}>
-          <input type='checkbox' checked={selected} onChange={(event) => onSelect(event.target.checked)} />
-        </td>
         {TOP_COLUMNS.map((column) => (
           <td
             key={column}
@@ -400,14 +337,14 @@ const TaskRow = ({
           >
             {editing
               ? renderEditor({
-                  column,
-                  draft,
-                  handleChange: handleFieldChange,
-                  handleKeyDown,
-                  projects,
-                  dictionary,
-                  taskId: task.id,
-                })
+                column,
+                draft,
+                handleChange: handleFieldChange,
+                handleKeyDown,
+                projects,
+                dictionary,
+                taskId: task.id,
+              })
               : renderDisplay(column, task, project, settings)}
           </td>
         ))}
@@ -422,28 +359,28 @@ const TaskRow = ({
               <>
                 <button type='button' onClick={onEnterEdit}>编辑</button>
                 <button type='button' onClick={onDelete}>删除</button>
-                <button type='button' onClick={() => onOpenProgress?.(task.id)}>查看/更新进展详情</button>
+                <button type='button' onClick={() => onOpenProgress?.(task.id)}>查看进展</button>
               </>
             )}
           </div>
         </td>
       </tr>
       <tr className={clsx('task-row-bottom')}>
-        <td colSpan={TOP_COLUMNS.length + 2}>
+        <td colSpan={TOP_COLUMNS.length + 1}>
           <div className='row-bottom'>
             {BOTTOM_BASE_FIELDS.map((field) => (
               <div key={field} className={clsx('field','module',`module--${field}`)}>
                 <div className='label'>{columnMeta[field]?.label ?? columns.labels?.[field] ?? field}</div>
                 {editing
                   ? renderEditor({
-                      column: field,
-                      draft,
-                      handleChange: handleFieldChange,
-                      handleKeyDown,
-                      projects,
-                      dictionary,
-                      taskId: task.id,
-                    })
+                    column: field,
+                    draft,
+                    handleChange: handleFieldChange,
+                    handleKeyDown,
+                    projects,
+                    dictionary,
+                    taskId: task.id,
+                  })
                   : renderDisplay(field, task, project, settings)}
               </div>
             ))}
@@ -512,11 +449,16 @@ const renderEditor = ({
       );
     case 'title':
       return (
-        <input
-          type='text'
+        <textarea
+          rows={4}
           value={draft.title}
           onChange={(event) => handleChange('title', event.target.value)}
           onKeyDown={handleKeyDown}
+          onInput={(event) => {
+            const el = event.currentTarget;
+            el.style.height = 'auto';
+            el.style.height = `${el.scrollHeight}px`;
+          }}
         />
       );
     case 'status':
@@ -582,8 +524,40 @@ const renderEditor = ({
           value={(draft[column as 'nextStep' | 'notes'] as string) ?? ''}
           onChange={(event) => handleChange(column as 'nextStep' | 'notes', event.target.value)}
           onKeyDown={handleKeyDown}
+          onInput={(event) => {
+            const el = event.currentTarget;
+            el.style.height = 'auto';
+            el.style.height = `${el.scrollHeight}px`;
+          }}
         />
       );
+    case 'latestProgress': {
+      const last = draft.progress?.length ? draft.progress[draft.progress.length - 1] : undefined;
+      const value = last?.note ?? '';
+      return (
+        <textarea
+          rows={4}
+          value={value}
+          onChange={(event) => {
+            const note = event.target.value;
+            const now = Date.now();
+            const entry = last
+              ? { ...last, note }
+              : { id: String(now), at: now, status: 'doing' as const, note };
+            const next = draft.progress?.length
+              ? [...(draft.progress ?? []).slice(0, -1), entry]
+              : [entry];
+            handleChange('progress', next);
+          }}
+          onKeyDown={handleKeyDown}
+          onInput={(event) => {
+            const el = event.currentTarget;
+            el.style.height = 'auto';
+            el.style.height = `${el.scrollHeight}px`;
+          }}
+        />
+      );
+    }
     case 'tags':
       return (
         <input

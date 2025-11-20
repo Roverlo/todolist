@@ -122,6 +122,7 @@ export interface DateRangeFilter {
 export interface Filters {
   search: string;
   status?: Status | 'all';
+  statuses?: Status[];
   projectId?: string;
   onsiteOwner?: string;
   lineOwner?: string;

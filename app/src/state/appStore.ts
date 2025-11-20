@@ -153,6 +153,7 @@ const initialData: AppData = {
   filters: {
     search: '',
     status: 'all',
+    statuses: [],
     priority: 'all',
     tags: [],
   },

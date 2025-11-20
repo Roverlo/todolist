@@ -1,0 +1,1 @@
+修改完代码后，在绿色版中运行 `npm run build` 来构建项目。在C:\personal\task\portable路径下提供exe文件给我。

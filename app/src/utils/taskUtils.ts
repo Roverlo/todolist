@@ -144,7 +144,11 @@ export const filterTasks = (
         if (task.projectId) return false;
       } else if (task.projectId !== filters.projectId) return false;
     }
-    if (filters.status && filters.status !== 'all' && task.status !== filters.status) return false;
+    if (filters.statuses && filters.statuses.length) {
+      if (!filters.statuses.includes(task.status)) return false;
+    } else if (filters.status && filters.status !== 'all' && task.status !== filters.status) {
+      return false;
+    }
     if (filters.priority && filters.priority !== 'all' && task.priority !== filters.priority)
       return false;
     if (filters.onsiteOwner && task.onsiteOwner !== filters.onsiteOwner) return false;
