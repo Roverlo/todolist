@@ -17,6 +17,7 @@ function App() {
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
+  const purgeTrash = useAppStore((state) => state.purgeTrash);
   const updateRightGutter = () => {
     const el = document.createElement('div');
     el.style.width = '100px';
@@ -33,6 +34,7 @@ function App() {
   };
 
   useEffect(() => {
+    purgeTrash();
     const handler = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.key.toLowerCase() === 'z' && !event.shiftKey) {
         event.preventDefault();

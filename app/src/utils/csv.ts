@@ -2,30 +2,46 @@ import dayjs from 'dayjs';
 import type { Task } from '../types';
 
 const CSV_COLUMNS = [
-  'id',
   'project',
   'title',
   'status',
   'priority',
+  'notes',
+  'latestProgress',
+  'nextStep',
   'dueDate',
   'createdAt',
   'updatedAt',
   'onsiteOwner',
   'lineOwner',
-  'latestProgressStatus',
-  'latestProgressNote',
-  'nextStep',
-  'notes',
   'tags',
   'attachmentsCount',
   'attachmentNames',
 ] as const;
 
+const CSV_HEADERS_CN: Record<(typeof CSV_COLUMNS)[number], string> = {
+  project: '项目',
+  title: '标题',
+  status: '状态',
+  priority: '优先级',
+  notes: '详情',
+  latestProgress: '最新进展',
+  nextStep: '下一步',
+  dueDate: '截止日期',
+  createdAt: '创建日期',
+  updatedAt: '更新日期',
+  onsiteOwner: '现场负责人',
+  lineOwner: '产线负责人',
+  tags: '标签',
+  attachmentsCount: '附件数',
+  attachmentNames: '附件名称',
+};
+
 export const exportTasksToCsv = (
   tasks: Task[],
   projectMap: Record<string, { name: string } | undefined>,
 ) => {
-  const header = CSV_COLUMNS.join(',');
+  const header = CSV_COLUMNS.map((c) => CSV_HEADERS_CN[c] ?? c).join(',');
   const lines = tasks.map((task) => {
     const values = CSV_COLUMNS.map((column) => escapeCsv(getFieldValue(task, column, projectMap)));
     return values.join(',');
@@ -39,16 +55,20 @@ const getFieldValue = (
   projectMap: Record<string, { name: string } | undefined>,
 ) => {
   switch (column) {
-    case 'id':
-      return task.id;
     case 'project':
       return projectMap[task.projectId]?.name ?? '';
     case 'title':
       return task.title ?? '';
-    case 'status':
-      return task.status;
-    case 'priority':
-      return task.priority ?? '';
+    case 'status': {
+      const map: Record<string, string> = { done: '已完成', paused: '暂停', doing: '进行中' };
+      const v = String(task.status ?? '');
+      return map[v] ?? v;
+    }
+    case 'priority': {
+      const map: Record<string, string> = { high: '高', medium: '中', low: '低' };
+      const v = String(task.priority ?? '');
+      return map[v] ?? v;
+    }
     case 'dueDate':
       return task.dueDate ?? '';
     case 'createdAt':
@@ -59,11 +79,7 @@ const getFieldValue = (
       return task.onsiteOwner ?? '';
     case 'lineOwner':
       return task.lineOwner ?? '';
-    case 'latestProgressStatus': {
-      const last = task.progress?.[task.progress.length - 1];
-      return last?.status ?? '';
-    }
-    case 'latestProgressNote': {
+    case 'latestProgress': {
       const last = task.progress?.[task.progress.length - 1];
       return last?.note ?? '';
     }
@@ -105,16 +121,15 @@ export const triggerDownload = (filename: string, content: string, mime = 'text/
 export const saveCsvWithTauri = async (filename: string, content: string): Promise<string | null> => {
   const BOM = '\ufeff';
   const data = BOM + content.replace(/\n/g, '\r\n');
-  const hasTauri = typeof (window as any).__TAURI__ !== 'undefined';
-  if (!hasTauri) {
-    triggerDownload(filename, data);
+  try {
+    const { save: tauriSave } = await import('@tauri-apps/plugin-dialog');
+    const { writeTextFile: tauriWriteTextFile } = await import('@tauri-apps/plugin-fs');
+    const path = await tauriSave({ defaultPath: filename, filters: [{ name: 'CSV', extensions: ['csv'] }] });
+    if (!path) return null;
+    await tauriWriteTextFile(path, data);
+    return String(path);
+  } catch {
+    triggerDownload(filename, content);
     return null;
   }
-  const dynamicImport = (id: string) => (new Function('id', 'return import(id)'))(id);
-  const { save: tauriSave } = await dynamicImport('@tauri-apps/api/dialog');
-  const { writeFile: tauriWriteFile } = await dynamicImport('@tauri-apps/api/fs');
-  const path = await tauriSave({ defaultPath: filename, filters: [{ name: 'CSV', extensions: ['csv'] }] });
-  if (!path) return null;
-  await tauriWriteFile({ path, contents: data });
-  return String(path);
 };

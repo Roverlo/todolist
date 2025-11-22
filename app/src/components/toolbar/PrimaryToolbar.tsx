@@ -26,8 +26,8 @@ export const PrimaryToolbar = () => {
   const { tasks, projectMap } = useVisibleTasks();
 
   const [addTaskOpen, setAddTaskOpen] = useState(false);
-  const [addRecurringOpen, setAddRecurringOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [addRecurringOpen, setAddRecurringOpen] = useState(false);
 
   
   const [dueFrom, setDueFrom] = useState(filters.dueRange?.from ?? '');
@@ -53,7 +53,7 @@ export const PrimaryToolbar = () => {
           <button type='button' className='accent-btn' onClick={() => setAddRecurringOpen(true)} aria-label='新建周期任务'>
             新建周期任务
           </button>
-          <button type='button' onClick={() => setExportOpen(true)} aria-label='导出当前筛选'>
+          <button type='button' className='accent-btn' onClick={() => setExportOpen(true)} aria-label='导出当前筛选'>
             导出
           </button>
         </div>
@@ -61,22 +61,26 @@ export const PrimaryToolbar = () => {
       <div className='toolbar-row filters'>
         <label>
           状态
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(['doing','paused','done'] as Status[]).map((s) => (
-              <label key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <input
-                  type='checkbox'
-                  checked={!!(filters.statuses ?? []).includes(s)}
-                  onChange={(event) => {
+          <div className='status-toggle-group'>
+            {(['doing','paused','done'] as Status[]).map((s) => {
+              const selected = !!(filters.statuses ?? []).includes(s);
+              const label = s === 'doing' ? '进行中' : s === 'paused' ? '挂起' : '已完成';
+              return (
+                <button
+                  key={s}
+                  type='button'
+                  className={`status-chip ${selected ? 'selected' : ''}`}
+                  onClick={() => {
                     const set = new Set(filters.statuses ?? []);
-                    if (event.target.checked) set.add(s); else set.delete(s);
+                    if (selected) set.delete(s); else set.add(s);
                     const next = Array.from(set);
                     setFilters({ statuses: next, status: next.length ? 'all' : filters.status });
                   }}
-                />
-                {s === 'doing' ? '进行中' : s === 'paused' ? '挂起' : '已完成'}
-              </label>
-            ))}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </label>
         <label>
@@ -171,8 +175,8 @@ export const PrimaryToolbar = () => {
       </div>
       
       <SingleTaskModal open={addTaskOpen} onClose={() => setAddTaskOpen(false)} />
-      <RecurringTaskModal open={addRecurringOpen} onClose={() => setAddRecurringOpen(false)} />
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} tasks={tasks} projectMap={projectMap} />
+      <RecurringTaskModal open={addRecurringOpen} onClose={() => setAddRecurringOpen(false)} />
     </section>
   );
 };

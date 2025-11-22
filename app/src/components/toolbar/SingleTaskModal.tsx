@@ -9,11 +9,12 @@ interface SingleTaskModalProps {
 }
 
 export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
-  const { projects, addTask, ensureProjectByName, dictionary } = useAppStoreShallow((state) => ({
+  const { projects, addTask, ensureProjectByName, dictionary, filters } = useAppStoreShallow((state) => ({
     projects: state.projects,
     addTask: state.addTask,
     ensureProjectByName: state.ensureProjectByName,
     dictionary: state.dictionary,
+    filters: state.filters,
   }));
 
   const [projectId, setProjectId] = useState(projects[0]?.id ?? '');
@@ -29,11 +30,14 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
 
   useEffect(() => {
     if (open) {
-      setProjectId(projects[0]?.id ?? '');
+      const selected = projects.find((p) => p.id === filters.projectId);
+      const isTrash = selected?.name === '回收站';
+      const defaultId = !isTrash && selected ? selected.id : (projects[0]?.id ?? '');
+      setProjectId(defaultId);
       setTitle(''); setNotes(''); setStatus('doing'); setPriority('medium'); setDueDate('');
       setOnsiteOwner(''); setLineOwner(''); setNextStep(''); setError('');
     }
-  }, [open, projects]);
+  }, [open, projects, filters.projectId]);
 
   const handleSubmit = () => {
     const t = title.trim();

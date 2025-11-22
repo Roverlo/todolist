@@ -110,8 +110,8 @@ export const ImportModal = ({ open, onClose, onImport, ensureProject }: ImportMo
       title="Import CSV"
       onClose={onClose}
       footer={
-        <button type="button" onClick={handleImport} disabled={!rows.length}>
-          Import
+        <button type="button" className="primary-btn" onClick={handleImport} disabled={!rows.length}>
+          导入
         </button>
       }
     >

@@ -1,5 +1,5 @@
-use tauri_plugin_log::Builder as LogBuilder;
 use tauri::Manager;
+use tauri_plugin_log::Builder as LogBuilder;
 
 #[tauri::command]
 fn frontend_log(level: String, message: String) {
@@ -17,6 +17,8 @@ fn frontend_log(level: String, message: String) {
 pub fn run() {
   tauri::Builder::default()
     .plugin(LogBuilder::default().level(log::LevelFilter::Info).build())
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_fs::init())
     .setup(|app| {
       if let Some(window) = app.get_webview_window("main") {
         let _ = window.maximize();

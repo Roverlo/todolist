@@ -3,7 +3,7 @@ import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useVisibleTasks } from '../../hooks/useVisibleTasks';
-import { useAppStoreShallow } from '../../state/appStore';
+import { useAppStore, useAppStoreShallow } from '../../state/appStore';
 import type { ColumnConfig, Dictionary, Project, Settings, Task } from '../../types';
 import { isDueSoon, isOverdue } from '../../utils/taskUtils';
 
@@ -355,10 +355,15 @@ const TaskRow = ({
                 <button type='button' onClick={handleSave}>保存</button>
                 <button type='button' onClick={onCancelEdit}>取消</button>
               </>
+            ) : project?.name === '回收站' ? (
+              <>
+                <button type='button' onClick={() => useAppStore.getState().restoreTask(task.id)}>恢复</button>
+                <button type='button' className='danger-btn' onClick={() => useAppStore.getState().hardDeleteTask(task.id)}>彻底删除</button>
+              </>
             ) : (
               <>
                 <button type='button' onClick={onEnterEdit}>编辑</button>
-                <button type='button' onClick={onDelete}>删除</button>
+                <button type='button' className='danger-btn' onClick={onDelete}>删除</button>
                 <button type='button' onClick={() => onOpenProgress?.(task.id)}>查看进展</button>
               </>
             )}
@@ -449,16 +454,10 @@ const renderEditor = ({
       );
     case 'title':
       return (
-        <textarea
-          rows={4}
+        <AutoTextarea
           value={draft.title}
-          onChange={(event) => handleChange('title', event.target.value)}
+          onChange={(v) => handleChange('title', v)}
           onKeyDown={handleKeyDown}
-          onInput={(event) => {
-            const el = event.currentTarget;
-            el.style.height = 'auto';
-            el.style.height = `${el.scrollHeight}px`;
-          }}
         />
       );
     case 'status':
@@ -519,27 +518,19 @@ const renderEditor = ({
     case 'nextStep':
     case 'notes':
       return (
-        <textarea
-          rows={4}
+        <AutoTextarea
           value={(draft[column as 'nextStep' | 'notes'] as string) ?? ''}
-          onChange={(event) => handleChange(column as 'nextStep' | 'notes', event.target.value)}
+          onChange={(v) => handleChange(column as 'nextStep' | 'notes', v)}
           onKeyDown={handleKeyDown}
-          onInput={(event) => {
-            const el = event.currentTarget;
-            el.style.height = 'auto';
-            el.style.height = `${el.scrollHeight}px`;
-          }}
         />
       );
     case 'latestProgress': {
       const last = draft.progress?.length ? draft.progress[draft.progress.length - 1] : undefined;
       const value = last?.note ?? '';
       return (
-        <textarea
-          rows={4}
+        <AutoTextarea
           value={value}
-          onChange={(event) => {
-            const note = event.target.value;
+          onChange={(note) => {
             const now = Date.now();
             const entry = last
               ? { ...last, note }
@@ -550,11 +541,6 @@ const renderEditor = ({
             handleChange('progress', next);
           }}
           onKeyDown={handleKeyDown}
-          onInput={(event) => {
-            const el = event.currentTarget;
-            el.style.height = 'auto';
-            el.style.height = `${el.scrollHeight}px`;
-          }}
         />
       );
     }
@@ -591,6 +577,39 @@ const renderEditor = ({
         />
       );
   }
+};
+
+interface AutoTextareaProps {
+  value: string;
+  onChange: (value: string) => void;
+  onKeyDown?: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
+}
+
+const AutoTextarea = ({ value, onChange, onKeyDown }: AutoTextareaProps) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+    el.selectionStart = el.value.length;
+    el.selectionEnd = el.value.length;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      rows={4}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={onKeyDown}
+      onInput={(e) => {
+        const el = e.currentTarget;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+      }}
+      style={{ width: '100%' }}
+    />
+  );
 };
 
 const renderDisplay = (column: string, task: Task, project: Project | undefined, settings: Settings) => {

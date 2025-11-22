@@ -71,7 +71,19 @@
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+}
+.project-sidebar .sidebar-header h2 { margin: 0 0 4px 0; }
+.project-sidebar .new-project-row { display: flex; gap: 8px; }
+.project-sidebar .new-project-row input { flex: 1; }
+.project-sidebar .project-toolbar { display: flex; gap: 8px; }
+.project-sidebar .compact-actions button { padding: 6px 10px; }
+.project-sidebar .sidebar-subheader { margin: 12px 0 6px; font-weight: 600; color: #334155; }
+.project-sidebar table .project-item:hover { filter: brightness(0.98); }
+.project-sidebar .sidebar-subheader {
+  margin: 8px 0 6px 0;
+  font-weight: 600;
+  color: #334155;
 }
 .project-toolbar {
   display: flex;
@@ -289,6 +301,28 @@
 .group-switch button.active {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* 状态选择切片按钮（更大的点击区域） */
+.status-toggle-group {
+  display: flex;
+  gap: 8px;
+}
+.status-chip {
+  min-width: 88px;
+  height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+.status-chip.selected {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: var(--accent);
+  color: #065f46;
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.24);
 }
 
 .task-table-panel {
@@ -898,6 +932,14 @@
 }
 .accent-btn {
   background: var(--warning);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.danger-btn {
+  background: var(--danger);
   color: #fff;
   border: none;
   border-radius: 6px;

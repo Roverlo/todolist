@@ -70,6 +70,7 @@ const defaultSettings: Settings = {
   overdueThresholdDays: 0,
   colorScheme: 'light',
   undoDepth: 10,
+  trashRetentionDays: 60,
 };
 
 const makeProject = (name: string): Project => ({
@@ -81,9 +82,9 @@ const makeProject = (name: string): Project => ({
 });
 
 const sampleProjects = [
-  makeProject('Equipment Refresh'),
-  makeProject('Line Retrofit'),
-  makeProject('Supplier Enablement'),
+  makeProject('设备升级'),
+  makeProject('产线改造'),
+  makeProject('供应商上线'),
 ];
 
 const today = dayjs();
@@ -92,58 +93,59 @@ const sampleTasks: Task[] = [
   {
     id: nanoid(12),
     projectId: sampleProjects[0].id,
-    title: 'Submit go-live paperwork',
+    title: '升级服务器固件',
     status: 'doing',
     priority: 'high',
-    dueDate: today.add(2, 'day').format('YYYY-MM-DD'),
-    createdAt: today.subtract(8, 'day').valueOf(),
+    dueDate: today.add(3, 'day').format('YYYY-MM-DD'),
+    createdAt: today.subtract(5, 'day').valueOf(),
     updatedAt: today.valueOf(),
-    onsiteOwner: 'Alex Zhang',
-    lineOwner: 'Lee Chen',
-    nextStep: 'Wait for customer signature',
-    tags: ['vendor', 'hardware'],
-    notes: 'Sync with legal after approval',
+    onsiteOwner: '张伟',
+    lineOwner: '李晨',
+    nextStep: '验证升级后的稳定性',
+    tags: ['设备', '固件'],
+    notes: '本周完成固件升级并回归测试',
   },
   {
     id: nanoid(12),
     projectId: sampleProjects[1].id,
-    title: 'Survey workstation layout',
+    title: '生产线搬迁方案评审',
     status: 'paused',
     priority: 'medium',
-    dueDate: today.add(5, 'day').format('YYYY-MM-DD'),
+    dueDate: today.add(7, 'day').format('YYYY-MM-DD'),
     createdAt: today.subtract(2, 'day').valueOf(),
     updatedAt: today.subtract(1, 'day').valueOf(),
-    onsiteOwner: 'Maria Wang',
-    lineOwner: 'Lee Chen',
-    nextStep: 'Book onsite review with production manager',
-    tags: ['research'],
+    onsiteOwner: '王敏',
+    lineOwner: '刘峰',
+    nextStep: '安排现场走查',
+    tags: ['评审'],
+    notes: '等待厂务确认电力改造时间',
   },
   {
     id: nanoid(12),
     projectId: sampleProjects[2].id,
-    title: 'Align contract clauses',
+    title: '对接供应商接口测试',
     status: 'doing',
-    priority: 'high',
-    dueDate: today.subtract(1, 'day').format('YYYY-MM-DD'),
-    createdAt: today.subtract(10, 'day').valueOf(),
-    updatedAt: today.subtract(1, 'day').valueOf(),
-    onsiteOwner: 'Elaine Zhao',
-    lineOwner: 'Victor Liu',
-    nextStep: 'Add payment milestones',
-    tags: ['contract', 'legal'],
+    priority: 'medium',
+    dueDate: today.add(1, 'day').format('YYYY-MM-DD'),
+    createdAt: today.subtract(1, 'day').valueOf(),
+    updatedAt: today.valueOf(),
+    onsiteOwner: '赵宁',
+    lineOwner: '周浩',
+    nextStep: '输出联合测试报告',
+    tags: ['接口', '联调'],
   },
   {
     id: nanoid(12),
     projectId: sampleProjects[0].id,
-    title: 'Inspect inbound equipment',
+    title: '设备入库验收',
     status: 'paused',
-    priority: 'medium',
-    dueDate: today.add(10, 'day').format('YYYY-MM-DD'),
-    createdAt: today.subtract(1, 'day').valueOf(),
+    priority: 'low',
+    dueDate: today.add(12, 'day').format('YYYY-MM-DD'),
+    createdAt: today.subtract(3, 'day').valueOf(),
     updatedAt: today.subtract(1, 'day').valueOf(),
-    onsiteOwner: 'Alex Zhang',
-    lineOwner: 'Nina Zhou',
-    tags: ['hardware'],
+    onsiteOwner: '陈晓',
+    lineOwner: '韩磊',
+    tags: ['设备'],
   },
 ];
 
@@ -201,7 +203,7 @@ export interface AppStore extends AppData {
   redoStack: AppDataSnapshot[];
   addProject: (name: string) => Project;
   renameProject: (id: string, name: string) => void;
-  toggleArchiveProject: (id: string) => void;
+  
   deleteProject: (id: string, options?: { deleteTasks?: boolean }) => void;
   setFilters: (filters: Partial<Filters>) => void;
   resetFilters: () => void;
@@ -213,11 +215,15 @@ export interface AppStore extends AppData {
   addTask: (task: { projectId: string; title: string } & Partial<Task>) => Task;
   updateTask: (id: string, updates: Partial<Task>, batchId?: string) => void;
   deleteTask: (id: string) => void;
+  restoreTask: (id: string) => void;
+  purgeTrash: () => void;
+  hardDeleteTask: (id: string) => void;
   bulkUpdateTasks: (ids: string[], updates: Partial<Task>, batchId?: string) => void;
   addProgress: (
     id: string,
-    entry: { status: 'doing' | 'blocked' | 'done'; note: string; at?: number; attachments?: Attachment[] },
+    entry: { note: string; at?: number; attachments?: Attachment[] },
   ) => void;
+  deleteProgress: (id: string, entryId: string) => void;
   updateProgress: (id: string, entryId: string, patch: Partial<ProgressEntry>) => void;
   saveFilter: (payload: { id?: string; name: string }) => void;
   applySavedFilter: (id: string) => void;
@@ -305,15 +311,7 @@ export const useAppStore = create<AppStore>()(
           }
         });
       },
-      toggleArchiveProject: (id) => {
-        withHistory(set, (state) => {
-          const project = state.projects.find((p) => p.id === id);
-          if (project) {
-            project.archived = !project.archived;
-            project.updatedAt = Date.now();
-          }
-        });
-      },
+      
       deleteProject: (id, options) => {
         const { deleteTasks = false } = options ?? {};
         withHistory(set, (state) => {
@@ -424,16 +422,115 @@ export const useAppStore = create<AppStore>()(
       updateTask: (id, updates) => {
         withHistory(set, (state) => {
           const task = state.tasks.find((t) => t.id === id);
-          if (task) {
-            Object.assign(task, updates);
-            task.updatedAt = Date.now();
-            registerFromTask(state, task);
+          if (!task) return;
+          const prevStatus = task.status as any;
+          Object.assign(task, updates);
+          task.updatedAt = Date.now();
+          registerFromTask(state, task);
+          const recurringRaw = (task.extras?.recurring ?? '') as string;
+          let recurring: { type: 'weekly'|'monthly'; dueWeekday?: number; dueDom?: number; day?: number; dueStrategy?: 'sameDay'|'endOfWeek'|'endOfMonth'|'none'; autoRenew?: boolean } | null = null;
+          try { recurring = recurringRaw ? JSON.parse(recurringRaw) : null; } catch { recurring = null; }
+          if (recurring?.autoRenew && prevStatus !== 'done' && (updates.status as any) === 'done') {
+            const now = dayjs();
+            if (recurring.type === 'weekly') {
+              const nextWeekStart = now.add(1, 'week').subtract((now.day() + 6) % 7, 'day');
+              const d = (recurring.dueWeekday ?? recurring.day ?? 5);
+              const due = nextWeekStart.add(((d + 7) % 7), 'day').format('YYYY-MM-DD');
+              const newTask: Task = {
+                id: nanoid(12),
+                projectId: task.projectId,
+                title: task.title,
+                status: 'doing' as any,
+                priority: task.priority,
+                dueDate: due,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                onsiteOwner: task.onsiteOwner,
+                lineOwner: task.lineOwner,
+                nextStep: task.nextStep,
+                tags: task.tags ?? [],
+                notes: task.notes,
+                attachments: [],
+                dependencies: [],
+                history: [],
+                progress: [],
+                extras: { recurring: recurringRaw },
+              };
+              state.tasks.push(newTask);
+            } else if (recurring.type === 'monthly') {
+              const nextMonthStart = now.startOf('month').add(1, 'month');
+              const endOfNextMonth = nextMonthStart.endOf('month');
+              const dom = Math.max(1, Math.min(31, (recurring.dueDom ?? recurring.day ?? 15)));
+              const target = nextMonthStart.date(Math.min(dom, endOfNextMonth.date())).format('YYYY-MM-DD');
+              const due = target;
+              const newTask: Task = {
+                id: nanoid(12),
+                projectId: task.projectId,
+                title: task.title,
+                status: 'doing' as any,
+                priority: task.priority,
+                dueDate: due,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                onsiteOwner: task.onsiteOwner,
+                lineOwner: task.lineOwner,
+                nextStep: task.nextStep,
+                tags: task.tags ?? [],
+                notes: task.notes,
+                attachments: [],
+                dependencies: [],
+                history: [],
+                progress: [],
+                extras: { recurring: recurringRaw },
+              };
+              state.tasks.push(newTask);
+            }
           }
         });
       },
       deleteTask: (id) => {
         withHistory(set, (state) => {
+          const task = state.tasks.find((t) => t.id === id);
+          if (!task) return;
+          const trashId = get().ensureProjectByName('回收站');
+          const from = task.projectId;
+          task.projectId = trashId;
+          task.updatedAt = Date.now();
+          const extras = { ...(task.extras ?? {}) } as Record<string, string>;
+          extras.trashedAt = String(Date.now());
+          extras.trashedFrom = from;
+          task.extras = extras;
+        });
+      },
+      hardDeleteTask: (id) => {
+        withHistory(set, (state) => {
           state.tasks = state.tasks.filter((t) => t.id !== id);
+        });
+      },
+      restoreTask: (id) => {
+        withHistory(set, (state) => {
+          const task = state.tasks.find((t) => t.id === id);
+          if (!task) return;
+          const from = task.extras?.trashedFrom;
+          if (from) {
+            task.projectId = from;
+            const { trashedAt, trashedFrom, ...rest } = task.extras ?? {};
+            task.extras = rest;
+            task.updatedAt = Date.now();
+          }
+        });
+      },
+      purgeTrash: () => {
+        withHistory(set, (state) => {
+          const trashId = state.projects.find((p) => p.name === '回收站')?.id;
+          const days = state.settings.trashRetentionDays ?? 60;
+          const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+          if (!trashId) return;
+          state.tasks = state.tasks.filter((t) => {
+            if (t.projectId !== trashId) return true;
+            const trashedAt = Number(t.extras?.trashedAt ?? '0');
+            return trashedAt > cutoff;
+          });
         });
       },
       bulkUpdateTasks: (ids, updates) => {
@@ -457,11 +554,18 @@ export const useAppStore = create<AppStore>()(
           const newEntry = {
             id: nanoid(10),
             at,
-            status: entry.status,
             note: entry.note.trim(),
             attachments: entry.attachments ?? [],
           };
           task.progress = [...(task.progress ?? []), newEntry];
+          task.updatedAt = Date.now();
+        });
+      },
+      deleteProgress: (id, entryId) => {
+        withHistory(set, (state) => {
+          const task = state.tasks.find((t) => t.id === id);
+          if (!task || !task.progress?.length) return;
+          task.progress = task.progress.filter((e) => e.id !== entryId);
           task.updatedAt = Date.now();
         });
       },
@@ -606,6 +710,10 @@ export const useAppStore = create<AppStore>()(
           }),
           false,
         );
+        // run purge when retention changes
+        if (settings.trashRetentionDays !== undefined) {
+          get().purgeTrash();
+        }
       },
       importTasks: (tasks) => {
         withHistory(set, (state) => {

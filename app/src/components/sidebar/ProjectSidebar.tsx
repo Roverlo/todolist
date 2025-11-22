@@ -14,36 +14,37 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
     filters,
     addProject,
     renameProject,
-    toggleArchiveProject,
     deleteProject,
     setFilters,
+    ensureProjectByName,
   } = useAppStoreShallow((state) => ({
     projects: state.projects,
     tasks: state.tasks,
     filters: state.filters,
     addProject: state.addProject,
     renameProject: state.renameProject,
-    toggleArchiveProject: state.toggleArchiveProject,
     deleteProject: state.deleteProject,
     setFilters: state.setFilters,
+    ensureProjectByName: state.ensureProjectByName,
   }));
 
   const [newProject, setNewProject] = useState('');
-  const [showArchived, setShowArchived] = useState(false);
+  
 
+  const trashId = useMemo(() => projects.find((p) => p.name === '回收站')?.id, [projects]);
+  const visibleTasks = useMemo(() => tasks.filter((t) => t.projectId !== trashId), [tasks, trashId]);
   const counts = useMemo(() => {
-    return tasks.reduce<Record<string, number>>((acc, task) => {
+    return visibleTasks.reduce<Record<string, number>>((acc, task) => {
       acc[task.projectId] = (acc[task.projectId] ?? 0) + 1;
       return acc;
     }, {});
-  }, [tasks]);
+  }, [visibleTasks]);
 
   const filtered = useMemo(() => {
     return [...projects].sort((a, b) => a.name.localeCompare(b.name, 'zh'));
   }, [projects]);
 
-  const activeProjects = filtered.filter((p) => !p.archived);
-  const archivedProjects = filtered.filter((p) => p.archived);
+  const activeProjects = filtered.filter((p) => p.name !== '回收站');
 
   const handleSelect = (project?: Project | 'ALL' | 'UNASSIGNED') => {
     if (project === 'ALL') {
@@ -76,14 +77,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
     }
   };
 
-  const handleToggleArchive = (project: Project) => {
-    const message = project.archived
-      ? '取消归档该项目？'
-      : '归档该项目？';
-    if (confirm(message)) {
-      toggleArchiveProject(project.id);
-    }
-  };
+  
 
   const palette = ['#e6f0ff', '#fff7e6', '#e6fffa', '#fce7f3', '#f0fdf4', '#fef3c7', '#e0f2fe'];
   const colorFor = (key: string) => {
@@ -132,7 +126,6 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
           <button type='button' onClick={handleCreateProject}>新建</button>
         </div>
       </div>
-      
       <div className='project-toolbar'>
         <button
           type='button'
@@ -150,16 +143,6 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
           onClick={() => {
             const p = projects.find(p => p.id === filters.projectId);
             if (!p) return;
-            handleToggleArchive(p);
-          }}
-          title='归档/取消归档'
-        >归档</button>
-        <button
-          type='button'
-          disabled={!projects.find(p => p.id === filters.projectId)}
-          onClick={() => {
-            const p = projects.find(p => p.id === filters.projectId);
-            if (!p) return;
             if (confirm('删除该项目？其任务将移至未分类。')) {
               deleteProject(p.id, { deleteTasks: false });
               setFilters({ projectId: undefined });
@@ -169,6 +152,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
         >删除</button>
       </div>
       <div className='project-list compact'>
+        <div className='sidebar-subheader'>系统视图</div>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
           <colgroup>
             <col />
@@ -187,7 +171,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
               title='汇总所有项目'
             >
               <td>汇总</td>
-              <td style={{ textAlign: 'right', color: '#64748b', fontSize: '12px' }}>{tasks.length} 项</td>
+              <td style={{ textAlign: 'right', color: '#64748b', fontSize: '12px' }}>{visibleTasks.length} 项</td>
             </tr>
             <tr 
               style={{ 
@@ -203,25 +187,43 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
               <td>未分类</td>
               <td style={{ textAlign: 'right', color: '#64748b', fontSize: '12px' }}>{tasks.filter(t => !t.projectId).length} 项</td>
             </tr>
+            {(() => {
+              const trashIdLocal = trashId;
+              const count = trashIdLocal ? tasks.filter(t => t.projectId === trashIdLocal).length : 0;
+              return (
+                <tr 
+                  style={{ 
+                    background: '#fee2e2', 
+                    cursor: 'pointer',
+                    borderRadius: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  className={clsx('project-item', { active: filters.projectId === trashIdLocal })}
+                  onClick={() => {
+                    const id = trashIdLocal ?? ensureProjectByName('回收站');
+                    const proj = projects.find(p => p.id === id);
+                    if (proj) handleSelect(proj);
+                  }}
+                  title='回收站（可恢复或清理）'
+                >
+                  <td>回收站</td>
+                  <td style={{ textAlign: 'right', color: '#b91c1c', fontSize: '12px' }}>{count} 项</td>
+                </tr>
+              );
+            })()}
+          </tbody>
+        </table>
+        <div className='sidebar-subheader' style={{ marginTop: 8 }}>项目列表</div>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
+          <colgroup>
+            <col />
+            <col style={{ width: 60 }} />
+          </colgroup>
+          <tbody>
             {activeProjects.map(renderItem)}
           </tbody>
         </table>
-        <div className='archived-toggle'>
-          <button type='button' onClick={() => setShowArchived((prev) => !prev)}>
-            {showArchived ? '隐藏已归档' : '显示已归档'}
-          </button>
-        </div>
-        {showArchived && (
-          <table className='archived' style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px', marginTop: '8px', paddingTop: '8px', borderTop: '2px solid #000' }}>
-            <colgroup>
-              <col />
-              <col style={{ width: 60 }} />
-            </colgroup>
-            <tbody>
-              {archivedProjects.map(renderItem)}
-            </tbody>
-          </table>
-        )}
+        
       </div>
     </aside>
   );

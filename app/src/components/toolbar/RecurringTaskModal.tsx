@@ -6,18 +6,7 @@ import type { Priority, RecurringTemplate, Status } from '../../types';
 
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
-const dueStrategyOptions: Array<{
-  value: RecurringTemplate['dueStrategy'];
-  label: string;
-  hint: string;
-}> = [
-  { value: 'sameDay', label: '当天', hint: '生成日 = 截止日' },
-  { value: 'endOfWeek', label: '周末', hint: '自动顺延到本周日' },
-  { value: 'endOfMonth', label: '月底', hint: '对齐当月最后一天' },
-  { value: 'none', label: '不设置', hint: '生成后自行补充' },
-];
 
-const defaultAnchorDate = () => dayjs().format('YYYY-MM-DD');
 
 type DefaultFieldKey = 'nextStep' | 'notes';
 
@@ -27,57 +16,40 @@ interface RecurringTaskModalProps {
 }
 
 export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) => {
-  const { projects, addRecurringTemplate, updateRecurringTemplate, materializeRecurringTasks } =
+  const { projects, addTask, filters, setFilters } =
     useAppStoreShallow((state) => ({
       projects: state.projects,
-      addRecurringTemplate: state.addRecurringTemplate,
-      updateRecurringTemplate: state.updateRecurringTemplate,
-      materializeRecurringTasks: state.materializeRecurringTasks,
+      addTask: state.addTask,
+      filters: state.filters,
+      setFilters: state.setFilters,
     }));
 
   const [tpl, setTpl] = useState<RecurringTemplate | null>(null);
+  const [autoRenew, setAutoRenew] = useState<boolean>(true);
 
   const projectName = useMemo(() => {
     if (!tpl) return '';
     return projects.find((p) => p.id === tpl.projectId)?.name ?? '';
   }, [projects, tpl]);
 
-  const scheduleSummary = useMemo(() => {
-    if (!tpl) return '';
-    const interval = Math.max(tpl.schedule.interval ?? 1, 1);
-    const unit = tpl.schedule.type === 'weekly' ? '周' : '月';
-    const prefix = interval > 1 ? `每${interval}${unit}` : `每${unit}`;
-    const anchorLabel = tpl.schedule.anchorDate
-      ? `（自 ${dayjs(tpl.schedule.anchorDate).format('YYYY-MM-DD')} 起）`
-      : '';
-    if (tpl.schedule.type === 'weekly') {
-      const days = (tpl.schedule.daysOfWeek ?? []).sort((a, b) => a - b);
-      if (!days.length) return '请选择执行日';
-      return `${prefix} · ${days.map((d) => `周${WEEK_LABELS[d]}`).join(' / ')}${anchorLabel}`;
-    }
-    return `${prefix} · ${tpl.schedule.dayOfMonth ?? 1} 日${anchorLabel}`;
-  }, [tpl]);
 
   useEffect(() => {
     if (!open) return;
+    const selected = projects.find((p) => p.id === filters.projectId);
+    const isTrash = selected?.name === '回收站';
+    const defaultId = !isTrash && selected ? selected.id : (projects[0]?.id ?? '');
     setTpl({
       id: '',
-      projectId: projects[0]?.id ?? '',
+      projectId: defaultId,
       title: '',
       status: 'paused' as Status,
       priority: 'medium' as Priority,
-      schedule: {
-        type: 'weekly',
-        daysOfWeek: [1],
-        flexible: false,
-        interval: 1,
-        anchorDate: defaultAnchorDate(),
-      },
-      dueStrategy: 'endOfWeek',
+      schedule: { type: 'weekly', daysOfWeek: [5] },
+      dueStrategy: 'none',
       defaults: {},
       active: true,
     });
-  }, [open, projects]);
+  }, [open, projects, filters.projectId]);
 
   const updateDefaults = (key: DefaultFieldKey, value: string) => {
     if (!tpl) return;
@@ -90,24 +62,6 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
     });
   };
 
-  const toggleDay = (day: number) => {
-    if (!tpl) return;
-    const picked = new Set(tpl.schedule.daysOfWeek ?? []);
-    if (picked.has(day)) {
-      picked.delete(day);
-    } else {
-      picked.add(day);
-    }
-    const days = Array.from(picked);
-    if (!days.length) days.push(day);
-    setTpl({
-      ...tpl,
-      schedule: {
-        ...tpl.schedule,
-        daysOfWeek: days.sort((a, b) => a - b),
-      },
-    });
-  };
 
   const switchFrequency = (type: 'weekly' | 'monthly') => {
     if (!tpl) return;
@@ -117,42 +71,61 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
         type === 'weekly'
           ? {
               type: 'weekly',
-              daysOfWeek: (tpl.schedule.daysOfWeek?.length
-                ? [...(tpl.schedule.daysOfWeek ?? [])]
-                : [1]),
-              flexible: tpl.schedule.flexible,
-              interval: tpl.schedule.interval ?? 1,
-              anchorDate: tpl.schedule.anchorDate ?? defaultAnchorDate(),
+              daysOfWeek: (tpl.schedule.daysOfWeek?.length ? [...(tpl.schedule.daysOfWeek ?? [])] : [1]),
             }
           : {
               type: 'monthly',
               dayOfMonth: tpl.schedule.dayOfMonth ?? 1,
-              flexible: tpl.schedule.flexible,
-              interval: tpl.schedule.interval ?? 1,
-              anchorDate: tpl.schedule.anchorDate ?? defaultAnchorDate(),
             },
     });
   };
 
-  const saveTpl = () => {
+  const generateCurrentPeriod = () => {
     if (!tpl) return;
     if (!tpl.title.trim()) {
       alert('请输入名称');
       return;
     }
-    if (!tpl.id) {
-      const saved = addRecurringTemplate(tpl);
-      setTpl(saved);
-      alert('周期规则已保存');
+    const now = dayjs();
+    const startOfWeek = now.subtract((now.day() + 6) % 7, 'day');
+    // removed endOfWeek usage; due date即为选定截止日
+    const startOfMonth = now.startOf('month');
+    const endOfMonth = now.endOf('month');
+    const dates: string[] = [];
+    if (tpl.schedule.type === 'weekly') {
+      const d = (tpl.schedule.daysOfWeek ?? [5])[0];
+      let target = startOfWeek.add(((d + 7) % 7), 'day');
+      if (target.isBefore(now.startOf('day'))) {
+        target = target.add(7, 'day');
+      }
+      dates.push(target.format('YYYY-MM-DD'));
     } else {
-      updateRecurringTemplate(tpl.id, tpl);
-      alert('周期规则已更新');
+      const dom = tpl.schedule.dayOfMonth ?? 15;
+      let target = startOfMonth.date(Math.min(dom, endOfMonth.date()));
+      if (target.isBefore(now.startOf('day'))) {
+        const nextStart = startOfMonth.add(1, 'month');
+        const nextEnd = nextStart.endOf('month');
+        target = nextStart.date(Math.min(dom, nextEnd.date()));
+      }
+      dates.push(target.format('YYYY-MM-DD'));
     }
-  };
-
-  const generateCurrentPeriod = () => {
-    saveTpl();
-    materializeRecurringTasks();
+    const dueFor = (dateStr: string) => dateStr;
+    dates.forEach((dateStr) => {
+      addTask({
+        projectId: tpl!.projectId,
+        title: tpl!.title,
+        status: tpl!.status,
+        priority: tpl!.priority ?? 'medium',
+        dueDate: dueFor(dateStr),
+        onsiteOwner: tpl!.onsiteOwner,
+        lineOwner: tpl!.lineOwner,
+        nextStep: tpl!.defaults?.nextStep,
+        notes: tpl!.defaults?.notes,
+        tags: tpl!.defaults?.tags ?? [],
+        extras: { recurring: JSON.stringify({ type: tpl!.schedule.type, dueWeekday: tpl!.schedule.type==='weekly' ? (tpl!.schedule.daysOfWeek ?? [5])[0] : undefined, dueDom: tpl!.schedule.type==='monthly' ? (tpl!.schedule.dayOfMonth ?? 15) : undefined, autoRenew }) },
+      });
+    });
+    setFilters({ projectId: tpl.projectId, statuses: [], status: 'all' });
     onClose();
     alert('已生成本期任务');
   };
@@ -166,10 +139,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
       footer={
         <div className="modal-actions">
           <button type="button" className="primary-btn" onClick={generateCurrentPeriod}>
-            生成本期任务
-          </button>
-          <button type="button" onClick={saveTpl}>
-            保存周期规则
+            生成周期任务
           </button>
         </div>
       }
@@ -182,7 +152,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                 <h3>基本信息</h3>
                 <p>明确周期任务的归属与展示文案</p>
               </div>
-              <span className="section-chip">{tpl.active ? '模板启用中' : '模板停用'}</span>
+              
             </div>
             <div className="section-grid">
               <div className="field-control">
@@ -269,7 +239,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
             <div className="section-header">
               <div>
                 <h3>计划周期</h3>
-                <p>{scheduleSummary || '选择执行频率与到期策略'}</p>
+                <p>只配置“截止日”，无需执行日</p>
               </div>
             </div>
             <div className="section-grid">
@@ -288,7 +258,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
               {tpl.schedule.type === 'monthly' && (
                 <div className="field-control">
                   <div className="field-label">
-                    <span>执行日</span>
+                    <span>截止日</span>
                     <span className="field-note">1 - 31</span>
                   </div>
                   <input
@@ -310,62 +280,23 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                   />
                 </div>
               )}
-              <div className="field-control">
-                <div className="field-label">
-                  <span>重复节奏</span>
-                  <span className="field-note">支持双周 / 多月任务</span>
-                </div>
-                <div className="interval-editor">
-                  <span>每</span>
-                  <input
-                    type="number"
-                    min={1}
-                    value={tpl.schedule.interval ?? 1}
-                    onChange={(event) => {
-                      const raw = Number(event.target.value);
-                      const safe = Number.isNaN(raw) ? 1 : Math.max(1, raw);
-                      setTpl({
-                        ...tpl,
-                        schedule: { ...tpl.schedule, interval: safe },
-                      });
-                    }}
-                  />
-                  <span>{tpl.schedule.type === 'weekly' ? '周' : '个月'}</span>
-                </div>
-              </div>
-              <div className="field-control">
-                <div className="field-label">
-                  <span>锚点日期</span>
-                  <span className="field-note">决定复杂周期的起点</span>
-                </div>
-                <input
-                  type="date"
-                  value={tpl.schedule.anchorDate ?? defaultAnchorDate()}
-                  onChange={(event) =>
-                    setTpl({
-                      ...tpl,
-                      schedule: { ...tpl.schedule, anchorDate: event.target.value },
-                    })
-                  }
-                />
-              </div>
+              
             </div>
-
             {tpl.schedule.type === 'weekly' && (
               <div className="field-control full">
                 <div className="field-label">
-                  <span>执行日</span>
-                  <span className="field-note">至少选择一个</span>
+                  <span>截止日</span>
+                  <span className="field-note">选择每周的截止星期</span>
                 </div>
                 <div className="day-selector">
                   {WEEK_LABELS.map((label, index) => {
-                    const selected = (tpl.schedule.daysOfWeek ?? []).includes(index);
+                    const selected = (tpl.schedule.daysOfWeek ?? [5])[0] === index;
                     return (
                       <button
                         type="button"
                         key={label}
                         className={`day-pill ${selected ? 'selected' : ''}`}
-                        onClick={() => toggleDay(index)}
+                        onClick={() => setTpl({ ...tpl!, schedule: { type: 'weekly', daysOfWeek: [index] } })}
                       >
                         周{label}
                       </button>
@@ -374,41 +305,12 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                 </div>
               </div>
             )}
-
-            <div className="field-control full">
-              <div className="field-label">
-                <span>到期策略</span>
-                <span className="field-note">决定生成任务的截止日期</span>
-              </div>
-              <div className="segmented-control">
-                {dueStrategyOptions.map((option) => (
-                  <button
-                    type="button"
-                    key={option.value}
-                    className={`segment ${tpl.dueStrategy === option.value ? 'active' : ''}`}
-                    onClick={() => setTpl({ ...tpl, dueStrategy: option.value })}
-                  >
-                    <strong>{option.label}</strong>
-                    <span>{option.hint}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
+            
             <label className="switch-control">
-              <input
-                type="checkbox"
-                checked={!!tpl.schedule.flexible}
-                onChange={(event) =>
-                  setTpl({
-                    ...tpl,
-                    schedule: { ...tpl.schedule, flexible: event.target.checked },
-                  })
-                }
-              />
+              <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} />
               <div>
-                <div>允许跳过/顺延</div>
-                <small>当某周不满足条件时自动跳过或顺延</small>
+                <div>完成后自动续期</div>
+                <small>本周/本月完成后自动生成下一期任务</small>
               </div>
             </label>
           </section>
@@ -423,27 +325,27 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
             <div className="defaults-grid">
               <div className="field-control full">
                 <div className="field-label">
-                  <span>下一步</span>
-                  <span className="field-note">提示协作者的下一行动</span>
+                  <span>详情</span>
+                  <span className="field-note">补充背景或固定注意事项</span>
                 </div>
                 <textarea
-                  className="next-step-textarea"
-                  rows={3}
-                  value={tpl.defaults?.nextStep ?? ''}
-                  onChange={(event) => updateDefaults('nextStep', event.target.value)}
-                  placeholder="把下一阶段的计划写清楚（支持多行）"
+                  rows={4}
+                  value={tpl.defaults?.notes ?? ''}
+                  onChange={(event) => updateDefaults('notes', event.target.value)}
                 />
               </div>
             </div>
             <div className="field-control full">
               <div className="field-label">
-                <span>详情</span>
-                <span className="field-note">补充背景或固定注意事项</span>
+                <span>下一步</span>
+                <span className="field-note">提示协作者的下一行动</span>
               </div>
               <textarea
-                rows={4}
-                value={tpl.defaults?.notes ?? ''}
-                onChange={(event) => updateDefaults('notes', event.target.value)}
+                className="next-step-textarea"
+                rows={3}
+                value={tpl.defaults?.nextStep ?? ''}
+                onChange={(event) => updateDefaults('nextStep', event.target.value)}
+                placeholder="把下一阶段的计划写清楚（支持多行）"
               />
             </div>
           </section>

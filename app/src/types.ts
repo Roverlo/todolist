@@ -63,7 +63,7 @@ export type ProgressStatus = 'doing' | 'blocked' | 'done';
 export interface ProgressEntry {
   id: string;
   at: number;
-  status: ProgressStatus;
+  status?: ProgressStatus;
   note: string;
   attachments?: Attachment[];
 }
@@ -172,6 +172,7 @@ export interface Settings {
   overdueThresholdDays: number;
   colorScheme: 'light' | 'dark' | 'high-contrast';
   undoDepth: number;
+  trashRetentionDays?: number;
 }
 
 export interface SortScheme {
