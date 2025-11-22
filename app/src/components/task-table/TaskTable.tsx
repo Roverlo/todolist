@@ -23,7 +23,6 @@ const columnMeta: Record<
   onsiteOwner: { label: '现场责任人' },
   lineOwner: { label: '产线责任人' },
   tags: { label: '标签' },
-  attachments: { label: '附件' },
 };
 
 const statusLabels: Record<string, string> = {
@@ -47,7 +46,7 @@ const HEADER_RATIOS: Record<string, number> = {
   latestProgress: 0.26,
   nextStep: 0.20,
 };
-const BOTTOM_BASE_FIELDS = ['status','priority','dueDate','onsiteOwner','lineOwner','createdAt','attachments'];
+const BOTTOM_BASE_FIELDS = ['status','priority','dueDate','onsiteOwner','lineOwner','createdAt'];
 
 export interface TaskTableProps {
   onTaskFocus: (taskId: string) => void;
@@ -240,7 +239,7 @@ export const TaskTable = ({
 const computePinnedOffsets = (config: ColumnConfig, widths: Record<string, number>) => {
   const offsets: Record<string, number> = {};
   let offset = 0;
-  config.columns.forEach((column) => {
+  TOP_COLUMNS.forEach((column) => {
     if (config.pinned.includes(column)) {
       offsets[column] = offset;
       offset += widths[column] ?? 160;
@@ -652,8 +651,6 @@ const renderDisplay = (column: string, task: Task, project: Project | undefined,
       return task.progress?.length
         ? task.progress[task.progress.length - 1].note
         : '--';
-    case 'attachments':
-      return `${task.attachments?.length ?? 0} file(s)`;
     default:
       return String(((task as unknown as Record<string, unknown>)[column]) ?? '--');
   }

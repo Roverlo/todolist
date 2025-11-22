@@ -880,7 +880,7 @@ export const useAppStore = create<AppStore>()(
     }),
     {
       name: 'project-todo-app',
-      version: 8,
+      version: 9,
       storage: createJSONStorage(() => {
         if (typeof window === 'undefined') {
           return noopStorage;
@@ -981,6 +981,26 @@ export const useAppStore = create<AppStore>()(
                 anchorDate: tpl.schedule.anchorDate ?? dayjs().format('YYYY-MM-DD'),
               },
             } as RecurringTemplate;
+          });
+        }
+        if (version < 9) {
+          const cols = state.columnConfig?.columns ?? [];
+          const filtered = cols.filter((c) => c !== 'test');
+          const pinned = (state.columnConfig?.pinned ?? []).filter((c) => c !== 'test');
+          const labelsEntries = Object.entries(state.columnConfig?.labels ?? {}).filter(([k]) => k !== 'test');
+          const labels = labelsEntries.length ? Object.fromEntries(labelsEntries) : undefined;
+          const templates = (state.columnConfig?.templates ?? []).map((t) => ({
+            ...t,
+            columns: (t.columns ?? []).filter((c) => c !== 'test'),
+            pinned: (t.pinned ?? []).filter((c) => c !== 'test'),
+          }));
+          state.columnConfig = { ...state.columnConfig, columns: filtered, pinned, labels, templates } as ColumnConfig;
+          state.tasks = (state.tasks ?? []).map((t) => {
+            const extras = { ...(t.extras ?? {}) } as Record<string, string>;
+            if ('test' in extras) {
+              delete extras.test;
+            }
+            return { ...t, extras } as Task;
           });
         }
         return state as any;

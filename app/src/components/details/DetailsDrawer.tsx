@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
-import type { Attachment } from '../../types';
 
 interface DetailsDrawerProps {
   open: boolean;
@@ -45,34 +44,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     );
   }
 
-  const handleAttachmentChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files?.length) return;
-    const attachments = [...(task.attachments ?? [])];
-    for (const file of Array.from(files)) {
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`${file.name} exceeds 10MB, skipped.`);
-        continue;
-      }
-      const dataUrl = await fileToDataUrl(file);
-      attachments.push({
-        id: crypto.randomUUID(),
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        dataUrl,
-        createdAt: Date.now(),
-      });
-    }
-    updateTask(task.id, { attachments });
-  };
-
   
-
-  const removeAttachment = (attachment: Attachment) => {
-    const filtered = (task.attachments ?? []).filter((item) => item.id !== attachment.id);
-    updateTask(task.id, { attachments: filtered });
-  };
 
   const saveNotes = () => {
     updateTask(task.id, { notes, nextStep });
@@ -129,28 +101,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
         </section>
         
         <section>
-          <h4>Attachments</h4>
-          <input type='file' multiple onChange={handleAttachmentChange} />
-          <ul className='attachment-list'>
-            {(task.attachments ?? []).map((attachment) => (
-              <li key={attachment.id}>
-                <span>
-                  {attachment.name} · {(attachment.size / 1024).toFixed(1)} KB
-                </span>
-                <div>
-                  {attachment.dataUrl && (
-                    <a href={attachment.dataUrl} download={attachment.name}>
-                      Download
-                    </a>
-                  )}
-                  <button type='button' onClick={() => removeAttachment(attachment)}>
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-            {!task.attachments?.length && <li className='muted'>No attachments</li>}
-          </ul>
+          
         </section>
         <section>
           <h4>History</h4>
@@ -178,15 +129,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 <div>{dayjs(p.at).format('YYYY-MM-DD')}</div>
                 <div>{p.status}</div>
                 <div>{p.note}</div>
-                {!!p.attachments?.length && (
-                  <ul className='attachment-list'>
-                    {p.attachments.map((a) => (
-                      <li key={a.id}>
-                        <a href={a.dataUrl} download={a.name}>{a.name}</a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                
               </li>
             ))}
             {!task.progress?.length && <li className='muted'>暂无进展记录</li>}
@@ -197,10 +140,3 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   );
 };
 
-const fileToDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });

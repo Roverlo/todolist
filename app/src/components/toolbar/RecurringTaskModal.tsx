@@ -42,7 +42,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
       id: '',
       projectId: defaultId,
       title: '',
-      status: 'paused' as Status,
+      status: 'doing' as Status,
       priority: 'medium' as Priority,
       schedule: { type: 'weekly', daysOfWeek: [5] },
       dueStrategy: 'none',
@@ -239,7 +239,6 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
             <div className="section-header">
               <div>
                 <h3>计划周期</h3>
-                <p>只配置“截止日”，无需执行日</p>
               </div>
             </div>
             <div className="section-grid">
