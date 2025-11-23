@@ -89,30 +89,33 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     onClose();
   };
 
-  const handleAddOrUpdateProgress = (stayEditing: boolean) => {
+  const handleAddOrUpdateProgress = (_stayEditing: boolean) => {
     if (!progressNote.trim()) return;
     const at = dayjs(progressTime).valueOf();
-    if (editingProgressId) {
-      setProgress((prev) =>
-        prev
+    const nextList = editingProgressId
+      ? progress
           .map((p) => (p.id === editingProgressId ? { ...p, note: progressNote.trim(), at } : p))
-          .sort((a, b) => a.at - b.at),
-      );
-    } else {
-      const entry: ProgressEntry = {
-        id: `${Date.now()}`,
-        at,
-        status: 'doing',
-        note: progressNote.trim(),
-      };
-      setProgress((prev) => [...prev, entry].sort((a, b) => a.at - b.at));
-    }
+          .sort((a, b) => a.at - b.at)
+      : [...progress, { id: `${Date.now()}`, at, status: 'doing', note: progressNote.trim() }].sort(
+          (a, b) => a.at - b.at,
+        );
+
+    setProgress(nextList);
     setEditingProgressId(null);
     setProgressNote('');
     setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
-    if (!stayEditing) {
-      handleSaveTask();
-    }
+
+    // 立即持久化到 store，但不关闭抽屉，方便继续填写
+    updateTask(task!.id, {
+      status,
+      priority,
+      dueDate: dueDate || undefined,
+      onsiteOwner: onsiteOwner || undefined,
+      lineOwner: lineOwner || undefined,
+      notes,
+      nextStep,
+      progress: nextList,
+    });
   };
 
   const handleDeleteProgress = (id: string) => {
