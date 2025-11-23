@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 import { ProjectSidebar } from './components/sidebar/ProjectSidebar';
 import { PrimaryToolbar } from './components/toolbar/PrimaryToolbar';
@@ -6,32 +6,26 @@ import { TaskTable } from './components/task-table/TaskTable';
 import { DetailsDrawer } from './components/details/DetailsDrawer';
 import { useAppStore } from './state/appStore';
 import { SingleTaskModal } from './components/toolbar/SingleTaskModal';
-import { ProgressModal } from './components/task/ProgressModal';
+import { RecurringTaskModal } from './components/toolbar/RecurringTaskModal';
+import { ExportModal } from './components/toolbar/ExportModal';
+import { useVisibleTasks } from './hooks/useVisibleTasks';
 
 function App() {
-  
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [progressOpen, setProgressOpen] = useState(false);
+  const [recurringOpen, setRecurringOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
   const purgeTrash = useAppStore((state) => state.purgeTrash);
-  const updateRightGutter = () => {
-    const el = document.createElement('div');
-    el.style.width = '100px';
-    el.style.height = '100px';
-    el.style.overflow = 'scroll';
-    el.style.position = 'absolute';
-    el.style.top = '-9999px';
-    document.body.appendChild(el);
-    const sw = el.offsetWidth - el.clientWidth;
-    document.body.removeChild(el);
-    const base = Math.max(sw, 16) + 32;
-    const val = drawerOpen ? base + 360 : base;
-    document.body.style.setProperty('--right-gutter', `${val}px`);
-  };
+  const { tasks, projectMap } = useVisibleTasks();
+
+  const metrics = useMemo(() => {
+    const doing = tasks.filter((t) => t.status === 'doing').length;
+    return { total: tasks.length, doing };
+  }, [tasks]);
 
   useEffect(() => {
     purgeTrash();
@@ -58,35 +52,78 @@ function App() {
   }, [undo, redo]);
 
   useEffect(() => {
-    updateRightGutter();
-    const onResize = () => updateRightGutter();
-    window.addEventListener('resize', onResize);
-    const dpiObserver = setInterval(() => updateRightGutter(), 500);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      clearInterval(dpiObserver);
-    };
+    return () => {};
   }, [drawerOpen]);
 
   return (
-    <div className={`app-shell theme-${colorScheme} theme-high-contrast ${drawerOpen ? 'drawer-open' : ''}`}>
-      <ProjectSidebar onProjectSelected={() => {}} />
-      <main>
+    <div className={`app theme-${colorScheme}`}>
+      <ProjectSidebar onProjectSelected={() => setDrawerOpen(false)} />
+      <main className='main'>
+        <div className='main-header'>
+          <div className='main-title-block'>
+            <div className='main-title'>
+              <span>任务看板</span>
+              <span className='chip'>共 {metrics.total || 0} 条</span>
+            </div>
+            <div className='main-subtitle'>按截止时间升序</div>
+          </div>
+          <div className='toolbar'>
+            <button
+              className='btn btn-outline'
+              onClick={() => setAddOpen(true)}
+              aria-label='新建单次任务'
+            >
+              新建单次任务
+            </button>
+            <button
+              className='btn btn-outline'
+              onClick={() => setRecurringOpen(true)}
+              aria-label='新建周期任务'
+            >
+              新建周期任务
+            </button>
+            <button
+              className='btn btn-light'
+              onClick={() => setExportOpen(true)}
+              aria-label='导出当前筛选'
+            >
+              导出
+            </button>
+          </div>
+        </div>
+
         <PrimaryToolbar />
-        <TaskTable
-          onTaskFocus={(taskId) => {
-            setActiveTaskId(taskId);
-          }}
-          onOpenProgress={(taskId) => {
-            setActiveTaskId(taskId);
-            setProgressOpen(true);
-          }}
-        />
-        
+
+        <section className='content'>
+          <div className='content-header'>
+            <div className='content-header-left'>
+              <div className='content-header-title'>DOING</div>
+              <div className='content-header-sub'>共 {tasks.length} 条任务 · 按截止时间升序</div>
+            </div>
+            <div className='content-header-tabs'>
+              <button className='tab tab-active'>列表</button>
+              <button className='tab'>看板</button>
+            </div>
+          </div>
+
+          <TaskTable
+            onTaskFocus={(taskId) => {
+              setActiveTaskId(taskId);
+              setDrawerOpen(true);
+            }}
+          />
+        </section>
       </main>
+
       <DetailsDrawer open={drawerOpen} taskId={activeTaskId} onClose={() => setDrawerOpen(false)} />
       <SingleTaskModal open={addOpen} onClose={() => setAddOpen(false)} />
-      <ProgressModal open={progressOpen} taskId={activeTaskId} onClose={() => setProgressOpen(false)} />
+      <RecurringTaskModal open={recurringOpen} onClose={() => setRecurringOpen(false)} />
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        tasks={tasks}
+        projectMap={projectMap}
+      />
     </div>
   );
 }

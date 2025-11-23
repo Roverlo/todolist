@@ -1,14 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
-import { Modal } from '../common/Modal';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, RecurringTemplate, Status } from '../../types';
 
-const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
+const WEEK_OPTIONS = [
+  { value: 1, label: '周一' },
+  { value: 2, label: '周二' },
+  { value: 3, label: '周三' },
+  { value: 4, label: '周四' },
+  { value: 5, label: '周五' },
+  { value: 6, label: '周六' },
+  { value: 0, label: '周日' },
+];
 
+const priorityOptions: { value: Priority; label: string }[] = [
+  { value: 'medium', label: '中' },
+  { value: 'high', label: '高' },
+  { value: 'low', label: '低' },
+];
 
-
-type DefaultFieldKey = 'nextStep' | 'notes';
+const statusOptions: { value: Status; label: string }[] = [
+  { value: 'doing', label: '进行中' },
+  { value: 'paused', label: '挂起' },
+  { value: 'done', label: '已完成' },
+];
 
 interface RecurringTaskModalProps {
   open: boolean;
@@ -16,52 +31,42 @@ interface RecurringTaskModalProps {
 }
 
 export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) => {
-  const { projects, addTask, filters, setFilters } =
-    useAppStoreShallow((state) => ({
-      projects: state.projects,
-      addTask: state.addTask,
-      filters: state.filters,
-      setFilters: state.setFilters,
-    }));
+  const { projects, addTask, filters, setFilters } = useAppStoreShallow((state) => ({
+    projects: state.projects,
+    addTask: state.addTask,
+    filters: state.filters,
+    setFilters: state.setFilters,
+  }));
 
   const [tpl, setTpl] = useState<RecurringTemplate | null>(null);
-  const [autoRenew, setAutoRenew] = useState<boolean>(true);
-
-  const projectName = useMemo(() => {
-    if (!tpl) return '';
-    return projects.find((p) => p.id === tpl.projectId)?.name ?? '';
-  }, [projects, tpl]);
-
+  const [autoRenew, setAutoRenew] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!open) return;
     const selected = projects.find((p) => p.id === filters.projectId);
     const isTrash = selected?.name === '回收站';
-    const defaultId = !isTrash && selected ? selected.id : (projects[0]?.id ?? '');
+    const defaultId = !isTrash && selected ? selected.id : projects[0]?.id ?? '';
     setTpl({
       id: '',
       projectId: defaultId,
       title: '',
-      status: 'doing' as Status,
-      priority: 'medium' as Priority,
-      schedule: { type: 'weekly', daysOfWeek: [5] },
+      status: 'doing',
+      priority: 'medium',
+      schedule: { type: 'weekly', daysOfWeek: [1] },
       dueStrategy: 'none',
       defaults: {},
       active: true,
     });
+    setAutoRenew(true);
+    setError('');
   }, [open, projects, filters.projectId]);
 
-  const updateDefaults = (key: DefaultFieldKey, value: string) => {
-    if (!tpl) return;
-    setTpl({
-      ...tpl,
-      defaults: {
-        ...(tpl.defaults ?? {}),
-        [key]: value,
-      },
-    });
-  };
+  if (!open || !tpl) return null;
 
+  const updateDefaults = (key: 'nextStep' | 'notes', value: string) => {
+    setTpl({ ...tpl, defaults: { ...(tpl.defaults ?? {}), [key]: value } });
+  };
 
   const switchFrequency = (type: 'weekly' | 'monthly') => {
     if (!tpl) return;
@@ -69,38 +74,28 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
       ...tpl,
       schedule:
         type === 'weekly'
-          ? {
-              type: 'weekly',
-              daysOfWeek: (tpl.schedule.daysOfWeek?.length ? [...(tpl.schedule.daysOfWeek ?? [])] : [1]),
-            }
-          : {
-              type: 'monthly',
-              dayOfMonth: tpl.schedule.dayOfMonth ?? 1,
-            },
+          ? { type: 'weekly', daysOfWeek: tpl.schedule.type === 'weekly' ? tpl.schedule.daysOfWeek ?? [1] : [1] }
+          : { type: 'monthly', dayOfMonth: tpl.schedule.type === 'monthly' ? tpl.schedule.dayOfMonth ?? 1 : 1 },
     });
   };
 
   const generateCurrentPeriod = () => {
-    if (!tpl) return;
     if (!tpl.title.trim()) {
-      alert('请输入名称');
+      setError('名称为必填项');
       return;
     }
     const now = dayjs();
     const startOfWeek = now.subtract((now.day() + 6) % 7, 'day');
-    // removed endOfWeek usage; due date即为选定截止日
     const startOfMonth = now.startOf('month');
     const endOfMonth = now.endOf('month');
     const dates: string[] = [];
     if (tpl.schedule.type === 'weekly') {
-      const d = (tpl.schedule.daysOfWeek ?? [5])[0];
-      let target = startOfWeek.add(((d + 7) % 7), 'day');
-      if (target.isBefore(now.startOf('day'))) {
-        target = target.add(7, 'day');
-      }
+      const weekday = (tpl.schedule.daysOfWeek ?? [1])[0];
+      let target = startOfWeek.add((weekday + 7) % 7, 'day');
+      if (target.isBefore(now.startOf('day'))) target = target.add(7, 'day');
       dates.push(target.format('YYYY-MM-DD'));
     } else {
-      const dom = tpl.schedule.dayOfMonth ?? 15;
+      const dom = tpl.schedule.dayOfMonth ?? 1;
       let target = startOfMonth.date(Math.min(dom, endOfMonth.date()));
       if (target.isBefore(now.startOf('day'))) {
         const nextStart = startOfMonth.add(1, 'month');
@@ -109,247 +104,207 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
       }
       dates.push(target.format('YYYY-MM-DD'));
     }
-    const dueFor = (dateStr: string) => dateStr;
     dates.forEach((dateStr) => {
       addTask({
-        projectId: tpl!.projectId,
-        title: tpl!.title,
-        status: tpl!.status,
-        priority: tpl!.priority ?? 'medium',
-        dueDate: dueFor(dateStr),
-        onsiteOwner: tpl!.onsiteOwner,
-        lineOwner: tpl!.lineOwner,
-        nextStep: tpl!.defaults?.nextStep,
-        notes: tpl!.defaults?.notes,
-        tags: tpl!.defaults?.tags ?? [],
-        extras: { recurring: JSON.stringify({ type: tpl!.schedule.type, dueWeekday: tpl!.schedule.type==='weekly' ? (tpl!.schedule.daysOfWeek ?? [5])[0] : undefined, dueDom: tpl!.schedule.type==='monthly' ? (tpl!.schedule.dayOfMonth ?? 15) : undefined, autoRenew }) },
+        projectId: tpl.projectId,
+        title: tpl.title,
+        status: tpl.status,
+        priority: tpl.priority ?? 'medium',
+        dueDate: dateStr,
+        onsiteOwner: tpl.onsiteOwner,
+        lineOwner: tpl.lineOwner,
+        nextStep: tpl.defaults?.nextStep,
+        notes: tpl.defaults?.notes,
+        extras: {
+          recurring: JSON.stringify({
+            type: tpl.schedule.type,
+            dueWeekday: tpl.schedule.type === 'weekly' ? (tpl.schedule.daysOfWeek ?? [1])[0] : undefined,
+            dueDom: tpl.schedule.type === 'monthly' ? tpl.schedule.dayOfMonth ?? 1 : undefined,
+            autoRenew,
+          }),
+        },
       });
     });
     setFilters({ projectId: tpl.projectId, statuses: [], status: 'all' });
     onClose();
-    alert('已生成本期任务');
   };
 
   return (
-    <Modal
-      open={open}
-      title="新建周期任务"
-      onClose={onClose}
-      width={920}
-      footer={
-        <div className="modal-actions">
-          <button type="button" className="primary-btn" onClick={generateCurrentPeriod}>
-            生成周期任务
+    <div className='create-overlay' onClick={onClose}>
+      <div className='create-dialog' style={{ width: 960 }} onClick={(e) => e.stopPropagation()}>
+        <header className='create-dialog-header'>
+          <div className='create-dialog-title-block'>
+            <div className='create-dialog-title'>新建周期任务</div>
+            <div className='create-dialog-subtitle'>适合每周例会、月度报表等固定节奏的工作，系统会按规则自动生成后续任务。</div>
+          </div>
+          <button className='create-btn-icon' aria-label='关闭' type='button' onClick={onClose}>
+            ✕
           </button>
-        </div>
-      }
-    >
-      {tpl && (
-        <div className="recurring-modal">
-          <section className="section-card">
-            <div className="section-header">
-              <div>
-                <h3>基本信息</h3>
-                <p>明确周期任务的归属与展示文案</p>
-              </div>
-              
+        </header>
+
+        <div className='create-dialog-body'>
+          {error && <div className='error-panel' style={{ marginBottom: 12 }}>{error}</div>}
+
+          <section className='create-section'>
+            <div className='create-section-title-row'>
+              <div className='create-section-title'>基本信息</div>
+              <div className='create-section-hint'>先把任务的标签补全，后续筛选、排序会更好用。</div>
             </div>
-            <div className="section-grid">
-              <div className="field-control">
-                <div className="field-label">
-                  <span>项目</span>
-                  <span className="field-note">{projectName || '请选择项目'}</span>
-                </div>
+            <div className='create-form-grid'>
+              <div className='create-field create-field-span-2'>
+                <label className='create-field-label'>名称（用于列表展示）<span>*</span></label>
+                <input
+                  className='create-field-input'
+                  type='text'
+                  value={tpl.title}
+                  placeholder='例如：周例会检查清单'
+                  onChange={(e) => setTpl({ ...tpl, title: e.target.value })}
+                />
+              </div>
+              <div className='create-field'>
+                <label className='create-field-label'>优先级<span>*</span></label>
                 <select
-                  value={tpl.projectId}
-                  onChange={(event) => setTpl({ ...tpl, projectId: event.target.value })}
+                  className='create-field-select'
+                  value={tpl.priority ?? 'medium'}
+                  onChange={(e) => setTpl({ ...tpl, priority: e.target.value as Priority })}
                 >
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
+                  {priorityOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
-              <div className="field-control">
-                <div className="field-label">
-                  <span>名称</span>
-                  <span className="field-note">用于列表展示</span>
-                </div>
+              <div className='create-field'>
+                <label className='create-field-label'>默认现场负责人</label>
                 <input
-                  value={tpl.title}
-                  onChange={(event) => setTpl({ ...tpl, title: event.target.value })}
-                  placeholder="例如：周例会检查清单"
-                />
-              </div>
-              <div className="field-control">
-                <div className="field-label">
-                  <span>状态</span>
-                </div>
-                <select
-                  value={tpl.status}
-                  onChange={(event) => setTpl({ ...tpl, status: event.target.value as Status })}
-                >
-                  <option value="doing">进行中</option>
-                  <option value="done">已完成</option>
-                  <option value="paused">挂起</option>
-                </select>
-              </div>
-              <div className="field-control">
-                <div className="field-label">
-                  <span>优先级</span>
-                </div>
-                <select
-                  value={tpl.priority ?? 'medium'}
-                  onChange={(event) =>
-                    setTpl({ ...tpl, priority: event.target.value as Priority })
-                  }
-                >
-                  <option value="high">高</option>
-                  <option value="medium">中</option>
-                  <option value="low">低</option>
-                </select>
-              </div>
-              <div className="field-control">
-                <div className="field-label">
-                  <span>现场责任人</span>
-                  <span className="field-note">任务生成时自动带入</span>
-                </div>
-                <input
+                  className='create-field-input'
+                  type='text'
                   value={tpl.onsiteOwner ?? ''}
-                  onChange={(event) => setTpl({ ...tpl, onsiteOwner: event.target.value })}
-                  placeholder="可选"
+                  placeholder='新建任务时自动带入，可在单条任务中修改'
+                  onChange={(e) => setTpl({ ...tpl, onsiteOwner: e.target.value })}
                 />
               </div>
-              <div className="field-control">
-                <div className="field-label">
-                  <span>产线责任人</span>
-                  <span className="field-note">方便跨班组协作</span>
-                </div>
+              <div className='create-field'>
+                <label className='create-field-label'>默认产线负责人</label>
                 <input
+                  className='create-field-input'
+                  type='text'
                   value={tpl.lineOwner ?? ''}
-                  onChange={(event) => setTpl({ ...tpl, lineOwner: event.target.value })}
-                  placeholder="可选"
+                  placeholder='例如：产线联络人 / 协作同事'
+                  onChange={(e) => setTpl({ ...tpl, lineOwner: e.target.value })}
                 />
+              </div>
+              <div className='create-field'>
+                <label className='create-field-label'>状态<span>*</span></label>
+                <select
+                  className='create-field-select'
+                  value={tpl.status}
+                  onChange={(e) => setTpl({ ...tpl, status: e.target.value as Status })}
+                >
+                  {statusOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </section>
 
-          <section className="section-card">
-            <div className="section-header">
-              <div>
-                <h3>计划周期</h3>
-              </div>
+          <section className='create-section'>
+            <div className='create-section-title-row'>
+              <div className='create-section-title'>计划周期</div>
+              <div className='create-section-hint'>设置生成新任务的频率和截止日期规则。</div>
             </div>
-            <div className="section-grid">
-              <div className="field-control">
-                <div className="field-label">
-                  <span>频率</span>
-                </div>
+            <div className='create-form-grid'>
+              <div className='create-field'>
+                <label className='create-field-label'>频率<span>*</span></label>
                 <select
+                  className='create-field-select'
                   value={tpl.schedule.type}
-                  onChange={(event) => switchFrequency(event.target.value as 'weekly' | 'monthly')}
+                  onChange={(e) => switchFrequency(e.target.value as 'weekly' | 'monthly')}
                 >
-                  <option value="weekly">每周</option>
-                  <option value="monthly">每月</option>
+                  <option value='weekly'>每周</option>
+                  <option value='monthly'>每月</option>
                 </select>
               </div>
-              {tpl.schedule.type === 'monthly' && (
-                <div className="field-control">
-                  <div className="field-label">
-                    <span>截止日</span>
-                    <span className="field-note">1 - 31</span>
-                  </div>
+              <div className='create-field'>
+                <label className='create-field-label'>截止日（按周计算）</label>
+                {tpl.schedule.type === 'weekly' ? (
+                  <select
+                    className='create-field-select'
+                    value={(tpl.schedule.daysOfWeek ?? [1])[0]}
+                    onChange={(e) =>
+                      setTpl({ ...tpl, schedule: { type: 'weekly', daysOfWeek: [Number(e.target.value)] } })
+                    }
+                  >
+                    {WEEK_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                ) : (
                   <input
-                    type="number"
+                    className='create-field-input'
+                    type='number'
                     min={1}
                     max={31}
                     value={tpl.schedule.dayOfMonth ?? 1}
-                    onChange={(event) => {
-                      const raw = Number(event.target.value);
-                      const safe = Number.isNaN(raw) ? 1 : raw;
+                    onChange={(e) =>
                       setTpl({
                         ...tpl,
-                        schedule: {
-                          ...tpl.schedule,
-                          dayOfMonth: Math.max(1, Math.min(31, safe)),
-                        },
-                      });
-                    }}
+                        schedule: { type: 'monthly', dayOfMonth: Math.min(31, Math.max(1, Number(e.target.value))) },
+                      })
+                    }
                   />
-                </div>
-              )}
-              
+                )}
+              </div>
             </div>
-            {tpl.schedule.type === 'weekly' && (
-              <div className="field-control full">
-                <div className="field-label">
-                  <span>截止日</span>
-                  <span className="field-note">选择每周的截止星期</span>
-                </div>
-                <div className="day-selector">
-                  {WEEK_LABELS.map((label, index) => {
-                    const selected = (tpl.schedule.daysOfWeek ?? [5])[0] === index;
-                    return (
-                      <button
-                        type="button"
-                        key={label}
-                        className={`day-pill ${selected ? 'selected' : ''}`}
-                        onClick={() => setTpl({ ...tpl!, schedule: { type: 'weekly', daysOfWeek: [index] } })}
-                      >
-                        周{label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            
-            <label className="switch-control">
-              <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} />
-              <div>
-                <div>完成后自动续期</div>
-                <small>本周/本月完成后自动生成下一期任务</small>
-              </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13, color: '#4b5563' }}>
+              <input
+                type='checkbox'
+                checked={autoRenew}
+                onChange={(e) => setAutoRenew(e.target.checked)}
+              />
+              <span>完成后自动续期</span>
+              <span style={{ color: '#94a3af', fontSize: 12 }}>本期任务完成后，系统自动生成下一周期任务。</span>
             </label>
           </section>
 
-          <section className="section-card">
-            <div className="section-header">
-              <div>
-                <h3>默认字段</h3>
-                <p>为每次生成的任务预填常用信息</p>
-              </div>
+          <section className='create-section'>
+            <div className='create-section-title-row'>
+              <div className='create-section-title'>默认任务内容</div>
+              <div className='create-section-hint'>为每次生成的任务预填常用信息，可在单条任务中微调。</div>
             </div>
-            <div className="defaults-grid">
-              <div className="field-control full">
-                <div className="field-label">
-                  <span>详情</span>
-                  <span className="field-note">补充背景或固定注意事项</span>
-                </div>
-                <textarea
-                  rows={4}
-                  value={tpl.defaults?.notes ?? ''}
-                  onChange={(event) => updateDefaults('notes', event.target.value)}
-                />
-              </div>
-            </div>
-            <div className="field-control full">
-              <div className="field-label">
-                <span>下一步</span>
-                <span className="field-note">提示协作者的下一行动</span>
-              </div>
+            <div className='create-field create-field-span-2'>
+              <label className='create-field-label'>详情模板</label>
               <textarea
-                className="next-step-textarea"
-                rows={3}
+                className='create-field-textarea'
+                value={tpl.defaults?.notes ?? ''}
+                onChange={(e) => updateDefaults('notes', e.target.value)}
+                placeholder='例如：本周例检查机房云桌面运行状态，汇总异常并反馈。'
+              />
+            </div>
+            <div className='create-field create-field-span-2'>
+              <label className='create-field-label'>下一步计划模板</label>
+              <textarea
+                className='create-field-textarea'
                 value={tpl.defaults?.nextStep ?? ''}
-                onChange={(event) => updateDefaults('nextStep', event.target.value)}
-                placeholder="把下一阶段的计划写清楚（支持多行）"
+                onChange={(e) => updateDefaults('nextStep', e.target.value)}
+                placeholder='例如：完成检查后，在小组群内同步结果，并约定整改截止时间。'
               />
             </div>
           </section>
         </div>
-      )}
-    </Modal>
+
+        <footer className='create-dialog-footer'>
+          <div className='create-footer-meta'>创建后会生成当前周期任务，后续任务会按规则自动生成，可在任务详情调整。</div>
+          <div className='create-footer-actions'>
+            <button className='btn btn-ghost' type='button' onClick={onClose}>
+              取消
+            </button>
+            <button className='btn btn-primary' type='button' onClick={generateCurrentPeriod}>
+              生成周期任务
+            </button>
+          </div>
+        </footer>
+      </div>
+    </div>
   );
 };
