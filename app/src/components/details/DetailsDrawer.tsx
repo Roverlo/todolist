@@ -92,11 +92,11 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   const handleAddOrUpdateProgress = (_stayEditing: boolean) => {
     if (!progressNote.trim()) return;
     const at = dayjs(progressTime).valueOf();
-    const nextList = editingProgressId
+    const nextList: ProgressEntry[] = editingProgressId
       ? progress
-          .map((p) => (p.id === editingProgressId ? { ...p, note: progressNote.trim(), at } : p))
+          .map((p): ProgressEntry => (p.id === editingProgressId ? { ...p, note: progressNote.trim(), at } : p))
           .sort((a, b) => a.at - b.at)
-      : [...progress, { id: `${Date.now()}`, at, status: 'doing', note: progressNote.trim() }].sort(
+      : [...progress, { id: `${Date.now()}`, at, status: 'doing' as const, note: progressNote.trim() }].sort(
           (a, b) => a.at - b.at,
         );
 
