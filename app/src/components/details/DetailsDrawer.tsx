@@ -290,11 +290,8 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 />
               </div>
               <div className='footer-actions' style={{ justifyContent: 'flex-end', marginBottom: 10 }}>
-                <button className='btn btn-ghost' type='button' onClick={() => handleAddOrUpdateProgress(true)}>
-                  {editingProgressId ? '更新进展' : '保存进展'}
-                </button>
                 <button className='btn btn-primary' type='button' onClick={() => handleAddOrUpdateProgress(false)}>
-                  {editingProgressId ? '更新并保存任务' : '保存并继续'}
+                  {editingProgressId ? '更新进展' : '保存并继续'}
                 </button>
               </div>
             </section>

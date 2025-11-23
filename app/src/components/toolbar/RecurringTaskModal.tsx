@@ -226,7 +226,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                 </select>
               </div>
               <div className='create-field'>
-                <label className='create-field-label'>截止日（按周计算）</label>
+                <label className='create-field-label'>截止日期</label>
                 {tpl.schedule.type === 'weekly' ? (
                   <select
                     className='create-field-select'

@@ -65,11 +65,11 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
     <aside className='sidebar'>
       <div>
         <div className='brand'>
-          <div className='brand-avatar'>网</div>
+          <div className='brand-avatar'>待</div>
           <div>
-            <div className='brand-text-title'>网络服务处</div>
-            <div className='brand-text-sub'>luo.fawen@zte.com.cn</div>
-            <div className='brand-text-note'>有任何想法欢迎邮件作者</div>
+            <div className='brand-text-title'>待办事项</div>
+            <div className='brand-text-sub'>网络服务处视频交付科</div>
+            <div className='brand-text-note'>作者luo.fawen@zte.com.cn</div>
           </div>
         </div>
       </div>

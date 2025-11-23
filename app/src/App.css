@@ -614,8 +614,8 @@ body {
 }
 
 .task-row:hover td {
-  background: #eef2ff;
-  border-color: #cbd5f5;
+  background: #d5ecff;
+  border-color: #b7dcff;
 }
 
 .col-main {
@@ -623,11 +623,11 @@ body {
 }
 
 .task-row:nth-child(odd) td {
-  background: #ffffff;
+  background: #e7f7ff;
 }
 
 .task-row:nth-child(even) td {
-  background: #f9fafb;
+  background: #def1ff;
 }
 
 .task-row td {
@@ -637,8 +637,8 @@ body {
 }
 
 .task-row:hover td {
-  background: #eef2ff;
-  border-color: #cbd5f5;
+  background: #d5ecff;
+  border-color: #b7dcff;
   box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
 }
 
