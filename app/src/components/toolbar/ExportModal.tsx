@@ -15,8 +15,6 @@ export const ExportModal = ({ open, onClose, tasks, projectMap }: Props) => {
   const [dir, setDir] = useState<string>('');
   const [name] = useState<string>(defaultName);
 
-  
-
   const pickDir = async () => {
     try {
       const { open } = await import('@tauri-apps/plugin-dialog');
@@ -25,7 +23,7 @@ export const ExportModal = ({ open, onClose, tasks, projectMap }: Props) => {
       else if (Array.isArray(result) && result.length) setDir(result[0]);
     } catch (error) {
       console.error('选择文件夹失败', error);
-      alert('选择文件夹失败，请重试或直接点击“确定”下载 CSV 文件。');
+      alert('选择文件夹失败，请重试，或直接点击“导出”使用默认目录。');
     }
   };
 
@@ -65,27 +63,56 @@ export const ExportModal = ({ open, onClose, tasks, projectMap }: Props) => {
 
   if (!open) return null;
   return (
-    <div className='modal-backdrop'>
-      <div className='modal-panel'>
-        <div className='modal-header'>
-          <h3>导出任务到 CSV</h3>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <label>
-            目标文件夹
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input type='text' value={dir} readOnly />
-              <button type='button' onClick={pickDir}>选择文件夹</button>
+    <div className='create-overlay'>
+      <div className='create-dialog' style={{ width: 520 }}>
+        <header className='create-dialog-header'>
+          <div className='create-dialog-title-block'>
+            <div className='create-dialog-title'>导出任务到 CSV</div>
+            <div className='create-dialog-subtitle'>只需选择导出目录，系统会自动生成文件名。</div>
+          </div>
+          <button className='create-btn-icon' aria-label='关闭导出弹窗' type='button' onClick={onClose}>
+            ✕
+          </button>
+        </header>
+
+        <div className='create-dialog-body' style={{ background: '#fff' }}>
+          <div className='create-section'>
+            <div className='create-field create-field-span-2'>
+              <label className='create-field-label'>
+                目标文件夹<span>*</span>
+              </label>
+              <div className='export-input-row'>
+                <input
+                  className='create-field-input export-input'
+                  type='text'
+                  readOnly
+                  placeholder='例如：C:\Users\Ro\Documents\ProjectTodoExport'
+                  value={dir}
+                />
+                <button className='btn btn-outline' type='button' onClick={pickDir}>
+                  选择目标文件夹
+                </button>
+              </div>
+              <div className='export-hint'>
+                不选择时默认导出到应用当前工作目录，文件名形如 <span className='code-like'>{name}</span>。
+              </div>
             </div>
-          </label>
-          <div>
-            将导出为：<span style={{ fontFamily: 'monospace' }}>{name}</span>
-          </div>
-          <div className='modal-actions'>
-            <button type='button' onClick={onClose}>取消</button>
-            <button type='button' className='primary-btn' onClick={handleConfirm}>确定</button>
+            <div className='export-hint' style={{ marginTop: 6 }}>
+              仅导出当前筛选条件下的任务数据，可随时重新导出覆盖。
+            </div>
           </div>
         </div>
+
+        <footer className='create-dialog-footer'>
+          <div className='create-footer-actions'>
+            <button className='btn btn-ghost' type='button' onClick={onClose}>
+              取消
+            </button>
+            <button className='btn btn-primary' type='button' onClick={handleConfirm}>
+              导出
+            </button>
+          </div>
+        </footer>
       </div>
     </div>
   );
