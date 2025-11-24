@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import './App.css';
 import { ProjectSidebar } from './components/sidebar/ProjectSidebar';
 import { PrimaryToolbar } from './components/toolbar/PrimaryToolbar';
@@ -9,6 +9,8 @@ import { SingleTaskModal } from './components/toolbar/SingleTaskModal';
 import { RecurringTaskModal } from './components/toolbar/RecurringTaskModal';
 import { ExportModal } from './components/toolbar/ExportModal';
 import { useVisibleTasks } from './hooks/useVisibleTasks';
+import { ToastContainer } from './components/ui/Toast';
+import './components/ui/Toast.css';
 
 function App() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -26,6 +28,19 @@ function App() {
     const doing = tasks.filter((t) => t.status === 'doing').length;
     return { total: tasks.length, doing };
   }, [tasks]);
+
+  const handleTaskFocus = useCallback((taskId: string) => {
+    setActiveTaskId(taskId);
+    setDrawerOpen(true);
+  }, []);
+
+  const handleCloseDrawer = useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
+
+  const handleProjectSelected = useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
 
   useEffect(() => {
     purgeTrash();
@@ -87,7 +102,7 @@ function App() {
 
   return (
     <div className={`app theme-${colorScheme}`}>
-      <ProjectSidebar onProjectSelected={() => setDrawerOpen(false)} />
+      <ProjectSidebar onProjectSelected={handleProjectSelected} />
       <main className='main'>
         <div className='main-header'>
           <div className='main-title-block'>
@@ -128,21 +143,16 @@ function App() {
           <div className='content-header'>
             <div className='content-header-left'>
               <div className='content-header-title'>DOING</div>
-              <div className='content-header-sub'>共 {tasks.length} 条任务 · 按截止时间升序</div>
+              <div className='content-header-sub'>共 {metrics.doing} 条任务 · 按截止时间升序</div>
             </div>
           
           </div>
 
-          <TaskTable
-            onTaskFocus={(taskId) => {
-              setActiveTaskId(taskId);
-              setDrawerOpen(true);
-            }}
-          />
+          <TaskTable onTaskFocus={handleTaskFocus} />
         </section>
       </main>
 
-      <DetailsDrawer open={drawerOpen} taskId={activeTaskId} onClose={() => setDrawerOpen(false)} />
+      <DetailsDrawer open={drawerOpen} taskId={activeTaskId} onClose={handleCloseDrawer} />
       <SingleTaskModal open={addOpen} onClose={() => setAddOpen(false)} />
       <RecurringTaskModal open={recurringOpen} onClose={() => setRecurringOpen(false)} />
       <ExportModal
@@ -151,6 +161,7 @@ function App() {
         tasks={tasks}
         projectMap={projectMap}
       />
+      <ToastContainer />
     </div>
   );
 }
