@@ -82,9 +82,15 @@ export const TaskRow = memo(({
     onTaskFocus(task.id);
   };
 
+  const priorityClass = {
+    high: 'border-l-priority-high',
+    medium: 'border-l-priority-medium',
+    low: 'border-l-priority-low',
+  }[task.priority ?? 'medium'];
+
   return (
     <tr className='task-row' onClick={handleRowClick}>
-      <td className='col-main'>
+      <td className={`col-main ${priorityClass}`}>
         <div className='project-name'>{project?.name ?? '未分类'}</div>
         <div className='task-title-main'>{task.title}</div>
         <div className='task-tags-row'>
@@ -114,7 +120,7 @@ export const TaskRow = memo(({
       </td>
       <td className='col-text'>
         <div className='field-label'>详情</div>
-        <div className='field-text'>{task.notes ?? '--'}</div>
+        <div className='field-text'>{task.notes || '--'}</div>
       </td>
       <td className='col-text'>
         <div className='field-label'>最近进展</div>
@@ -122,7 +128,7 @@ export const TaskRow = memo(({
       </td>
       <td className='col-text'>
         <div className='field-label'>下一步计划</div>
-        <div className='field-text'>{task.nextStep ?? '--'}</div>
+        <div className='field-text'>{task.nextStep || '--'}</div>
       </td>
       <td className='col-meta'>
         <MetaBlock task={task} />

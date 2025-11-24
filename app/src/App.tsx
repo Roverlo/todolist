@@ -114,14 +114,14 @@ function App() {
           </div>
           <div className='toolbar'>
             <button
-              className='btn btn-outline'
+              className='btn btn-primary-bold'
               onClick={() => setAddOpen(true)}
               aria-label='新建单次任务'
             >
               新建单次任务
             </button>
             <button
-              className='btn btn-outline'
+              className='btn btn-primary-bold'
               onClick={() => setRecurringOpen(true)}
               aria-label='新建周期任务'
             >

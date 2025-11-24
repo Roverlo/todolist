@@ -40,21 +40,14 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
     {
       key: 'ALL' as const,
       label: '汇总',
-      hint: '包含当前账户下的所有任务',
+      hint: '',
       icon: '汇',
       count: tasks.length,
     },
     {
-      key: 'UNASSIGNED' as const,
-      label: '未分类',
-      hint: '还没分配到项目的任务',
-      icon: '未',
-      count: tasks.filter((t) => !t.projectId).length,
-    },
-    {
       key: 'TRASH' as const,
       label: '回收站',
-      hint: '30 天内自动清理',
+      hint: '默认保留 30 天',
       icon: '回',
       count: trashId ? tasks.filter((t) => t.projectId === trashId).length : 0,
     },
@@ -67,7 +60,6 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
 
   const handleSelectSystem = (key: 'ALL' | 'UNASSIGNED' | 'TRASH') => {
     if (key === 'ALL') setFilters({ projectId: undefined });
-    if (key === 'UNASSIGNED') setFilters({ projectId: 'UNASSIGNED' as string });
     if (key === 'TRASH') {
       const id = trashId ?? ensureProjectByName('回收站');
       setFilters({ projectId: id });
@@ -100,10 +92,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
       <div className='sidebar-group'>
         <div className='system-panel'>
           <div className='system-header'>
-            <div>
-              <div className='system-title'>系统视图</div>
-              <div className='system-subtitle'>按视图快速查看不同范围的任务。</div>
-            </div>
+            <div className='system-title'>系统视图</div>
             <span className='system-stats-pill'>共 {totalSystemCount} 项</span>
           </div>
 
@@ -111,7 +100,6 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
             {systemItems.map((item) => {
               const isActive =
                 (item.key === 'ALL' && filters.projectId === undefined) ||
-                (item.key === 'UNASSIGNED' && filters.projectId === ('UNASSIGNED' as string)) ||
                 (item.key === 'TRASH' && filters.projectId === trashId);
               const isRecycle = item.key === 'TRASH';
               return (
@@ -126,7 +114,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
                     <div className='system-icon'>{item.icon}</div>
                     <div className='system-label-block'>
                       <div className='system-name'>{item.label}</div>
-                      <div className='system-hint'>{item.hint}</div>
+                      {item.hint && <div className='system-hint'>{item.hint}</div>}
                     </div>
                   </div>
                   <div className='system-count-pill'>{item.count} 项</div>
