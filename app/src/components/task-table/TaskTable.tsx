@@ -62,7 +62,17 @@ export const TaskTable = ({ onTaskFocus }: TaskTableProps) => {
                 <div className='project-name'>{project?.name ?? '未分类'}</div>
                 <div className='task-title-main'>{task.title}</div>
                 <div className='task-tags-row'>
-                  <span className='tag-pill tag-status-doing'>{statusLabel[task.status]}</span>
+                  <span
+                    className={`tag-pill ${
+                      task.status === 'done'
+                        ? 'tag-status-done'
+                        : task.status === 'paused'
+                        ? 'tag-status-paused'
+                        : 'tag-status-doing'
+                    }`}
+                  >
+                    {statusLabel[task.status]}
+                  </span>
                   <span
                     className={`tag-pill ${
                       task.priority === 'high'

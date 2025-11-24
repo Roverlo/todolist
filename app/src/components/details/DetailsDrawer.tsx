@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
@@ -23,11 +23,10 @@ const priorityOptions: { value: Priority; label: string; tone?: 'danger' }[] = [
 ];
 
 export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => {
-  const { tasks, projects, updateTask, deleteTask } = useAppStoreShallow((state) => ({
+  const { tasks, projects, updateTask } = useAppStoreShallow((state) => ({
     tasks: state.tasks,
     projects: state.projects,
     updateTask: state.updateTask,
-    deleteTask: state.deleteTask,
   }));
 
   const task = useMemo(() => tasks.find((item) => item.id === taskId), [tasks, taskId]);
@@ -48,6 +47,22 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   const [progressTime, setProgressTime] = useState(() => dayjs().format('YYYY-MM-DDTHH:mm'));
   const [editingProgressId, setEditingProgressId] = useState<string | null>(null);
 
+  const notesRef = useRef<HTMLTextAreaElement | null>(null);
+  const nextRef = useRef<HTMLTextAreaElement | null>(null);
+  const progressRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const resize = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useLayoutEffect(() => {
+    resize(notesRef.current);
+    resize(nextRef.current);
+    resize(progressRef.current);
+  }, [notes, nextStep, progressNote, open]);
+
   useEffect(() => {
     if (task) {
       setStatus(task.status);
@@ -62,6 +77,9 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       setProgressNote('');
       setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
       setEditingProgressId(null);
+      resize(notesRef.current);
+      resize(nextRef.current);
+      resize(progressRef.current);
     }
   }, [task]);
 
@@ -247,7 +265,11 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 <textarea
                   className='field-textarea'
                   value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
+                  ref={notesRef}
+                  onChange={(event) => {
+                    setNotes(event.target.value);
+                    resize(notesRef.current);
+                  }}
                   placeholder='例如：当前已经完成了哪些工作，还有哪些待处理…'
                 />
               </div>
@@ -256,7 +278,11 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 <textarea
                   className='field-textarea'
                   value={nextStep}
-                  onChange={(event) => setNextStep(event.target.value)}
+                  ref={nextRef}
+                  onChange={(event) => {
+                    setNextStep(event.target.value);
+                    resize(nextRef.current);
+                  }}
                   placeholder='例如：下周一前补齐案例，并提交知识库…'
                 />
               </div>
@@ -285,13 +311,17 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 <textarea
                   className='field-textarea'
                   value={progressNote}
-                  onChange={(event) => setProgressNote(event.target.value)}
+                  ref={progressRef}
+                  onChange={(event) => {
+                    setProgressNote(event.target.value);
+                    resize(progressRef.current);
+                  }}
                   placeholder='例如：已完成环境部署，正在联调接口…'
                 />
               </div>
               <div className='footer-actions' style={{ justifyContent: 'flex-end', marginBottom: 10 }}>
-                <button className='btn btn-primary' type='button' onClick={() => handleAddOrUpdateProgress(false)}>
-                  {editingProgressId ? '更新进展' : '保存并继续'}
+                <button className='btn btn-primary-outline' type='button' onClick={() => handleAddOrUpdateProgress(false)}>
+                  {editingProgressId ? '更新进展' : '添加该进展到记录'}
                 </button>
               </div>
             </section>
@@ -335,13 +365,10 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
         <footer className='dialog-footer'>
           <div className='footer-meta'>上次更新：{lastUpdated}</div>
           <div className='footer-actions'>
-            <button className='btn btn-danger-text' type='button' onClick={() => deleteTask(task.id)}>
-              删除任务
-            </button>
             <button className='btn btn-ghost' type='button' onClick={onClose}>
               取消
             </button>
-            <button className='btn btn-primary' type='button' onClick={handleSaveTask}>
+            <button className='btn btn-primary-outline' type='button' onClick={handleSaveTask}>
               保存修改
             </button>
           </div>

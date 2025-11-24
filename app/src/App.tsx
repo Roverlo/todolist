@@ -100,10 +100,7 @@ function App() {
               <div className='content-header-title'>DOING</div>
               <div className='content-header-sub'>共 {tasks.length} 条任务 · 按截止时间升序</div>
             </div>
-            <div className='content-header-tabs'>
-              <button className='tab tab-active'>列表</button>
-              <button className='tab'>看板</button>
-            </div>
+          
           </div>
 
           <TaskTable

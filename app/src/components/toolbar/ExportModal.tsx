@@ -104,8 +104,8 @@ export const ExportModal = ({ open, onClose, tasks, projectMap }: Props) => {
         </div>
 
         <footer className='create-dialog-footer'>
-          <div className='create-footer-actions'>
-            <button className='btn btn-ghost' type='button' onClick={onClose}>
+          <div className='create-footer-actions export-footer-actions'>
+            <button className='btn btn-light' type='button' onClick={onClose}>
               取消
             </button>
             <button className='btn btn-primary' type='button' onClick={handleConfirm}>
