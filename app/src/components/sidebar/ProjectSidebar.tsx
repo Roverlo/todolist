@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useAppStoreShallow } from '../../state/appStore';
 
@@ -61,6 +61,10 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
     onProjectSelected?.();
   };
 
+  const [creatingName, setCreatingName] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
   return (
     <aside className='sidebar'>
       <div>
@@ -81,7 +85,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
             <button
               key={item.key}
               type='button'
-              className={clsx('sidebar-item', {
+              className={clsx('sidebar-item system-item', {
                 'sidebar-item-active':
                   (item.key === 'ALL' && filters.projectId === undefined) ||
                   (item.key === 'UNASSIGNED' && filters.projectId === ('UNASSIGNED' as string)) ||
@@ -89,7 +93,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
               })}
               onClick={() => handleSelectSystem(item.key)}
             >
-              <span>{item.label}</span>
+              <span className='sidebar-item-name'>{item.label}</span>
               <span className='pill-counter'>{item.count} 项</span>
             </button>
           ))}
@@ -98,67 +102,95 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
 
       <div className='sidebar-group'>
         <div className='section-title-row'>
-          <div className='section-title' style={{ marginBottom: 0 }}>
-            项目列表
-          </div>
+          <div className='section-title' style={{ marginBottom: 0 }}>项目列表</div>
+        </div>
+        
+        <div className='project-create-row'>
+          <input
+            className='input'
+            placeholder='输入新项目名称...'
+            value={creatingName}
+            onChange={(e) => setCreatingName(e.target.value)}
+          />
           <button
-            className='btn btn-section'
+            className='btn btn-primary-outline project-create-btn'
             type='button'
+            disabled={!creatingName.trim()}
             onClick={() => {
-              const name = prompt('新建项目');
-              if (name && name.trim()) addProject(name.trim());
+              const name = creatingName.trim();
+              if (name) {
+                addProject(name);
+                setCreatingName('');
+              }
             }}
           >
-            新建项目
+            新建
           </button>
         </div>
-        <div className='sidebar-subnote'>
-          在这里切换具体项目，右侧任务列表会跟着切换。新建项目后会出现在下方列表中。
-        </div>
-        <div className='sidebar-list sidebar-project-list'>
+        
+        <div className='project-list-wrapper'>
+          <div className='project-list'>
           {projects
             .filter((p) => p.name !== '回收站')
             .map((project) => (
-              <button
+              <div
                 key={project.id}
-                type='button'
                 className={clsx('sidebar-item', { 'sidebar-item-active': filters.projectId === project.id })}
                 onClick={() => handleSelectProject(project.id)}
               >
-                <div className='sidebar-item-main'>
-                  <span className='sidebar-item-name'>{project.name}</span>
-                  <span className='pill-counter'>{counts[project.id] ?? 0}</span>
+                <div className='ps-project-main'>
+                  {editingId === project.id ? (
+                    <input
+                      className='input'
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                    />
+                  ) : (
+                    <div className='ps-project-name'>{project.name}</div>
+                  )}
+                  <div className='ps-project-meta-row'>
+                    <div className='ps-meta-left'>
+                      <span className='count-pill'>{(counts[project.id] ?? 0)} 条任务</span>
+                    </div>
+                    <div className='ps-btn-row'>
+                      <button
+                        type='button'
+                        className='ps-icon-btn'
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (editingId === project.id) {
+                            const name = editingName.trim();
+                            if (name) renameProject(project.id, name);
+                            setEditingId(null);
+                            setEditingName('');
+                          } else {
+                            setEditingId(project.id);
+                            setEditingName(project.name);
+                          }
+                        }}
+                      >
+                        {editingId === project.id ? '保存' : '重命名'}
+                      </button>
+                      <button
+                        type='button'
+                        className='ps-icon-btn ps-btn-danger'
+                        title='删除或归档项目'
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (confirm('删除该项目？任务会移动到未分类')) {
+                            deleteProject(project.id, { deleteTasks: false });
+                            setFilters({ projectId: undefined });
+                          }
+                        }}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className='sidebar-item-actions'>
-                  <button
-                    type='button'
-                    className='btn-mini'
-                    title='重命名项目'
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      const next = prompt('重命名项目', project.name);
-                      if (next && next.trim()) renameProject(project.id, next.trim());
-                    }}
-                  >
-                    编辑
-                  </button>
-                  <button
-                    type='button'
-                    className='btn-mini'
-                    title='删除或归档项目'
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (confirm('删除该项目？任务会移动到未分类')) {
-                        deleteProject(project.id, { deleteTasks: false });
-                        setFilters({ projectId: undefined });
-                      }
-                    }}
-                  >
-                    删除
-                  </button>
-                </div>
-              </button>
+              </div>
             ))}
+          </div>
         </div>
       </div>
 
