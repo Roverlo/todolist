@@ -32,14 +32,24 @@ function App() {
     const handler = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isEditableElement = () => {
-        if (!target) return false;
+        if (!target || !(target instanceof HTMLElement)) return false;
         const tag = target.tagName;
-        const editableTags = ['INPUT', 'TEXTAREA', 'SELECT'];
         const contentEditable = target.getAttribute('contenteditable');
         if (contentEditable && contentEditable.toLowerCase() === 'true') return true;
-        if (editableTags.includes(tag)) {
-          const el = target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+        if (tag === 'TEXTAREA') {
+          const el = target as HTMLTextAreaElement;
           return !(el.readOnly || el.disabled);
+        }
+        if (tag === 'INPUT') {
+          const el = target as HTMLInputElement;
+          const nonTextTypes = ['button', 'submit', 'reset', 'checkbox', 'radio', 'file'];
+          if (nonTextTypes.includes(el.type)) return false;
+          return !(el.readOnly || el.disabled);
+        }
+        if (tag === 'SELECT') {
+          const el = target as HTMLSelectElement;
+          return !el.disabled;
         }
         return false;
       };
