@@ -37,14 +37,33 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
   }, [visibleTasks]);
 
   const systemItems = [
-    { key: 'ALL' as const, label: '汇总', count: visibleTasks.length },
-    { key: 'UNASSIGNED' as const, label: '未分类', count: tasks.filter((t) => !t.projectId).length },
+    {
+      key: 'ALL' as const,
+      label: '汇总',
+      hint: '包含当前账户下的所有任务',
+      icon: '汇',
+      count: tasks.length,
+    },
+    {
+      key: 'UNASSIGNED' as const,
+      label: '未分类',
+      hint: '还没分配到项目的任务',
+      icon: '未',
+      count: tasks.filter((t) => !t.projectId).length,
+    },
     {
       key: 'TRASH' as const,
       label: '回收站',
+      hint: '30 天内自动清理',
+      icon: '回',
       count: trashId ? tasks.filter((t) => t.projectId === trashId).length : 0,
     },
   ];
+
+  const totalSystemCount = useMemo(
+    () => systemItems.find((item) => item.key === 'ALL')?.count ?? 0,
+    [systemItems],
+  );
 
   const handleSelectSystem = (key: 'ALL' | 'UNASSIGNED' | 'TRASH') => {
     if (key === 'ALL') setFilters({ projectId: undefined });
@@ -79,24 +98,42 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
       </div>
 
       <div className='sidebar-group'>
-        <div className='section-title'>系统视图</div>
-        <div className='sidebar-list'>
-          {systemItems.map((item) => (
-            <button
-              key={item.key}
-              type='button'
-              className={clsx('sidebar-item system-item', {
-                'sidebar-item-active':
-                  (item.key === 'ALL' && filters.projectId === undefined) ||
-                  (item.key === 'UNASSIGNED' && filters.projectId === ('UNASSIGNED' as string)) ||
-                  (item.key === 'TRASH' && filters.projectId === trashId),
-              })}
-              onClick={() => handleSelectSystem(item.key)}
-            >
-              <span className='sidebar-item-name'>{item.label}</span>
-              <span className='pill-counter'>{item.count} 项</span>
-            </button>
-          ))}
+        <div className='system-panel'>
+          <div className='system-header'>
+            <div>
+              <div className='system-title'>系统视图</div>
+              <div className='system-subtitle'>按视图快速查看不同范围的任务。</div>
+            </div>
+            <span className='system-stats-pill'>共 {totalSystemCount} 项</span>
+          </div>
+
+          <div className='system-list'>
+            {systemItems.map((item) => {
+              const isActive =
+                (item.key === 'ALL' && filters.projectId === undefined) ||
+                (item.key === 'UNASSIGNED' && filters.projectId === ('UNASSIGNED' as string)) ||
+                (item.key === 'TRASH' && filters.projectId === trashId);
+              const isRecycle = item.key === 'TRASH';
+              return (
+                <button
+                  key={item.key}
+                  type='button'
+                  className={clsx('system-item', { active: isActive, recycle: isRecycle })}
+                  title={item.hint}
+                  onClick={() => handleSelectSystem(item.key)}
+                >
+                  <div className='system-main'>
+                    <div className='system-icon'>{item.icon}</div>
+                    <div className='system-label-block'>
+                      <div className='system-name'>{item.label}</div>
+                      <div className='system-hint'>{item.hint}</div>
+                    </div>
+                  </div>
+                  <div className='system-count-pill'>{item.count} 项</div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
