@@ -30,6 +30,26 @@ function App() {
   useEffect(() => {
     purgeTrash();
     const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isEditableElement = () => {
+        if (!target) return false;
+        const tag = target.tagName;
+        const editableTags = ['INPUT', 'TEXTAREA', 'SELECT'];
+        const contentEditable = target.getAttribute('contenteditable');
+        if (contentEditable && contentEditable.toLowerCase() === 'true') return true;
+        if (editableTags.includes(tag)) {
+          const el = target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+          return !(el.readOnly || el.disabled);
+        }
+        return false;
+      };
+
+      // 防止 Backspace 在非输入场景触发浏览器回退
+      if (event.key === 'Backspace' && !isEditableElement()) {
+        event.preventDefault();
+        return;
+      }
+
       if (event.ctrlKey && event.key.toLowerCase() === 'z' && !event.shiftKey) {
         event.preventDefault();
         undo();
