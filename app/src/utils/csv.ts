@@ -14,7 +14,6 @@ const CSV_COLUMNS = [
   'updatedAt',
   'onsiteOwner',
   'lineOwner',
-  'tags',
 ] as const;
 
 const CSV_HEADERS_CN: Record<(typeof CSV_COLUMNS)[number], string> = {
@@ -30,7 +29,6 @@ const CSV_HEADERS_CN: Record<(typeof CSV_COLUMNS)[number], string> = {
   updatedAt: '更新日期',
   onsiteOwner: '现场负责人',
   lineOwner: '产线负责人',
-  tags: '标签',
 };
 
 export const exportTasksToCsv = (
@@ -83,8 +81,6 @@ const getFieldValue = (
       return task.nextStep ?? '';
     case 'notes':
       return task.notes ?? '';
-    case 'tags':
-      return (task.tags ?? []).join(',');
     default:
       return '';
   }

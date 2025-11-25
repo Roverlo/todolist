@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, Status } from '../../types';
+import { CustomSelect } from '../ui/CustomSelect';
 
 export const PrimaryToolbar = () => {
   const { filters, setFilters, dictionary } = useAppStoreShallow((state) => ({
@@ -35,6 +36,31 @@ export const PrimaryToolbar = () => {
     });
   };
 
+  // Options preparation
+  const stageOptions = [
+    { value: 'all', label: '全部' },
+    { value: 'doing', label: '进行中' },
+    { value: 'paused', label: '挂起' },
+    { value: 'done', label: '已完成' },
+  ];
+
+  const priorityOptions = [
+    { value: 'all', label: '全部' },
+    { value: 'high', label: '高' },
+    { value: 'medium', label: '中' },
+    { value: 'low', label: '低' },
+  ];
+
+  const onsiteOwnerOptions = [
+    { value: '', label: '全部' },
+    ...dictionary.onsiteOwners.map((o) => ({ value: o, label: o })),
+  ];
+
+  const lineOwnerOptions = [
+    { value: '', label: '全部' },
+    ...dictionary.lineOwners.map((o) => ({ value: o, label: o })),
+  ];
+
   return (
     <div className='filters-card'>
       <div className='filters-row-top'>
@@ -65,11 +91,11 @@ export const PrimaryToolbar = () => {
       <div className='filters-row-bottom'>
         <div className='filter-item'>
           <span className='filter-label'>当前阶段</span>
-          <select
-            className='filter-control'
+          <CustomSelect
             value={stage}
-            onChange={(event) => {
-              const value = event.target.value as Status | 'all';
+            options={stageOptions}
+            onChange={(val) => {
+              const value = val as Status | 'all';
               setStage(value);
               if (value === 'all') {
                 setFilters({ status: 'all' });
@@ -77,59 +103,35 @@ export const PrimaryToolbar = () => {
                 setFilters({ status: value, statuses: [value] });
               }
             }}
-          >
-            <option value='all'>全部</option>
-            <option value='doing'>进行中</option>
-            <option value='paused'>挂起</option>
-            <option value='done'>已完成</option>
-          </select>
+          />
         </div>
         <div className='filter-item'>
           <span className='filter-label'>优先级</span>
-          <select
-            className='filter-control'
+          <CustomSelect
             value={filters.priority ?? 'all'}
-            onChange={(event) =>
+            options={priorityOptions}
+            onChange={(val) =>
               setFilters({
-                priority: event.target.value === 'all' ? 'all' : (event.target.value as Priority),
+                priority: val === 'all' ? 'all' : (val as Priority),
               })
             }
-          >
-            <option value='all'>全部</option>
-            <option value='high'>高</option>
-            <option value='medium'>中</option>
-            <option value='low'>低</option>
-          </select>
+          />
         </div>
         <div className='filter-item'>
           <span className='filter-label'>现场责任人</span>
-          <select
-            className='filter-control'
+          <CustomSelect
             value={filters.onsiteOwner ?? ''}
-            onChange={(event) => setFilters({ onsiteOwner: event.target.value || undefined })}
-          >
-            <option value=''>全部</option>
-            {dictionary.onsiteOwners.map((owner) => (
-              <option key={owner} value={owner}>
-                {owner}
-              </option>
-            ))}
-          </select>
+            options={onsiteOwnerOptions}
+            onChange={(val) => setFilters({ onsiteOwner: val || undefined })}
+          />
         </div>
         <div className='filter-item'>
           <span className='filter-label'>产线责任人</span>
-          <select
-            className='filter-control'
+          <CustomSelect
             value={filters.lineOwner ?? ''}
-            onChange={(event) => setFilters({ lineOwner: event.target.value || undefined })}
-          >
-            <option value=''>全部</option>
-            {dictionary.lineOwners.map((owner) => (
-              <option key={owner} value={owner}>
-                {owner}
-              </option>
-            ))}
-          </select>
+            options={lineOwnerOptions}
+            onChange={(val) => setFilters({ lineOwner: val || undefined })}
+          />
         </div>
         <div className='filter-item'>
           <span className='filter-label'>截止日期 起</span>

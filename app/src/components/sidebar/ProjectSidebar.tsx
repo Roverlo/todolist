@@ -47,7 +47,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
     {
       key: 'TRASH' as const,
       label: '回收站',
-      hint: '默认保留 30 天',
+      hint: '仅保留 30 天',
       icon: '回',
       count: trashId ? tasks.filter((t) => t.projectId === trashId).length : 0,
     },

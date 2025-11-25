@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, Status } from '../../types';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface SingleTaskModalProps {
   open: boolean;
@@ -38,6 +39,9 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
   const [lineOwner, setLineOwner] = useState('');
   const [nextStep, setNextStep] = useState('');
   const [error, setError] = useState('');
+
+  // Project options for CustomSelect
+  const projectOptions = projects.map((p) => ({ value: p.id, label: p.name }));
 
   useEffect(() => {
     if (open) {
@@ -110,29 +114,22 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
                 <label className='create-field-label'>
                   项目<span>*</span>
                 </label>
-                <select className='create-field-select' value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={projectId}
+                  options={projectOptions}
+                  onChange={(val) => setProjectId(val)}
+                  placeholder="选择项目"
+                />
               </div>
               <div className='create-field'>
                 <label className='create-field-label'>
                   状态<span>*</span>
                 </label>
-                <select
-                  className='create-field-select'
+                <CustomSelect
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as Status)}
-                >
-                  {statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  options={statusOptions}
+                  onChange={(val) => setStatus(val as Status)}
+                />
               </div>
               <div className='create-field create-field-span-2'>
                 <label className='create-field-label'>
@@ -151,17 +148,11 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
                 <label className='create-field-label'>
                   优先级<span>*</span>
                 </label>
-                <select
-                  className='create-field-select'
+                <CustomSelect
                   value={priority}
-                  onChange={(e) => setPriority(e.target.value as Priority)}
-                >
-                  {priorityOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  options={priorityOptions}
+                  onChange={(val) => setPriority(val as Priority)}
+                />
               </div>
               <div className='create-field'>
                 <label className='create-field-label'>截止日期</label>

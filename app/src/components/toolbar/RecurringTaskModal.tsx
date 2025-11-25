@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, RecurringTemplate, Status } from '../../types';
+import { CustomSelect } from '../ui/CustomSelect';
 
 const WEEK_OPTIONS = [
-  { value: 1, label: '周一' },
-  { value: 2, label: '周二' },
-  { value: 3, label: '周三' },
-  { value: 4, label: '周四' },
-  { value: 5, label: '周五' },
-  { value: 6, label: '周六' },
-  { value: 0, label: '周日' },
+  { value: '1', label: '周一' },
+  { value: '2', label: '周二' },
+  { value: '3', label: '周三' },
+  { value: '4', label: '周四' },
+  { value: '5', label: '周五' },
+  { value: '6', label: '周六' },
+  { value: '0', label: '周日' },
 ];
 
 const priorityOptions: { value: Priority; label: string }[] = [
@@ -23,6 +24,11 @@ const statusOptions: { value: Status; label: string }[] = [
   { value: 'doing', label: '进行中' },
   { value: 'paused', label: '挂起' },
   { value: 'done', label: '已完成' },
+];
+
+const frequencyOptions = [
+  { value: 'weekly', label: '每周' },
+  { value: 'monthly', label: '每月' },
 ];
 
 interface RecurringTaskModalProps {
@@ -163,15 +169,11 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
               </div>
               <div className='create-field'>
                 <label className='create-field-label'>优先级<span>*</span></label>
-                <select
-                  className='create-field-select'
+                <CustomSelect
                   value={tpl.priority ?? 'medium'}
-                  onChange={(e) => setTpl({ ...tpl, priority: e.target.value as Priority })}
-                >
-                  {priorityOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                  options={priorityOptions}
+                  onChange={(val) => setTpl({ ...tpl, priority: val as Priority })}
+                />
               </div>
               <div className='create-field'>
                 <label className='create-field-label'>默认现场负责人</label>
@@ -195,15 +197,11 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
               </div>
               <div className='create-field'>
                 <label className='create-field-label'>状态<span>*</span></label>
-                <select
-                  className='create-field-select'
+                <CustomSelect
                   value={tpl.status}
-                  onChange={(e) => setTpl({ ...tpl, status: e.target.value as Status })}
-                >
-                  {statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                  options={statusOptions}
+                  onChange={(val) => setTpl({ ...tpl, status: val as Status })}
+                />
               </div>
             </div>
           </section>
@@ -216,29 +214,22 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
             <div className='create-form-grid'>
               <div className='create-field'>
                 <label className='create-field-label'>频率<span>*</span></label>
-                <select
-                  className='create-field-select'
+                <CustomSelect
                   value={tpl.schedule.type}
-                  onChange={(e) => switchFrequency(e.target.value as 'weekly' | 'monthly')}
-                >
-                  <option value='weekly'>每周</option>
-                  <option value='monthly'>每月</option>
-                </select>
+                  options={frequencyOptions}
+                  onChange={(val) => switchFrequency(val as 'weekly' | 'monthly')}
+                />
               </div>
               <div className='create-field'>
                 <label className='create-field-label'>截止日期</label>
                 {tpl.schedule.type === 'weekly' ? (
-                  <select
-                    className='create-field-select'
-                    value={(tpl.schedule.daysOfWeek ?? [1])[0]}
-                    onChange={(e) =>
-                      setTpl({ ...tpl, schedule: { type: 'weekly', daysOfWeek: [Number(e.target.value)] } })
+                  <CustomSelect
+                    value={String((tpl.schedule.daysOfWeek ?? [1])[0])}
+                    options={WEEK_OPTIONS}
+                    onChange={(val) =>
+                      setTpl({ ...tpl, schedule: { type: 'weekly', daysOfWeek: [Number(val)] } })
                     }
-                  >
-                    {WEEK_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                  />
                 ) : (
                   <input
                     className='create-field-input'
@@ -273,7 +264,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
               <div className='create-section-hint'>为每次生成的任务预填常用信息，可在单条任务中微调。</div>
             </div>
             <div className='create-field create-field-span-2'>
-              <label className='create-field-label'>详情模板</label>
+              <label className='create-field-label'>详情</label>
               <textarea
                 className='create-field-textarea'
                 value={tpl.defaults?.notes ?? ''}
@@ -282,7 +273,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
               />
             </div>
             <div className='create-field create-field-span-2'>
-              <label className='create-field-label'>下一步计划模板</label>
+              <label className='create-field-label'>下一步计划</label>
               <textarea
                 className='create-field-textarea'
                 value={tpl.defaults?.nextStep ?? ''}

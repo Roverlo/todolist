@@ -41,8 +41,8 @@ export const ALL_COLUMNS = [
 ];
 
 const DEFAULT_SORT: SortRule[] = [
-  { key: 'status', direction: 'asc' },
   { key: 'dueDate', direction: 'asc' },
+  { key: 'status', direction: 'asc' },
   { key: 'priority', direction: 'desc' },
 ];
 
@@ -182,20 +182,40 @@ type Draft<T> = T extends (...args: any[]) => any ? never : T;
 
 type DictionaryKey = 'onsiteOwners' | 'lineOwners' | 'tags';
 
-const appendDictionaryValue = (arr: string[], value?: string) => {
-  const trimmed = (value ?? '').trim();
-  if (trimmed && !arr.includes(trimmed)) {
-    arr.push(trimmed);
-  }
+const rebuildDictionary = (state: Draft<AppStore>) => {
+  if (!state.dictionary.autoAppend) return;
+  
+  const onsite = new Set<string>();
+  const line = new Set<string>();
+  const tags = new Set<string>();
+  
+  // Keep initial defaults if needed, or start fresh. 
+  // Current user request implies they want to remove ghosts, so starting fresh based on active tasks is better.
+  // But we should preserve the initial sample data structure if it was empty? 
+  // Let's just scan active tasks.
+  
+  // Get trash project ID
+  const trashId = state.projects.find(p => p.name === '回收站')?.id;
+  
+  state.tasks.forEach(task => {
+    if (task.projectId === trashId) return;
+    
+    if (task.onsiteOwner?.trim()) onsite.add(task.onsiteOwner.trim());
+    if (task.lineOwner?.trim()) line.add(task.lineOwner.trim());
+    (task.tags ?? []).forEach(t => {
+      if (t.trim()) tags.add(t.trim());
+    });
+  });
+
+  state.dictionary.onsiteOwners = Array.from(onsite).sort();
+  state.dictionary.lineOwners = Array.from(line).sort();
+  state.dictionary.tags = Array.from(tags).sort();
 };
 
-const registerFromTask = (state: Draft<AppStore>, payload: Partial<Task>) => {
-  if (!state.dictionary.autoAppend) {
-    return;
-  }
-  appendDictionaryValue(state.dictionary.onsiteOwners, payload.onsiteOwner);
-  appendDictionaryValue(state.dictionary.lineOwners, payload.lineOwner);
-  (payload.tags ?? []).forEach((tag) => appendDictionaryValue(state.dictionary.tags, tag));
+const registerFromTask = (state: Draft<AppStore>, _payload: Partial<Task>) => {
+  // This function is now just a trigger for full rebuild to ensure consistency
+  // Or we can keep it as an optimistic update, but rebuildDictionary is safer.
+  rebuildDictionary(state);
 };
 
 export interface AppStore extends AppData {
@@ -500,11 +520,13 @@ export const useAppStore = create<AppStore>()(
           extras.trashedAt = String(Date.now());
           extras.trashedFrom = from;
           task.extras = extras;
+          rebuildDictionary(state);
         });
       },
       hardDeleteTask: (id) => {
         withHistory(set, (state) => {
           state.tasks = state.tasks.filter((t) => t.id !== id);
+          rebuildDictionary(state);
         });
       },
       restoreTask: (id) => {
@@ -517,6 +539,7 @@ export const useAppStore = create<AppStore>()(
             const { trashedAt, trashedFrom, ...rest } = task.extras ?? {};
             task.extras = rest;
             task.updatedAt = Date.now();
+            rebuildDictionary(state);
           }
         });
       },
@@ -531,6 +554,7 @@ export const useAppStore = create<AppStore>()(
             const trashedAt = Number(t.extras?.trashedAt ?? '0');
             return trashedAt > cutoff;
           });
+          rebuildDictionary(state);
         });
       },
       bulkUpdateTasks: (ids, updates) => {
@@ -880,7 +904,7 @@ export const useAppStore = create<AppStore>()(
     }),
     {
       name: 'project-todo-app',
-      version: 9,
+      version: 10,
       storage: createJSONStorage(() => {
         if (typeof window === 'undefined') {
           return noopStorage;
@@ -993,6 +1017,7 @@ export const useAppStore = create<AppStore>()(
             ...t,
             columns: (t.columns ?? []).filter((c) => c !== 'test'),
             pinned: (t.pinned ?? []).filter((c) => c !== 'test'),
+            labels: undefined,
           }));
           state.columnConfig = { ...state.columnConfig, columns: filtered, pinned, labels, templates } as ColumnConfig;
           state.tasks = (state.tasks ?? []).map((t) => {
@@ -1002,6 +1027,10 @@ export const useAppStore = create<AppStore>()(
             }
             return { ...t, extras } as Task;
           });
+        }
+        if (version < 10) {
+          // 强制更新排序规则以应用新的 DEFAULT_SORT (dueDate 优先)
+          state.sortRules = DEFAULT_SORT;
         }
         return state as any;
       },
