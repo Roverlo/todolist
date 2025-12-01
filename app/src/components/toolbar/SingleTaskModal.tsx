@@ -61,6 +61,17 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
     }
   }, [open, projects, filters.projectId]);
 
+  // Handle Esc key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (open && e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const handleSubmit = () => {

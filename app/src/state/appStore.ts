@@ -68,9 +68,9 @@ const defaultColumnConfig: ColumnConfig = {
 const defaultSettings: Settings = {
   dateFormat: 'YYYY-MM-DD',
   overdueThresholdDays: 0,
-  colorScheme: 'light',
+  colorScheme: 'blue',
   undoDepth: 10,
-  trashRetentionDays: 60,
+  trashRetentionDays: 30,
 };
 
 const makeProject = (name: string): Project => ({
@@ -237,6 +237,7 @@ export interface AppStore extends AppData {
   deleteTask: (id: string) => void;
   restoreTask: (id: string) => void;
   purgeTrash: () => void;
+  emptyTrash: () => void;
   hardDeleteTask: (id: string) => void;
   bulkUpdateTasks: (ids: string[], updates: Partial<Task>, batchId?: string) => void;
   addProgress: (
@@ -337,9 +338,52 @@ export const useAppStore = create<AppStore>()(
         withHistory(set, (state) => {
           state.projects = state.projects.filter((p) => p.id !== id);
           if (deleteTasks) {
-            state.tasks = state.tasks.filter((t) => t.projectId !== id);
+            // 将任务移到回收站（软删除）
+            let trashId = state.projects.find((p) => p.name === '回收站')?.id;
+            if (!trashId) {
+              // 如果回收站不存在，创建它
+              const newProject = {
+                id: nanoid(),
+                name: '回收站',
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+              state.projects.push(newProject);
+              trashId = newProject.id;
+            }
+            const now = Date.now();
+            state.tasks = state.tasks.map((t) => {
+              if (t.projectId === id) {
+                return {
+                  ...t,
+                  projectId: trashId!,
+                  updatedAt: now,
+                  extras: {
+                    ...t.extras,
+                    trashedAt: String(now),
+                    trashedFrom: id,
+                  },
+                };
+              }
+              return t;
+            });
           } else {
-            state.tasks = state.tasks.map((t) => (t.projectId === id ? { ...t, projectId: '' } : t));
+            // 将任务移到"未分类"项目
+            let unassignedId = state.projects.find((p) => p.name === '未分类')?.id;
+            if (!unassignedId) {
+              // 如果"未分类"项目不存在，创建它
+              const newProject = {
+                id: nanoid(),
+                name: '未分类',
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+              state.projects.push(newProject);
+              unassignedId = newProject.id;
+            }
+            state.tasks = state.tasks.map((t) => 
+              t.projectId === id ? { ...t, projectId: unassignedId!, updatedAt: Date.now() } : t
+            );
           }
         });
       },
@@ -535,7 +579,31 @@ export const useAppStore = create<AppStore>()(
           if (!task) return;
           const from = task.extras?.trashedFrom;
           if (from) {
-            task.projectId = from;
+            // 检查原项目是否还存在
+            const originalProject = state.projects.find((p) => p.id === from);
+            if (originalProject) {
+              // 原项目存在，正常恢复
+              task.projectId = from;
+            } else {
+              // 原项目已被删除，移到"未分类"项目
+              let unassignedId = state.projects.find((p) => p.name === '未分类')?.id;
+              if (!unassignedId) {
+                // 如果"未分类"项目不存在，创建它
+                const newProject = {
+                  id: nanoid(),
+                  name: '未分类',
+                  createdAt: Date.now(),
+                  updatedAt: Date.now(),
+                };
+                state.projects.push(newProject);
+                unassignedId = newProject.id;
+              }
+              task.projectId = unassignedId;
+              // 在标题前添加标记
+              if (!task.title.startsWith('[原项目已被删除]')) {
+                task.title = `[原项目已被删除] ${task.title}`;
+              }
+            }
             const { trashedAt, trashedFrom, ...rest } = task.extras ?? {};
             task.extras = rest;
             task.updatedAt = Date.now();
@@ -554,6 +622,14 @@ export const useAppStore = create<AppStore>()(
             const trashedAt = Number(t.extras?.trashedAt ?? '0');
             return trashedAt > cutoff;
           });
+          rebuildDictionary(state);
+        });
+      },
+      emptyTrash: () => {
+        withHistory(set, (state) => {
+          const trashId = state.projects.find((p) => p.name === '回收站')?.id;
+          if (!trashId) return;
+          state.tasks = state.tasks.filter((t) => t.projectId !== trashId);
           rebuildDictionary(state);
         });
       },

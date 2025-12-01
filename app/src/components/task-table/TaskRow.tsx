@@ -8,6 +8,10 @@ interface TaskRowProps {
   latestNote?: string;
   onTaskFocus: (taskId: string) => void;
   onDeleteTask: (taskId: string) => void;
+  onRestoreTask?: (taskId: string) => void;
+  onHardDeleteTask?: (taskId: string) => void;
+  trashRetentionDays?: number;
+  isActive?: boolean;
 }
 
 const statusLabel: Record<Task['status'], string> = {
@@ -22,13 +26,33 @@ const priorityLabel: Record<NonNullable<Task['priority']>, string> = {
   low: '低优',
 };
 
-const MetaBlock = memo(({ task }: { task: Task }) => {
+const MetaBlock = memo(({ task, isTrash, retentionDays }: { task: Task; isTrash: boolean; retentionDays: number }) => {
   const dueLabel = () => {
     if (!task.dueDate) return '无截止日期';
+    // 已完成的任务不再计算倒计时/逾期，直接显示日期
+    if (task.status === 'done') {
+      return dayjs(task.dueDate).format('YYYY-MM-DD');
+    }
     const diff = dayjs(task.dueDate).startOf('day').diff(dayjs().startOf('day'), 'day');
     if (diff === 0) return '今日到期';
     if (diff > 0) return `剩余 ${diff} 天`;
     return `逾期 ${Math.abs(diff)} 天`;
+  };
+
+  const trashLabel = () => {
+    if (!task.extras?.trashedAt) return '即将删除';
+    const trashedAt = Number(task.extras.trashedAt);
+    const deleteAt = dayjs(trashedAt).add(retentionDays, 'day');
+    const diff = deleteAt.diff(dayjs(), 'day');
+    if (diff <= 0) return '即将删除';
+    return `${diff} 天后删除`;
+  };
+
+  // 检查是否在3天内到期（1-3天，不包括今天和逾期）
+  const isSoonDue = () => {
+    if (!task.dueDate || task.status === 'done') return false;
+    const diff = dayjs(task.dueDate).startOf('day').diff(dayjs().startOf('day'), 'day');
+    return diff > 0 && diff <= 3;
   };
 
   return (
@@ -37,12 +61,20 @@ const MetaBlock = memo(({ task }: { task: Task }) => {
         <span className='meta-label'>创建</span>
         <span className='meta-value'>{dayjs(task.createdAt).format('MM-DD HH:mm')}</span>
       </div>
-      <div className='meta-line'>
-        <span className='meta-label'>截止</span>
-        <span className={`meta-value ${task.dueDate && dayjs(task.dueDate).isBefore(dayjs(), 'day') ? 'text-danger' : ''}`}>
-          {dueLabel()}
-        </span>
-      </div>
+      {isTrash ? (
+        <div className='meta-line'>
+          <span className='meta-label'>清理</span>
+          <span className='meta-value text-danger'>{trashLabel()}</span>
+        </div>
+      ) : (
+        <div className='meta-line'>
+          <span className='meta-label'>截止</span>
+          <span className={`meta-value ${task.status !== 'done' && task.dueDate && dayjs(task.dueDate).isBefore(dayjs(), 'day') ? 'text-danger' : ''}`}>
+            {dueLabel()}
+            {isSoonDue() && <span className='due-soon-badge'>⏰</span>}
+          </span>
+        </div>
+      )}
       <div className='meta-line'>
         <span className='meta-label'>现场</span>
         <span className='meta-value'>{task.onsiteOwner || '--'}</span>
@@ -62,13 +94,21 @@ export const TaskRow = memo(({
   project, 
   latestNote, 
   onTaskFocus, 
-  onDeleteTask 
+  onDeleteTask,
+  onRestoreTask,
+  onHardDeleteTask,
+  trashRetentionDays = 30,
+  isActive = false
 }: TaskRowProps) => {
+  const isTrash = project?.name === '回收站';
+
   const handleRowClick = (e: React.MouseEvent) => {
     // 如果点击的是按钮，不触发行点击
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
+    // 回收站任务不可查看详情/编辑
+    if (isTrash) return;
     onTaskFocus(task.id);
   };
 
@@ -82,6 +122,16 @@ export const TaskRow = memo(({
     onTaskFocus(task.id);
   };
 
+  const handleRestore = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRestoreTask?.(task.id);
+  };
+
+  const handleHardDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onHardDeleteTask?.(task.id);
+  };
+
   const priorityClass = {
     high: 'border-l-priority-high',
     medium: 'border-l-priority-medium',
@@ -89,10 +139,14 @@ export const TaskRow = memo(({
   }[task.priority ?? 'medium'];
 
   return (
-    <tr className='task-row' onClick={handleRowClick}>
+    <tr 
+      className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''}`} 
+      onClick={handleRowClick}
+      style={isTrash ? { cursor: 'default' } : undefined}
+    >
       <td className={`col-main ${priorityClass}`}>
         <div className='project-name'>{project?.name ?? '未分类'}</div>
-        <div className='task-title-main'>{task.title}</div>
+        <div className={`task-title-main ${isTrash ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
         <div className='task-tags-row'>
           <span
             className={`tag-pill ${
@@ -131,24 +185,47 @@ export const TaskRow = memo(({
         <div className='field-text'>{task.nextStep || '--'}</div>
       </td>
       <td className='col-meta'>
-        <MetaBlock task={task} />
+        <MetaBlock task={task} isTrash={isTrash} retentionDays={trashRetentionDays} />
         <div className='meta-actions'>
-          <button 
-            className='btn-xs btn-xs-outline' 
-            type='button' 
-            onClick={handleEdit}
-            aria-label={`编辑任务: ${task.title}`}
-          >
-            编辑
-          </button>
-          <button
-            className='btn-xs btn-xs-danger'
-            type='button'
-            onClick={handleDelete}
-            aria-label={`删除任务: ${task.title}`}
-          >
-            删除
-          </button>
+          {isTrash ? (
+            <>
+              <button 
+                className='btn-xs btn-xs-outline' 
+                type='button' 
+                onClick={handleRestore}
+                title='恢复任务'
+              >
+                恢复
+              </button>
+              <button
+                className='btn-xs btn-xs-danger'
+                type='button'
+                onClick={handleHardDelete}
+                title='彻底删除'
+              >
+                彻底删除
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                className='btn-xs btn-xs-outline' 
+                type='button' 
+                onClick={handleEdit}
+                aria-label={`编辑任务: ${task.title}`}
+              >
+                编辑
+              </button>
+              <button
+                className='btn-xs btn-xs-danger'
+                type='button'
+                onClick={handleDelete}
+                aria-label={`删除任务: ${task.title}`}
+              >
+                删除
+              </button>
+            </>
+          )}
         </div>
       </td>
     </tr>

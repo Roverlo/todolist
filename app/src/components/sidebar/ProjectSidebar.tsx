@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { useAppStoreShallow } from '../../state/appStore';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface ProjectSidebarProps {
   onProjectSelected?: () => void;
@@ -16,6 +18,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
     renameProject,
     deleteProject,
     ensureProjectByName,
+    settings,
   } = useAppStoreShallow((state) => ({
     projects: state.projects,
     tasks: state.tasks,
@@ -25,9 +28,11 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
     renameProject: state.renameProject,
     deleteProject: state.deleteProject,
     ensureProjectByName: state.ensureProjectByName,
+    settings: state.settings,
   }));
 
   const trashId = useMemo(() => projects.find((p) => p.name === '回收站')?.id, [projects]);
+  const unassignedId = useMemo(() => projects.find((p) => p.name === '未分类')?.id, [projects]);
   const visibleTasks = useMemo(() => tasks.filter((t) => t.projectId !== trashId), [tasks, trashId]);
   const counts = useMemo(() => {
     return visibleTasks.reduce<Record<string, number>>((acc, task) => {
@@ -42,12 +47,19 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
       label: '汇总',
       hint: '',
       icon: '汇',
-      count: tasks.length,
+      count: trashId ? tasks.filter((t) => t.projectId !== trashId).length : tasks.length,
+    },
+    {
+      key: 'UNASSIGNED' as const,
+      label: '未分类',
+      hint: '',
+      icon: '未',
+      count: unassignedId ? tasks.filter((t) => t.projectId === unassignedId).length : 0,
     },
     {
       key: 'TRASH' as const,
       label: '回收站',
-      hint: '仅保留 30 天',
+      hint: (settings.trashRetentionDays ?? 30) >= 99999 ? '永久保留' : `保留 ${settings.trashRetentionDays ?? 30} 天`,
       icon: '回',
       count: trashId ? tasks.filter((t) => t.projectId === trashId).length : 0,
     },
@@ -60,6 +72,10 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
 
   const handleSelectSystem = (key: 'ALL' | 'UNASSIGNED' | 'TRASH') => {
     if (key === 'ALL') setFilters({ projectId: undefined });
+    if (key === 'UNASSIGNED') {
+      const id = unassignedId ?? ensureProjectByName('未分类');
+      setFilters({ projectId: id });
+    }
     if (key === 'TRASH') {
       const id = trashId ?? ensureProjectByName('回收站');
       setFilters({ projectId: id });
@@ -75,14 +91,43 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
   const [creatingName, setCreatingName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<{ id: string; name: string; taskCount: number } | null>(null);
+
+  // Tooltip 状态管理
+  const helpIconRef = useRef<HTMLDivElement>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+
+  const handleTooltipShow = () => {
+    if (helpIconRef.current) {
+      const rect = helpIconRef.current.getBoundingClientRect();
+      setTooltipPos({
+        top: rect.bottom + 10,
+        left: rect.left,
+      });
+      setShowTooltip(true);
+    }
+  };
 
   return (
-    <aside className='sidebar'>
+    <>
+      <aside className='sidebar'>
       <div>
         <div className='brand'>
           <div className='brand-avatar'>待</div>
           <div>
-            <div className='brand-text-title'>待办事项</div>
+            <div className='brand-title-row'>
+              <div className='brand-text-title'>待办事项</div>
+              <div 
+                className='help-icon'
+                ref={helpIconRef}
+                onMouseEnter={handleTooltipShow}
+                onMouseLeave={() => setShowTooltip(false)}
+              >
+                ?
+              </div>
+            </div>
             <div className='brand-text-sub'>网络服务处视频交付科</div>
             <div className='brand-text-note'>作者luo.fawen@zte.com.cn</div>
           </div>
@@ -100,6 +145,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
             {systemItems.map((item) => {
               const isActive =
                 (item.key === 'ALL' && filters.projectId === undefined) ||
+                (item.key === 'UNASSIGNED' && filters.projectId === unassignedId) ||
                 (item.key === 'TRASH' && filters.projectId === trashId);
               const isRecycle = item.key === 'TRASH';
               return (
@@ -156,7 +202,7 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
         <div className='project-list-wrapper'>
           <div className='project-list'>
           {projects
-            .filter((p) => p.name !== '回收站')
+            .filter((p) => p.name !== '回收站' && p.name !== '未分类')
             .map((project) => (
               <div
                 key={project.id}
@@ -202,9 +248,15 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
                         title='删除或归档项目'
                         onClick={(event) => {
                           event.stopPropagation();
-                          if (confirm('删除该项目？任务会移动到未分类')) {
+                          const taskCount = counts[project.id] || 0;
+                          if (taskCount === 0) {
+                            // 没有任务，直接删除项目
                             deleteProject(project.id, { deleteTasks: false });
                             setFilters({ projectId: undefined });
+                          } else {
+                            // 有任务，打开对话框询问
+                            setProjectToDelete({ id: project.id, name: project.name, taskCount });
+                            setDeleteDialogOpen(true);
                           }
                         }}
                       >
@@ -219,6 +271,64 @@ export const ProjectSidebar = ({ onProjectSelected }: ProjectSidebarProps) => {
         </div>
       </div>
 
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title='删除项目'
+        message={
+          projectToDelete
+            ? `该项目中有 ${projectToDelete.taskCount} 个任务。\n\n点击"删除任务"将任务移到回收站，\n点击"移到未分类"将任务移到"未分类"项目。`
+            : ''
+        }
+        confirmLabel='删除任务'
+        cancelLabel='移到未分类'
+        variant='warning'
+        onConfirm={() => {
+          if (projectToDelete) {
+            deleteProject(projectToDelete.id, { deleteTasks: true });
+            setFilters({ projectId: undefined });
+          }
+          setDeleteDialogOpen(false);
+          setProjectToDelete(null);
+        }}
+        onCancel={() => {
+          if (projectToDelete) {
+            deleteProject(projectToDelete.id, { deleteTasks: false });
+            setFilters({ projectId: undefined });
+          }
+          setDeleteDialogOpen(false);
+          setProjectToDelete(null);
+        }}
+      />
     </aside>
+
+    {showTooltip && createPortal(
+      <div 
+        className='help-tooltip'
+        style={{
+          position: 'fixed',
+          top: `${tooltipPos.top}px`,
+          left: `${tooltipPos.left}px`,
+          opacity: 1,
+          visibility: 'visible',
+        }}
+      >
+        <div className='help-tooltip-title'>智能排序逻辑</div>
+        <div className='help-item'>
+          <span className='help-icon-emoji'>🔴</span>
+          <span className='help-item-text'><b>紧急区</b> (逾期/今日)：高优置顶</span>
+        </div>
+        <div className='help-item'>
+          <span className='help-icon-emoji'>📅</span>
+          <span className='help-item-text'><b>规划区</b> (未来)：按日期排列</span>
+        </div>
+        <div className='help-item'>
+          <span className='help-icon-emoji'>⚪</span>
+          <span className='help-item-text'><b>待定区</b>：按优先级排列</span>
+        </div>
+        <div className='help-footer'>* 已完成任务自动沉底</div>
+      </div>,
+      document.body
+    )}
+  </>
   );
 };

@@ -41,7 +41,7 @@ const defaultSettings: Settings = {
   overdueThresholdDays: 0,
   colorScheme: 'light',
   undoDepth: 10,
-  trashRetentionDays: 60,
+  trashRetentionDays: 30,
 };
 
 type DictionaryKey = 'onsiteOwners' | 'lineOwners' | 'tags';

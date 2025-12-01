@@ -31,6 +31,11 @@ const frequencyOptions = [
   { value: 'monthly', label: '每月' },
 ];
 
+const MONTH_OPTIONS = Array.from({ length: 31 }, (_, i) => {
+  const d = i + 1;
+  return { value: String(d), label: d === 31 ? '31日 (或月底)' : `${d}日` };
+});
+
 interface RecurringTaskModalProps {
   open: boolean;
   onClose: () => void;
@@ -60,13 +65,23 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
       status: 'doing',
       priority: 'medium',
       schedule: { type: 'weekly', daysOfWeek: [1] },
-      dueStrategy: 'none',
-      defaults: {},
+      defaults: { notes: '', nextStep: '' },
+      dueStrategy: 'sameDay', // default strategy
       active: true,
     });
     setAutoRenew(true);
     setError('');
   }, [open, projects, filters.projectId]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (open && e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [open, onClose]);
 
   if (!open || !tpl) return null;
 
@@ -231,16 +246,13 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                     }
                   />
                 ) : (
-                  <input
-                    className='create-field-input'
-                    type='number'
-                    min={1}
-                    max={31}
-                    value={tpl.schedule.dayOfMonth ?? 1}
-                    onChange={(e) =>
+                  <CustomSelect
+                    value={String(tpl.schedule.dayOfMonth ?? 1)}
+                    options={MONTH_OPTIONS}
+                    onChange={(val) =>
                       setTpl({
                         ...tpl,
-                        schedule: { type: 'monthly', dayOfMonth: Math.min(31, Math.max(1, Number(e.target.value))) },
+                        schedule: { type: 'monthly', dayOfMonth: Number(val) },
                       })
                     }
                   />

@@ -26,6 +26,20 @@ const PRIORITY_ORDER: Record<string, number> = {
   low: 2,
 };
 
+export type TaskZone = 'urgent' | 'future' | 'nodate' | 'done';
+
+export const getTaskZone = (task: Task): TaskZone => {
+  if (task.status === 'done') return 'done';
+  if (!task.dueDate) return 'nodate';
+  
+  const now = dayjs().startOf('day');
+  const dueDate = dayjs(task.dueDate).startOf('day');
+  const diff = dueDate.diff(now, 'day');
+  
+  if (diff <= 0) return 'urgent'; // 逾期或今天
+  return 'future'; // 未来
+};
+
 const normalize = (value?: string | null) => (value ?? '').toLowerCase();
 
 export const parseSearchInput = (input: string): ParsedSearch => {
@@ -139,6 +153,12 @@ export const filterTasks = (
 ) => {
   const terms = parsed.textTerms.filter(Boolean);
   return tasks.filter((task) => {
+    // 在汇总视图（projectId 为 undefined）时，排除回收站任务
+    if (!filters.projectId) {
+      const project = projectMap[task.projectId];
+      if (project?.name === '回收站') return false;
+    }
+    
     if (filters.projectId) {
       if (filters.projectId === ('UNASSIGNED' as unknown as string)) {
         if (task.projectId) return false;
@@ -215,12 +235,85 @@ export const sortTasks = (
 ) => {
   const copy = [...tasks];
   copy.sort((a, b) => {
-    // 当用户明确选择列排序时，完全按规则排序；仅在没有规则时按更新时间降序作为默认
-    if (!rules.length) {
-      if (a.updatedAt !== b.updatedAt) {
-        return b.updatedAt - a.updatedAt;
+    // Smart Hybrid Sort: 当首要规则是按截止日期升序时，启用智能分层排序
+    // Layer 1 (Urgent): 逾期 & 今天 -> 按优先级降序
+    // Layer 2 (Future): 未来 -> 按日期升序
+    // Layer 3 (No Date): 无日期 -> 按优先级降序
+    if (rules.length > 0 && rules[0].key === 'dueDate' && rules[0].direction === 'asc') {
+      const statusA = STATUS_ORDER[a.status] ?? 99;
+      const statusB = STATUS_ORDER[b.status] ?? 99;
+      
+      // 0. 已完成任务沉底 (Done always at bottom)
+      // 如果两个都是已完成，或者其中一个是，先按状态分
+      if (a.status === 'done' || b.status === 'done') {
+        if (a.status === b.status) {
+           // 都是已完成，按完成时间倒序（如果没有 completedAt，用 updatedAt）
+           return b.updatedAt - a.updatedAt; 
+        }
+        return statusA - statusB;
+      }
+
+      // 1. 获取优先级权重
+      const pA = PRIORITY_ORDER[a.priority ?? 'medium'] ?? 1; // 0:high, 1:medium, 2:low
+      const pB = PRIORITY_ORDER[b.priority ?? 'medium'] ?? 1;
+      // 反转权重以便计算 (High=3, Med=2, Low=1)
+      const wA = 3 - pA; 
+      const wB = 3 - pB;
+
+      // 2. 解析日期
+      const now = dayjs().startOf('day');
+      const dateA = a.dueDate ? dayjs(a.dueDate).startOf('day') : null;
+      const dateB = b.dueDate ? dayjs(b.dueDate).startOf('day') : null;
+
+      // 3. 判断层级
+      // Layer 1: Urgent (Overdue or Today)
+      const isUrgentA = dateA && dateA.diff(now, 'day') <= 0;
+      const isUrgentB = dateB && dateB.diff(now, 'day') <= 0;
+
+      // Layer 3: No Date
+      const isNoDateA = !dateA;
+      const isNoDateB = !dateB;
+
+      // === 层级比较 ===
+      
+      // A 是紧急，B 不是 -> A 前
+      if (isUrgentA && !isUrgentB) return -1;
+      // B 是紧急，A 不是 -> B 前
+      if (!isUrgentA && isUrgentB) return 1;
+
+      // A 无日期，B 有日期 -> B 前 (无日期沉底，但比已完成高)
+      if (isNoDateA && !isNoDateB) return 1;
+      if (!isNoDateA && isNoDateB) return -1;
+
+      // === 同层级内部比较 ===
+
+      // Case 1: 都在紧急区 (Urgent)
+      if (isUrgentA && isUrgentB) {
+        // 先比优先级 (权重高的在前)
+        if (wA !== wB) return wB - wA;
+        // 优先级相同，比逾期程度 (日期越早越前)
+        return dateA!.diff(dateB!);
+      }
+
+      // Case 2: 都在未来区 (Future)
+      if (dateA && dateB && !isUrgentA && !isUrgentB) {
+        // 先比日期 (日期近的前)
+        const diff = dateA.diff(dateB);
+        if (diff !== 0) return diff;
+        // 日期相同，比优先级
+        return wB - wA;
+      }
+
+      // Case 3: 都无日期 (No Date)
+      if (isNoDateA && isNoDateB) {
+        // 比优先级
+        if (wA !== wB) return wB - wA;
+        // 优先级相同，按创建时间倒序 (新的在前)
+        return b.createdAt - a.createdAt;
       }
     }
+
+    // 默认排序逻辑（保留用于其他规则）
     for (const rule of rules) {
       const av = toSortable(a, rule.key, projectMap);
       const bv = toSortable(b, rule.key, projectMap);

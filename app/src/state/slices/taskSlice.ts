@@ -20,6 +20,7 @@ export interface TaskSlice {
   updateProgress: (id: string, entryId: string, patch: Partial<ProgressEntry>) => void;
   importTasks: (tasks: (Partial<Task> & { projectId: string; title: string })[]) => void;
   purgeTrash: () => void;
+  emptyTrash: () => void;
 }
 
 export const createTaskSlice: StateCreator<
@@ -261,6 +262,18 @@ export const createTaskSlice: StateCreator<
         state.tasks = state.tasks.filter(
           (t) => t.projectId !== trashProject.id || t.updatedAt > cutoff
         );
+      })
+    );
+  },
+
+  emptyTrash: () => {
+    const projects = get().projects;
+    const trashProject = projects.find((p) => p.name === '回收站');
+    if (!trashProject) return;
+
+    set(
+      produce((state: AppStore) => {
+        state.tasks = state.tasks.filter((t) => t.projectId !== trashProject.id);
       })
     );
   },

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { exportTasksToCsv, triggerDownload, saveCsvWithTauri } from '../../utils/csv';
 import type { Task } from '../../types';
@@ -60,6 +60,17 @@ export const ExportModal = ({ open, onClose, tasks, projectMap }: Props) => {
     alert(`已导出 ${tasks.length} 条任务到 CSV: ${name}`);
     onClose();
   };
+
+  // Handle Esc key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (open && e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [open, onClose]);
 
   if (!open) return null;
   return (

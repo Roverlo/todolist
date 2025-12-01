@@ -170,7 +170,7 @@ export interface Dictionary {
 export interface Settings {
   dateFormat: string;
   overdueThresholdDays: number;
-  colorScheme: 'light' | 'dark' | 'high-contrast';
+  colorScheme: string;
   undoDepth: number;
   trashRetentionDays?: number;
 }
