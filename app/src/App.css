@@ -112,20 +112,20 @@
   --shadow-color: rgba(2, 132, 199, 0.15);
 }
 
-/* 7. 樱花粉 (Rose) - 治愈、温暖 */
+/* 7. 樱花粉 (Rose) - 治愈、温暖 - 优化：降低攻击性红调，转向柔和粉色 */
 :root[data-theme='rose'] {
   --bg: #fff1f2;            /* Rose 50 */
   --surface: #ffffff;
   --sidebar-bg: #ffe4e6;    /* Rose 100 */
-  --border: #fda4af;        /* 加深边框 Rose 300 */
-  --primary: #e11d48;       /* Rose 600 */
-  --primary-hover: #be123c; /* Rose 700 */
-  --primary-soft: #fff1f2;  /* Rose 50 */
+  --border: #fbcfe8;        /* Pink 200 - 更柔和的边框 */
+  --primary: #ec4899;       /* Pink 500 - 从刺眼的红(Rose 600)改为更像樱花的粉 */
+  --primary-hover: #db2777; /* Pink 600 */
+  --primary-soft: #fdf2f8;  /* Pink 50 */
   --primary-text: #ffffff;
-  --text-main: #881337;     /* Rose 900 */
-  --text-secondary: #be123c;
-  --text-subtle: #fb7185;
-  --shadow-color: rgba(225, 29, 72, 0.15);
+  --text-main: #831843;     /* Pink 900 */
+  --text-secondary: #db2777;
+  --text-subtle: #f472b6;
+  --shadow-color: rgba(236, 72, 153, 0.15);
 }
 
 /* 8. 深邃靛 (Indigo) - 沉稳、商务 */
@@ -1213,6 +1213,7 @@ body {
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   line-height: 1.3;
   text-overflow: ellipsis;
@@ -1270,6 +1271,11 @@ body {
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .col-meta {
@@ -1616,7 +1622,7 @@ body {
 .timeline { margin-top: 4px; padding-left: 10px; border-left: 1px solid #e5e7eb; }
 .timeline-item { margin-bottom: 8px; }
 .timeline-item-label { font-size: 11px; color: #9ca3af; }
-.timeline-item-text { font-size: 12px; color: #4b5563; }
+.timeline-item-text { font-size: 12px; color: #4b5563; white-space: pre-wrap; word-break: break-word; }
 .task-editor-footer { padding: 10px 20px 14px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #f9fafb; }
 .footer-meta { font-size: 11px; color: #9ca3af; }
 .footer-actions { display: flex; gap: 8px; }
@@ -1657,7 +1663,7 @@ body {
 .timeline { margin-top: 4px; padding-left: 10px; border-left: 1px solid #e5e7eb; }
 .timeline-item { margin-bottom: 8px; }
 .timeline-item-label { font-size: 11px; color: #9ca3af; }
-.timeline-item-text { font-size: 12px; color: #4b5563; }
+.timeline-item-text { font-size: 12px; color: #4b5563; white-space: pre-wrap; word-break: break-word; }
 .timeline-item-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .timeline-item-actions { display: flex; gap: 4px; }
 .link-action { border: none; background: transparent; padding: 2px 6px; border-radius: 999px; font-size: 11px; color: #9ca3af; cursor: pointer; transition: background 0.12s ease, color 0.12s ease; }

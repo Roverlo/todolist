@@ -37,7 +37,7 @@ export const ThemeModal = ({ open, onClose }: ThemeModalProps) => {
   ];
 
   return (
-    <div className='create-overlay' onClick={onClose}>
+    <div className='create-overlay'>
       <div className='create-dialog' style={{ width: 420 }} onClick={(e) => e.stopPropagation()}>
         <header className='create-dialog-header'>
           <div className='create-dialog-title-block'>

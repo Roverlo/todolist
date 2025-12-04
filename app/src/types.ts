@@ -173,6 +173,7 @@ export interface Settings {
   colorScheme: string;
   undoDepth: number;
   trashRetentionDays?: number;
+  listFontSize?: number;
 }
 
 export interface SortScheme {

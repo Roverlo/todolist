@@ -71,6 +71,7 @@ const defaultSettings: Settings = {
   colorScheme: 'blue',
   undoDepth: 10,
   trashRetentionDays: 30,
+  listFontSize: 13,
 };
 
 const makeProject = (name: string): Project => ({

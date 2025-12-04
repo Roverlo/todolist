@@ -12,6 +12,7 @@ interface TaskRowProps {
   onHardDeleteTask?: (taskId: string) => void;
   trashRetentionDays?: number;
   isActive?: boolean;
+  fontSize?: number;
 }
 
 const statusLabel: Record<Task['status'], string> = {
@@ -98,7 +99,8 @@ export const TaskRow = memo(({
   onRestoreTask,
   onHardDeleteTask,
   trashRetentionDays = 30,
-  isActive = false
+  isActive = false,
+  fontSize = 13
 }: TaskRowProps) => {
   const isTrash = project?.name === '回收站';
 
@@ -138,6 +140,17 @@ export const TaskRow = memo(({
     low: 'border-l-priority-low',
   }[task.priority ?? 'medium'];
 
+  // Dynamic calculation of max lines to match the Meta column height (~110px)
+  // Meta column has fixed 12px font size, about 6 lines worth of content including buttons.
+  // We want the middle text to fill this height without overflowing too much.
+  const lineClamp = Math.max(3, Math.min(8, Math.round(110 / (fontSize * 1.5))));
+  
+  const textStyle = {
+    fontSize,
+    WebkitLineClamp: lineClamp,
+    lineClamp: lineClamp, // Standard property for future support
+  };
+
   return (
     <tr 
       className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''}`} 
@@ -174,15 +187,15 @@ export const TaskRow = memo(({
       </td>
       <td className='col-text'>
         <div className='field-label'>详情</div>
-        <div className='field-text'>{task.notes || '--'}</div>
+        <div className='field-text' style={textStyle}>{task.notes || '--'}</div>
       </td>
       <td className='col-text'>
         <div className='field-label'>最近进展</div>
-        <div className='field-text'>{latestNote || '--'}</div>
+        <div className='field-text' style={textStyle}>{latestNote || '--'}</div>
       </td>
       <td className='col-text'>
         <div className='field-label'>下一步计划</div>
-        <div className='field-text'>{task.nextStep || '--'}</div>
+        <div className='field-text' style={textStyle}>{task.nextStep || '--'}</div>
       </td>
       <td className='col-meta'>
         <MetaBlock task={task} isTrash={isTrash} retentionDays={trashRetentionDays} />

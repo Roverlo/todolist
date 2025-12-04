@@ -29,8 +29,8 @@
     "active": true,
     "windows": {
       "webviewInstallMode": {
-        "type": "downloadBootstrapper",
-        "silent": false
+        "type": "fixedRuntime",
+        "path": "./webview2/Microsoft.WebView2.FixedVersionRuntime.142.0.3595.94.x64"
       }
     },
     "targets": "all",

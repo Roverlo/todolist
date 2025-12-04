@@ -10,6 +10,7 @@ import { RecurringTaskModal } from './components/toolbar/RecurringTaskModal';
 import { ExportModal } from './components/toolbar/ExportModal';
 import { SettingsModal } from './components/toolbar/SettingsModal';
 import { ThemeModal } from './components/toolbar/ThemeModal';
+import { FontSizeModal } from './components/toolbar/FontSizeModal';
 import { useVisibleTasks } from './hooks/useVisibleTasks';
 import { ToastContainer } from './components/ui/Toast';
 import './components/ui/Toast.css';
@@ -23,6 +24,7 @@ function App() {
   const [exportOpen, setExportOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [fontSizeOpen, setFontSizeOpen] = useState(false);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
@@ -200,6 +202,15 @@ function App() {
                 >
                   主题
                 </button>
+                <button
+                  className='btn btn-light'
+                  onClick={() => setFontSizeOpen(true)}
+                  aria-label='字体大小'
+                  title='字体大小'
+                  style={{ marginLeft: 4 }}
+                >
+                  字号
+                </button>
               </>
             )}
           </div>
@@ -235,6 +246,7 @@ function App() {
       />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <ThemeModal open={themeOpen} onClose={() => setThemeOpen(false)} />
+      <FontSizeModal open={fontSizeOpen} onClose={() => setFontSizeOpen(false)} />
       <ToastContainer />
     </div>
   );

@@ -99,6 +99,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
                   onHardDeleteTask={handleHardDeleteTask}
                   trashRetentionDays={settings.trashRetentionDays ?? 60}
                   isActive={activeTaskId === task.id}
+                  fontSize={settings.listFontSize}
                 />
               </React.Fragment>
             );

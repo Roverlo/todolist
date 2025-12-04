@@ -100,7 +100,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
   };
 
   return (
-    <div className='create-overlay' onClick={onClose}>
+    <div className='create-overlay'>
       <div className='create-dialog' onClick={(e) => e.stopPropagation()}>
         <header className='create-dialog-header'>
           <div className='create-dialog-title-block'>

@@ -156,7 +156,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   const lastUpdated = dayjs(task.updatedAt).format('YYYY-MM-DD HH:mm');
 
   return (
-    <div className='overlay' onClick={onClose}>
+    <div className='overlay'>
       <div className='dialog-shell' onClick={(e) => e.stopPropagation()}>
         <header className='dialog-header'>
           <div className='task-title-block'>
