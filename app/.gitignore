@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# WebView2 Fixed Runtime
+src-tauri/webview2/

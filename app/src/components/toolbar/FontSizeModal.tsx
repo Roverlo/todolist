@@ -41,9 +41,25 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
     <div className='create-overlay'>
       <div className='create-dialog' style={{ width: 420 }} onClick={(e) => e.stopPropagation()}>
         <header className='create-dialog-header'>
-          <div className='create-dialog-title-block'>
-            <div className='create-dialog-title'>字体大小</div>
-            <div className='create-dialog-subtitle'>调整任务列表中详情、进展等内容的字号</div>
+          <div className='create-dialog-title-block' style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <div style={{ 
+              width: 32, 
+              height: 32, 
+              borderRadius: 8, 
+              background: 'var(--primary-soft)', 
+              color: 'var(--primary)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              fontSize: 16,
+              fontWeight: 'bold'
+            }}>
+              Aa
+            </div>
+            <div>
+              <div className='create-dialog-title' style={{ fontSize: 16 }}>字体大小</div>
+              <div className='create-dialog-subtitle'>调整任务列表中详情、进展等内容的字号</div>
+            </div>
           </div>
           <button className='create-btn-icon' onClick={onClose} title='关闭'>
             ✕
@@ -51,7 +67,7 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
         </header>
 
         <div className='create-dialog-body'>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {sizes.map((size) => (
               <div
                 key={size.value}
@@ -60,15 +76,16 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
                   display: 'flex',
                   alignItems: 'center',
                   padding: '12px 16px',
-                  borderRadius: 8,
+                  borderRadius: 12,
                   cursor: 'pointer',
                   background: currentSize === size.value 
-                    ? 'rgba(0,0,0,0.04)' 
+                    ? 'var(--primary-soft)' 
                     : 'transparent',
                   border: currentSize === size.value
-                    ? '1px solid var(--primary-color, #2563eb)'
+                    ? '1px solid var(--primary)'
                     : '1px solid transparent',
                   transition: 'all 0.2s ease',
+                  position: 'relative'
                 }}
                 onMouseEnter={(e) => {
                   if (currentSize !== size.value) {
@@ -83,13 +100,13 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ 
-                    fontSize: 15, 
-                    fontWeight: currentSize === size.value ? 600 : 400,
-                    color: '#1f2937'
+                    fontSize: 14, 
+                    fontWeight: currentSize === size.value ? 600 : 500,
+                    color: currentSize === size.value ? 'var(--primary)' : '#374151'
                   }}>
                     {size.label}
                   </div>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: currentSize === size.value ? 'var(--primary)' : '#9ca3af', marginTop: 2, opacity: 0.8 }}>
                     {size.desc}
                   </div>
                 </div>
@@ -97,16 +114,27 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
                 {/* Preview text */}
                 <div style={{ 
                   fontSize: size.value, 
-                  color: '#374151', 
-                  marginRight: 16,
-                  opacity: 0.8 
+                  color: currentSize === size.value ? 'var(--primary)' : '#374151', 
+                  marginRight: 12,
+                  opacity: 0.9,
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap'
                 }}>
-                  预览文本
+                  预览 Text
                 </div>
 
-                {currentSize === size.value && (
-                  <div style={{ color: 'var(--primary-color, #2563eb)', fontWeight: 'bold' }}>✓</div>
-                )}
+                <div style={{ 
+                  width: 20, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  color: 'var(--primary)',
+                  opacity: currentSize === size.value ? 1 : 0
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
               </div>
             ))}
           </div>
