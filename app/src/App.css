@@ -993,7 +993,8 @@ body {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-soft);
-  padding: 10px 0 6px;
+  padding: 0; /* Remove container padding */
+  overflow: hidden; /* Clip content to corners */
   display: flex;
   flex-direction: column;
 }
@@ -1049,29 +1050,33 @@ body {
 }
 
 .task-table-wrapper {
-  padding: 8px 18px 8px 18px;
+  padding: 0; /* Remove wrapper padding to let table fill card */
   overflow-y: auto;
   flex: 1;
 }
 
 .task-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 14px;
+  border-collapse: collapse; /* Change from separate to collapse to fix spacing issues */
+  border-spacing: 0; /* Remove border-spacing */
   background: transparent;
   font-size: 13px;
   table-layout: fixed;
 }
 
 .task-table thead th {
-  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 20; /* Ensure it stays on top of content */
+  background: var(--surface); /* Match card background */
   color: var(--text-secondary);
   font-weight: 600;
   font-size: 12px;
   text-align: left;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-subtle);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+  /* Add a shadow to create depth and mask the scrolling cut-off */
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
 }
 
 .task-table thead th + th {
@@ -1079,11 +1084,11 @@ body {
 }
 
 .task-table thead th:first-child {
-  border-top-left-radius: 10px;
+  padding-left: 24px; /* Internal indentation */
 }
 
 .task-table thead th:last-child {
-  border-top-right-radius: 10px;
+  padding-right: 24px; /* Internal indentation */
 }
 
 .task-table tbody td {
@@ -1093,6 +1098,14 @@ body {
   border-top: none;
   border-bottom: 1px solid var(--border-subtle);
   box-shadow: 0 0 0 rgba(0,0,0,0);
+}
+
+.task-table tbody td:first-child {
+  padding-left: 24px;
+}
+
+.task-table tbody td:last-child {
+  padding-right: 24px;
 }
 
 .task-row:hover td {
@@ -1170,11 +1183,11 @@ body {
 }
 
 /* 关键：复刻侧边栏的左侧指示条 */
-.task-row-active td:first-child {
+.task-row-active td:first-child::before {
   /* 强制覆盖优先级颜色，使用主题色作为选中指示 */
-  border-left-color: var(--primary) !important;
+  background-color: var(--primary) !important;
   /* 确保指示条清晰 */
-  border-left-width: 4px !important; 
+  width: 4px !important; 
 }
 
 .task-row-active:hover td {
@@ -1184,16 +1197,30 @@ body {
 }
 
 .task-row td:first-child {
-  border-radius: 10px 0 0 10px;
-  border-left: 3px solid transparent; /* Default to transparent, controlled by priority class */
+  border-radius: 0; /* Remove row rounding for full bleed */
+  border-left: none; /* Removed border priority indicator */
+  position: relative; /* For pseudo-element positioning */
 }
 
-.task-row td.col-main.border-l-priority-high { border-left-color: var(--danger); }
-.task-row td.col-main.border-l-priority-medium { border-left-color: var(--warning); }
-.task-row td.col-main.border-l-priority-low { border-left-color: var(--primary); }
+/* New Priority Indicator: Inset Strip */
+.task-row td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 6px; /* Indented from edge */
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 4px;
+  background-color: transparent; /* Default hidden */
+  transition: background-color 0.2s ease;
+}
+
+.task-row td.col-main.border-l-priority-high::before { background-color: var(--danger); }
+.task-row td.col-main.border-l-priority-medium::before { background-color: var(--warning); }
+.task-row td.col-main.border-l-priority-low::before { background-color: var(--primary); }
 
 .task-row td:last-child {
-  border-radius: 0 10px 10px 0;
+  border-radius: 0; /* Remove row rounding for full bleed */
   border-right: 1px solid var(--border-subtle);
 }
 

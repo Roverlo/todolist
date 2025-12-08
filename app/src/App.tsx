@@ -188,6 +188,23 @@ function App() {
                 </button>
                 <button
                   className='btn btn-light'
+                  onClick={() => {
+                    const el = document.getElementById('filters-panel');
+                    if (el) {
+                      if (el.style.display === 'none') {
+                        el.style.display = 'flex';
+                      } else {
+                        el.style.display = 'none';
+                      }
+                    }
+                  }}
+                  aria-label='展开/收起筛选'
+                  title='展开/收起筛选'
+                >
+                  🔍 筛选
+                </button>
+                <button
+                  className='btn btn-light'
                   onClick={() => setExportOpen(true)}
                   aria-label='导出当前筛选'
                 >
@@ -219,13 +236,6 @@ function App() {
         <PrimaryToolbar />
 
         <section className='content'>
-          <div className='content-header'>
-            <div className='content-header-left'>
-              <div className='content-header-title'>DOING</div>
-              <div className='content-header-sub'>共 {metrics.doing} 条任务 · 按截止时间升序</div>
-            </div>
-          </div>
-
           <TaskTable onTaskFocus={setActiveTaskId} activeTaskId={activeTaskId} />
         </section>
       </main>

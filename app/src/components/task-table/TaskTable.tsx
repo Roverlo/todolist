@@ -43,7 +43,13 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
         const project = projectMap[task.projectId];
         const latest = task.progress?.length ? task.progress[task.progress.length - 1] : undefined;
         const zone = getTaskZone(task);
-        return { task, project, latestNote: latest?.note ?? '', zone };
+        return { 
+          task, 
+          project, 
+          latestNote: latest?.note ?? '', 
+          latestProgressAt: latest?.at,
+          zone 
+        };
       }),
     [tasks, projectMap],
   );
@@ -93,6 +99,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
                   task={task}
                   project={project}
                   latestNote={latestNote}
+                  latestProgressAt={rows[index].latestProgressAt}
                   onTaskFocus={onTaskFocus}
                   onDeleteTask={handleDeleteTask}
                   onRestoreTask={handleRestoreTask}

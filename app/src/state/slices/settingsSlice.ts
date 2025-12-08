@@ -39,9 +39,10 @@ const defaultColumnConfig: ColumnConfig = {
 const defaultSettings: Settings = {
   dateFormat: 'YYYY-MM-DD',
   overdueThresholdDays: 0,
-  colorScheme: 'light',
+  colorScheme: 'purple',
   undoDepth: 10,
   trashRetentionDays: 30,
+  listFontSize: 12,
 };
 
 type DictionaryKey = 'onsiteOwners' | 'lineOwners' | 'tags';

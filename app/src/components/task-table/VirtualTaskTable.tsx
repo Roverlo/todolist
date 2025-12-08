@@ -17,6 +17,7 @@ interface RowData {
     task: Task;
     project?: Project;
     latestNote: string;
+    latestProgressAt?: number;
   }>;
   onTaskFocus: (taskId: string) => void;
   onDeleteTask: (taskId: string) => void;
@@ -34,6 +35,7 @@ const Row = ({ index, style, data }: { index: number; style: CSSProperties; data
             task={item.task}
             project={item.project}
             latestNote={item.latestNote}
+            latestProgressAt={item.latestProgressAt}
             onTaskFocus={data.onTaskFocus}
             onDeleteTask={data.onDeleteTask}
           />
@@ -58,7 +60,7 @@ export const VirtualTaskTable = React.memo(({ onTaskFocus, height = 600 }: Virtu
       tasks.map((task) => {
         const project = projectMap[task.projectId];
         const latest = task.progress?.length ? task.progress[task.progress.length - 1] : undefined;
-        return { task, project, latestNote: latest?.note ?? '' };
+        return { task, project, latestNote: latest?.note ?? '', latestProgressAt: latest?.at };
       }),
     [tasks, projectMap],
   );
@@ -94,12 +96,13 @@ export const VirtualTaskTable = React.memo(({ onTaskFocus, height = 600 }: Virtu
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ task, project, latestNote }) => (
+            {rows.map(({ task, project, latestNote, latestProgressAt }) => (
               <TaskRow
                 key={task.id}
                 task={task}
                 project={project}
                 latestNote={latestNote}
+                latestProgressAt={latestProgressAt}
                 onTaskFocus={onTaskFocus}
                 onDeleteTask={handleDeleteTask}
               />

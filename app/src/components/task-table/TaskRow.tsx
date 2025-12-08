@@ -6,6 +6,7 @@ interface TaskRowProps {
   task: Task;
   project?: Project;
   latestNote?: string;
+  latestProgressAt?: number;
   onTaskFocus: (taskId: string) => void;
   onDeleteTask: (taskId: string) => void;
   onRestoreTask?: (taskId: string) => void;
@@ -94,6 +95,7 @@ export const TaskRow = memo(({
   task, 
   project, 
   latestNote, 
+  latestProgressAt,
   onTaskFocus, 
   onDeleteTask,
   onRestoreTask,
@@ -145,10 +147,14 @@ export const TaskRow = memo(({
   // We want the middle text to fill this height without overflowing too much.
   const lineClamp = Math.max(3, Math.min(8, Math.round(110 / (fontSize * 1.5))));
   
-  const textStyle = {
+  const textStyle: React.CSSProperties = {
     fontSize,
+    // @ts-ignore
     WebkitLineClamp: lineClamp,
+    // @ts-ignore
     lineClamp: lineClamp, // Standard property for future support
+    whiteSpace: 'pre-wrap', // Preserve newlines and spaces
+    wordBreak: 'break-word',
   };
 
   return (
@@ -191,7 +197,18 @@ export const TaskRow = memo(({
       </td>
       <td className='col-text'>
         <div className='field-label'>最近进展</div>
-        <div className='field-text' style={textStyle}>{latestNote || '--'}</div>
+        <div className='field-text' style={textStyle}>
+          {latestProgressAt ? (
+            <>
+              <span style={{ color: '#9ca3af', marginRight: '6px', fontSize: '0.9em', fontWeight: 500 }}>
+                {dayjs(latestProgressAt).format('MM-DD HH:mm')}
+              </span>
+              {latestNote || '--'}
+            </>
+          ) : (
+            latestNote || '--'
+          )}
+        </div>
       </td>
       <td className='col-text'>
         <div className='field-label'>下一步计划</div>

@@ -62,7 +62,7 @@ export const PrimaryToolbar = () => {
   ];
 
   return (
-    <div className='filters-card'>
+    <div className='filters-card' id='filters-panel' style={{ display: 'none' }}>
       <div className='filters-row-top'>
         <div className='section-title' style={{ marginBottom: 0 }}>
           筛选
