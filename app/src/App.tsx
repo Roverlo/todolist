@@ -112,14 +112,25 @@ function App() {
         event.preventDefault();
         redo();
       }
+      // Ctrl+N 或 单独 N 键新建任务
       if (event.ctrlKey && event.key.toLowerCase() === 'n') {
         event.preventDefault();
         setAddOpen(true);
       }
+      if (!event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        setAddOpen(true);
+      }
+      // Esc 键关闭详情抽屉
+      if (event.key === 'Escape') {
+        if (activeTaskId) {
+          setActiveTaskId(null);
+        }
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo, redo]);
+  }, [undo, redo, activeTaskId]);
 
   useEffect(() => {
     return () => { };

@@ -14,11 +14,12 @@ export interface TaskTableProps {
 export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTableProps) => {
   const { tasks, projectMap } = useVisibleTasks();
   const [deleteCandidateId, setDeleteCandidateId] = React.useState<string | null>(null);
-  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, settings } = useAppStoreShallow((state) => ({
+  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, updateTask, settings } = useAppStoreShallow((state) => ({
     deleteTask: state.deleteTask,
     moveToUncategorized: state.moveToUncategorized,
     restoreTask: state.restoreTask,
     hardDeleteTask: state.hardDeleteTask,
+    updateTask: state.updateTask,
     settings: state.settings,
   }));
 
@@ -39,6 +40,10 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
       hardDeleteTask(taskId);
     }
   }, [hardDeleteTask]);
+
+  const handleQuickStatusChange = useCallback((taskId: string, newStatus: 'doing' | 'done' | 'paused') => {
+    updateTask(taskId, { status: newStatus });
+  }, [updateTask]);
 
   const rows = useMemo(
     () =>
@@ -84,36 +89,54 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ task, project, latestNote, zone }, index) => {
-            const prevZone = index > 0 ? rows[index - 1].zone : null;
-            const showZoneHeader = zone !== prevZone;
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={5}>
+                <div className='empty-state'>
+                  <div className='empty-state-icon'>📋</div>
+                  <div className='empty-state-title'>暂无任务</div>
+                  <div className='empty-state-desc'>
+                    点击页面右上角的「新建任务」按钮创建第一个任务
+                  </div>
+                  <div className='empty-state-tips'>
+                    💡 提示：使用快捷键 <kbd>N</kbd> 可快速新建任务
+                  </div>
+                </div>
+              </td>
+            </tr>
+          ) : (
+            rows.map(({ task, project, latestNote, zone }, index) => {
+              const prevZone = index > 0 ? rows[index - 1].zone : null;
+              const showZoneHeader = zone !== prevZone;
 
-            return (
-              <React.Fragment key={task.id}>
-                {showZoneHeader && (
-                  <tr className='zone-header'>
-                    <td colSpan={5}>
-                      <span className='zone-emoji'>{zoneLabels[zone].emoji}</span>
-                      <span className='zone-label'>{zoneLabels[zone].label}</span>
-                    </td>
-                  </tr>
-                )}
-                <TaskRow
-                  task={task}
-                  project={project}
-                  latestNote={latestNote}
-                  latestProgressAt={rows[index].latestProgressAt}
-                  onTaskFocus={onTaskFocus}
-                  onDeleteTask={handleDeleteTask}
-                  onRestoreTask={handleRestoreTask}
-                  onHardDeleteTask={handleHardDeleteTask}
-                  trashRetentionDays={settings.trashRetentionDays ?? 60}
-                  isActive={activeTaskId === task.id}
-                  fontSize={settings.listFontSize}
-                />
-              </React.Fragment>
-            );
-          })}
+              return (
+                <React.Fragment key={task.id}>
+                  {showZoneHeader && (
+                    <tr className='zone-header'>
+                      <td colSpan={5}>
+                        <span className='zone-emoji'>{zoneLabels[zone].emoji}</span>
+                        <span className='zone-label'>{zoneLabels[zone].label}</span>
+                      </td>
+                    </tr>
+                  )}
+                  <TaskRow
+                    task={task}
+                    project={project}
+                    latestNote={latestNote}
+                    latestProgressAt={rows[index].latestProgressAt}
+                    onTaskFocus={onTaskFocus}
+                    onDeleteTask={handleDeleteTask}
+                    onRestoreTask={handleRestoreTask}
+                    onHardDeleteTask={handleHardDeleteTask}
+                    onQuickStatusChange={handleQuickStatusChange}
+                    trashRetentionDays={settings.trashRetentionDays ?? 60}
+                    isActive={activeTaskId === task.id}
+                    fontSize={settings.listFontSize}
+                  />
+                </React.Fragment>
+              );
+            })
+          )}
         </tbody>
       </table>
       <DeleteChoiceDialog

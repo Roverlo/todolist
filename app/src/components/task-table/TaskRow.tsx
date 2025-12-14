@@ -11,6 +11,7 @@ interface TaskRowProps {
   onDeleteTask: (taskId: string) => void;
   onRestoreTask?: (taskId: string) => void;
   onHardDeleteTask?: (taskId: string) => void;
+  onQuickStatusChange?: (taskId: string, newStatus: Task['status']) => void;
   trashRetentionDays?: number;
   isActive?: boolean;
   fontSize?: number;
@@ -91,15 +92,16 @@ const MetaBlock = memo(({ task, isTrash, retentionDays }: { task: Task; isTrash:
 
 MetaBlock.displayName = 'MetaBlock';
 
-export const TaskRow = memo(({ 
-  task, 
-  project, 
-  latestNote, 
+export const TaskRow = memo(({
+  task,
+  project,
+  latestNote,
   latestProgressAt,
-  onTaskFocus, 
+  onTaskFocus,
   onDeleteTask,
   onRestoreTask,
   onHardDeleteTask,
+  onQuickStatusChange,
   trashRetentionDays = 30,
   isActive = false,
   fontSize = 13
@@ -136,6 +138,23 @@ export const TaskRow = memo(({
     onHardDeleteTask?.(task.id);
   };
 
+  const handleQuickStatus = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // 状态循环: doing -> done -> paused -> doing
+    const nextStatus: Record<Task['status'], Task['status']> = {
+      doing: 'done',
+      done: 'paused',
+      paused: 'doing',
+    };
+    onQuickStatusChange?.(task.id, nextStatus[task.status]);
+  };
+
+  const statusActionLabel: Record<Task['status'], string> = {
+    doing: '✓ 完成',
+    done: '⏸ 挂起',
+    paused: '▶ 继续',
+  };
+
   const priorityClass = {
     high: 'border-l-priority-high',
     medium: 'border-l-priority-medium',
@@ -146,7 +165,7 @@ export const TaskRow = memo(({
   // Meta column has fixed 12px font size, about 6 lines worth of content including buttons.
   // We want the middle text to fill this height without overflowing too much.
   const lineClamp = Math.max(3, Math.min(8, Math.round(110 / (fontSize * 1.5))));
-  
+
   const textStyle: React.CSSProperties = {
     fontSize,
     // @ts-ignore
@@ -158,8 +177,8 @@ export const TaskRow = memo(({
   };
 
   return (
-    <tr 
-      className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''}`} 
+    <tr
+      className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''}`}
       onClick={handleRowClick}
       style={isTrash ? { cursor: 'default' } : undefined}
     >
@@ -168,24 +187,22 @@ export const TaskRow = memo(({
         <div className={`task-title-main ${isTrash ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
         <div className='task-tags-row'>
           <span
-            className={`tag-pill ${
-              task.status === 'done'
-                ? 'tag-status-done'
-                : task.status === 'paused'
+            className={`tag-pill ${task.status === 'done'
+              ? 'tag-status-done'
+              : task.status === 'paused'
                 ? 'tag-status-paused'
                 : 'tag-status-doing'
-            }`}
+              }`}
           >
             {statusLabel[task.status]}
           </span>
           <span
-            className={`tag-pill ${
-              task.priority === 'high'
-                ? 'tag-priority-high'
-                : task.priority === 'low'
+            className={`tag-pill ${task.priority === 'high'
+              ? 'tag-priority-high'
+              : task.priority === 'low'
                 ? 'tag-priority-low'
                 : 'tag-priority-medium'
-            }`}
+              }`}
           >
             {priorityLabel[task.priority ?? 'medium']}
           </span>
@@ -219,9 +236,9 @@ export const TaskRow = memo(({
         <div className='meta-actions'>
           {isTrash ? (
             <>
-              <button 
-                className='btn-xs btn-xs-outline' 
-                type='button' 
+              <button
+                className='btn-xs btn-xs-outline'
+                type='button'
                 onClick={handleRestore}
                 title='恢复任务'
               >
@@ -238,9 +255,17 @@ export const TaskRow = memo(({
             </>
           ) : (
             <>
-              <button 
-                className='btn-xs btn-xs-outline' 
-                type='button' 
+              <button
+                className='btn-xs btn-xs-primary'
+                type='button'
+                onClick={handleQuickStatus}
+                title={`点击${statusActionLabel[task.status]}`}
+              >
+                {statusActionLabel[task.status]}
+              </button>
+              <button
+                className='btn-xs btn-xs-outline'
+                type='button'
                 onClick={handleEdit}
                 aria-label={`编辑任务: ${task.title}`}
               >
