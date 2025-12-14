@@ -14,7 +14,7 @@ import { FontSizeModal } from './components/toolbar/FontSizeModal';
 import { useVisibleTasks } from './hooks/useVisibleTasks';
 import { ToastContainer } from './components/ui/Toast';
 import './components/ui/Toast.css';
-import { confirm } from '@tauri-apps/plugin-dialog';
+import { ConfirmDialog } from './components/ui/ConfirmDialog';
 
 function App() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -25,6 +25,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const [fontSizeOpen, setFontSizeOpen] = useState(false);
+  const [emptyTrashConfirmOpen, setEmptyTrashConfirmOpen] = useState(false);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
@@ -121,7 +122,7 @@ function App() {
   }, [undo, redo]);
 
   useEffect(() => {
-    return () => {};
+    return () => { };
   }, [drawerOpen]);
 
   return (
@@ -141,24 +142,14 @@ function App() {
               <>
                 <button
                   className='btn'
-                  style={{ 
-                    backgroundColor: '#fef2f2', 
-                    color: '#dc2626', 
+                  style={{
+                    backgroundColor: '#fef2f2',
+                    color: '#dc2626',
                     border: '1px solid #fecaca',
                     fontWeight: 600,
                     marginRight: 8
                   }}
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const confirmed = await confirm('确定要清空回收站吗？此操作将永久删除回收站中的所有任务，无法恢复。', {
-                      title: 'ProjectTodo',
-                      kind: 'warning'
-                    });
-                    if (confirmed) {
-                      emptyTrash();
-                    }
-                  }}
+                  onClick={() => setEmptyTrashConfirmOpen(true)}
                 >
                   清空回收站
                 </button>
@@ -248,9 +239,9 @@ function App() {
 
       <SingleTaskModal open={addOpen} onClose={() => setAddOpen(false)} />
       <RecurringTaskModal open={recurringOpen} onClose={() => setRecurringOpen(false)} />
-      <ExportModal 
-        open={exportOpen} 
-        onClose={() => setExportOpen(false)} 
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
         tasks={tasks}
         projectMap={projectMap as any}
       />
@@ -258,6 +249,19 @@ function App() {
       <ThemeModal open={themeOpen} onClose={() => setThemeOpen(false)} />
       <FontSizeModal open={fontSizeOpen} onClose={() => setFontSizeOpen(false)} />
       <ToastContainer />
+      <ConfirmDialog
+        open={emptyTrashConfirmOpen}
+        title="清空回收站"
+        message="确定要清空回收站吗？此操作将永久删除回收站中的所有任务，无法恢复。"
+        confirmLabel="确定清空"
+        cancelLabel="取消"
+        variant="danger"
+        onConfirm={() => {
+          emptyTrash();
+          setEmptyTrashConfirmOpen(false);
+        }}
+        onCancel={() => setEmptyTrashConfirmOpen(false)}
+      />
     </div>
   );
 }

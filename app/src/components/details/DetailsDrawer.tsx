@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, ProgressEntry, Status } from '../../types';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface DetailsDrawerProps {
   open: boolean;
@@ -30,11 +31,9 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   }));
 
   const task = useMemo(() => tasks.find((item) => item.id === taskId), [tasks, taskId]);
-  const project = useMemo(
-    () => projects.find((item) => item.id === task?.projectId),
-    [projects, task?.projectId],
-  );
 
+  const [title, setTitle] = useState('');
+  const [projectId, setProjectId] = useState('');
   const [status, setStatus] = useState<Status>('doing');
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState('');
@@ -65,6 +64,8 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
 
   useEffect(() => {
     if (task) {
+      setTitle(task.title);
+      setProjectId(task.projectId);
       setStatus(task.status);
       setPriority(task.priority ?? 'medium');
       setDueDate(task.dueDate ?? '');
@@ -94,7 +95,13 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   };
 
   const handleSaveTask = () => {
+    if (!title.trim()) {
+      alert('标题不能为空');
+      return;
+    }
     updateTask(task.id, {
+      title: title.trim(),
+      projectId,
       status,
       priority,
       dueDate: dueDate || undefined,
@@ -112,11 +119,11 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     const at = dayjs(progressTime).valueOf();
     const nextList: ProgressEntry[] = editingProgressId
       ? progress
-          .map((p): ProgressEntry => (p.id === editingProgressId ? { ...p, note: progressNote.trim(), at } : p))
-          .sort((a, b) => a.at - b.at)
+        .map((p): ProgressEntry => (p.id === editingProgressId ? { ...p, note: progressNote.trim(), at } : p))
+        .sort((a, b) => a.at - b.at)
       : [...progress, { id: `${Date.now()}`, at, status: 'doing' as const, note: progressNote.trim() }].sort(
-          (a, b) => a.at - b.at,
-        );
+        (a, b) => a.at - b.at,
+      );
 
     setProgress(nextList);
     setEditingProgressId(null);
@@ -137,12 +144,26 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   };
 
   const handleDeleteProgress = (id: string) => {
-    setProgress((prev) => prev.filter((p) => p.id !== id));
+    const updatedProgress = progress.filter((p) => p.id !== id);
+    setProgress(updatedProgress);
     if (editingProgressId === id) {
       setEditingProgressId(null);
       setProgressNote('');
       setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
     }
+    // 立即持久化删除
+    updateTask(task!.id, {
+      title: title.trim(),
+      projectId,
+      status,
+      priority,
+      dueDate: dueDate || undefined,
+      onsiteOwner: onsiteOwner || undefined,
+      lineOwner: lineOwner || undefined,
+      notes,
+      nextStep,
+      progress: updatedProgress,
+    });
   };
 
   const handleEditProgress = (id: string) => {
@@ -160,8 +181,6 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       <div className='dialog-shell' onClick={(e) => e.stopPropagation()}>
         <header className='dialog-header'>
           <div className='task-title-block'>
-            <div className='task-project'>{project?.name ?? '未分类项目'}</div>
-            <div className='task-title'>{task.title}</div>
             <div className='task-chips'>
               <span className='chip chip-primary'>{statusOptions.find((s) => s.value === status)?.label}</span>
               <span className='chip chip-danger-soft'>
@@ -176,6 +195,39 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
 
         <div className='dialog-body'>
           <main className='panel-main'>
+            <section className='section'>
+              <div className='section-title-row'>
+                <div className='section-title'>标题与项目</div>
+                <div className='section-hint'>修改任务标题或移动到其他项目。</div>
+              </div>
+              <div className='field-grid'>
+                <div className='field' style={{ gridColumn: 'span 2' }}>
+                  <label className='field-label'>
+                    任务标题<span>*</span>
+                  </label>
+                  <input
+                    className='field-input'
+                    type='text'
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder='请输入任务标题'
+                    maxLength={100}
+                  />
+                </div>
+                <div className='field'>
+                  <label className='field-label'>
+                    所属项目<span>*</span>
+                  </label>
+                  <CustomSelect
+                    value={projectId}
+                    options={projects.filter(p => p.name !== '回收站').map(p => ({ value: p.id, label: p.name }))}
+                    onChange={(val) => setProjectId(val)}
+                    placeholder='选择项目'
+                  />
+                </div>
+              </div>
+            </section>
+
             <section className='section'>
               <div className='section-title-row'>
                 <div className='section-title'>基本信息</div>

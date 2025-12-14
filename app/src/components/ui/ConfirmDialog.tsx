@@ -55,7 +55,7 @@ export const ConfirmDialog = ({
         </header>
 
         <div className='create-dialog-body' style={{ padding: '20px 24px' }}>
-          <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-main)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
             {message}
           </div>
         </div>

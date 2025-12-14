@@ -185,22 +185,22 @@ type DictionaryKey = 'onsiteOwners' | 'lineOwners' | 'tags';
 
 const rebuildDictionary = (state: Draft<AppStore>) => {
   if (!state.dictionary.autoAppend) return;
-  
+
   const onsite = new Set<string>();
   const line = new Set<string>();
   const tags = new Set<string>();
-  
+
   // Keep initial defaults if needed, or start fresh. 
   // Current user request implies they want to remove ghosts, so starting fresh based on active tasks is better.
   // But we should preserve the initial sample data structure if it was empty? 
   // Let's just scan active tasks.
-  
+
   // Get trash project ID
   const trashId = state.projects.find(p => p.name === '回收站')?.id;
-  
+
   state.tasks.forEach(task => {
     if (task.projectId === trashId) return;
-    
+
     if (task.onsiteOwner?.trim()) onsite.add(task.onsiteOwner.trim());
     if (task.lineOwner?.trim()) line.add(task.lineOwner.trim());
     (task.tags ?? []).forEach(t => {
@@ -224,7 +224,7 @@ export interface AppStore extends AppData {
   redoStack: AppDataSnapshot[];
   addProject: (name: string) => Project;
   renameProject: (id: string, name: string) => void;
-  
+
   deleteProject: (id: string, options?: { deleteTasks?: boolean }) => void;
   setFilters: (filters: Partial<Filters>) => void;
   resetFilters: () => void;
@@ -236,6 +236,7 @@ export interface AppStore extends AppData {
   addTask: (task: { projectId: string; title: string } & Partial<Task>) => Task;
   updateTask: (id: string, updates: Partial<Task>, batchId?: string) => void;
   deleteTask: (id: string) => void;
+  moveToUncategorized: (id: string) => void;
   restoreTask: (id: string) => void;
   purgeTrash: () => void;
   emptyTrash: () => void;
@@ -299,8 +300,8 @@ const withHistory = (set: any, updater: (state: Draft<AppStore>) => void) => {
 
 const noopStorage = {
   getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
+  setItem: () => { },
+  removeItem: () => { },
 };
 
 export const useAppStore = create<AppStore>()(
@@ -333,7 +334,7 @@ export const useAppStore = create<AppStore>()(
           }
         });
       },
-      
+
       deleteProject: (id, options) => {
         const { deleteTasks = false } = options ?? {};
         withHistory(set, (state) => {
@@ -382,7 +383,7 @@ export const useAppStore = create<AppStore>()(
               state.projects.push(newProject);
               unassignedId = newProject.id;
             }
-            state.tasks = state.tasks.map((t) => 
+            state.tasks = state.tasks.map((t) =>
               t.projectId === id ? { ...t, projectId: unassignedId!, updatedAt: Date.now() } : t
             );
           }
@@ -493,7 +494,7 @@ export const useAppStore = create<AppStore>()(
           task.updatedAt = Date.now();
           registerFromTask(state, task);
           const recurringRaw = (task.extras?.recurring ?? '') as string;
-          let recurring: { type: 'weekly'|'monthly'; dueWeekday?: number; dueDom?: number; day?: number; dueStrategy?: 'sameDay'|'endOfWeek'|'endOfMonth'|'none'; autoRenew?: boolean } | null = null;
+          let recurring: { type: 'weekly' | 'monthly'; dueWeekday?: number; dueDom?: number; day?: number; dueStrategy?: 'sameDay' | 'endOfWeek' | 'endOfMonth' | 'none'; autoRenew?: boolean } | null = null;
           try { recurring = recurringRaw ? JSON.parse(recurringRaw) : null; } catch { recurring = null; }
           if (recurring?.autoRenew && prevStatus !== 'done' && (updates.status as any) === 'done') {
             const now = dayjs();
@@ -568,6 +569,16 @@ export const useAppStore = create<AppStore>()(
           rebuildDictionary(state);
         });
       },
+      moveToUncategorized: (id) => {
+        withHistory(set, (state) => {
+          const task = state.tasks.find((t) => t.id === id);
+          if (!task) return;
+          const unassignedId = get().ensureProjectByName('未分类');
+          task.projectId = unassignedId;
+          task.updatedAt = Date.now();
+          rebuildDictionary(state);
+        });
+      },
       hardDeleteTask: (id) => {
         withHistory(set, (state) => {
           state.tasks = state.tasks.filter((t) => t.id !== id);
@@ -639,10 +650,10 @@ export const useAppStore = create<AppStore>()(
           state.tasks = state.tasks.map((task) =>
             ids.includes(task.id)
               ? (() => {
-                  const updated = { ...task, ...updates, updatedAt: Date.now() };
-                  registerFromTask(state, updated);
-                  return updated;
-                })()
+                const updated = { ...task, ...updates, updatedAt: Date.now() };
+                registerFromTask(state, updated);
+                return updated;
+              })()
               : task,
           );
         });
@@ -677,12 +688,12 @@ export const useAppStore = create<AppStore>()(
           task.progress = task.progress.map((e) =>
             e.id === entryId
               ? {
-                  ...e,
-                  ...(patch.at !== undefined ? { at: patch.at } : {}),
-                  ...(patch.status !== undefined ? { status: patch.status } : {}),
-                  ...(patch.note !== undefined ? { note: patch.note } : {}),
-                  ...(patch.attachments !== undefined ? { attachments: patch.attachments } : {}),
-                }
+                ...e,
+                ...(patch.at !== undefined ? { at: patch.at } : {}),
+                ...(patch.status !== undefined ? { status: patch.status } : {}),
+                ...(patch.note !== undefined ? { note: patch.note } : {}),
+                ...(patch.attachments !== undefined ? { attachments: patch.attachments } : {}),
+              }
               : e,
           );
           task.updatedAt = Date.now();

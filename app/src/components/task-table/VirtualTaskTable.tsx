@@ -26,7 +26,7 @@ interface RowData {
 const Row = ({ index, style, data }: { index: number; style: CSSProperties; data: RowData }) => {
   const item = data.tasks[index];
   if (!item) return null;
-  
+
   return (
     <div style={style}>
       <table className="task-table" style={{ tableLayout: 'fixed', width: '100%' }}>
@@ -45,15 +45,19 @@ const Row = ({ index, style, data }: { index: number; style: CSSProperties; data
   );
 };
 
+import { DeleteChoiceDialog } from '../ui/DeleteChoiceDialog';
+
 export const VirtualTaskTable = React.memo(({ onTaskFocus, height = 600 }: VirtualTaskTableProps) => {
   const { tasks, projectMap } = useVisibleTasks();
-  const { deleteTask } = useAppStoreShallow((state) => ({
+  const [deleteCandidateId, setDeleteCandidateId] = React.useState<string | null>(null);
+  const { deleteTask, moveToUncategorized } = useAppStoreShallow((state) => ({
     deleteTask: state.deleteTask,
+    moveToUncategorized: state.moveToUncategorized,
   }));
 
   const handleDeleteTask = useCallback((taskId: string) => {
-    deleteTask(taskId);
-  }, [deleteTask]);
+    setDeleteCandidateId(taskId);
+  }, []);
 
   const rows = useMemo(
     () =>
@@ -143,6 +147,24 @@ export const VirtualTaskTable = React.memo(({ onTaskFocus, height = 600 }: Virtu
       >
         {Row}
       </FixedSizeList>
+      <DeleteChoiceDialog
+        open={!!deleteCandidateId}
+        title="删除任务"
+        message="请选择删除方式："
+        onMoveToTrash={() => {
+          if (deleteCandidateId) {
+            deleteTask(deleteCandidateId);
+            setDeleteCandidateId(null);
+          }
+        }}
+        onMoveToUncategorized={() => {
+          if (deleteCandidateId) {
+            moveToUncategorized(deleteCandidateId);
+            setDeleteCandidateId(null);
+          }
+        }}
+        onCancel={() => setDeleteCandidateId(null)}
+      />
     </div>
   );
 });

@@ -43,7 +43,7 @@ export const SettingsModal = ({ open, onClose }: SettingsModalProps) => {
                   <option value={365}>保留 1 年</option>
                   <option value={99999}>永久保留</option>
                 </select>
-                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-subtle)', marginTop: 4 }}>
                   超过该时间后，回收站中的任务将被自动彻底清除
                 </div>
               </div>

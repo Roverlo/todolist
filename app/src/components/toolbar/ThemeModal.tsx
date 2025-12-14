@@ -38,7 +38,7 @@ export const ThemeModal = ({ open, onClose }: ThemeModalProps) => {
 
   return (
     <div className='create-overlay'>
-      <div className='create-dialog' style={{ width: 420 }} onClick={(e) => e.stopPropagation()}>
+      <div className='create-dialog' style={{ width: 480 }} onClick={(e) => e.stopPropagation()}>
         <header className='create-dialog-header'>
           <div className='create-dialog-title-block'>
             <div className='create-dialog-title'>外观主题</div>
@@ -50,59 +50,97 @@ export const ThemeModal = ({ open, onClose }: ThemeModalProps) => {
         </header>
 
         <div className='create-dialog-body'>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {themes.map((theme) => (
-              <div
-                key={theme.key}
-                onClick={() => setSettings({ colorScheme: theme.key as any })}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  borderRadius: 12,
-                  cursor: 'pointer',
-                  border: settings.colorScheme === theme.key 
-                    ? `2px solid ${theme.color}` 
-                    : '2px solid transparent',
-                  background: settings.colorScheme === theme.key 
-                    ? 'rgba(0,0,0,0.02)' 
-                    : 'transparent',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (settings.colorScheme !== theme.key) {
-                    e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (settings.colorScheme !== theme.key) {
-                    e.currentTarget.style.background = 'transparent';
-                  }
-                }}
-              >
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 12,
+          }}>
+            {themes.map((theme) => {
+              const isSelected = settings.colorScheme === theme.key;
+              return (
                 <div
+                  key={theme.key}
+                  onClick={() => setSettings({ colorScheme: theme.key as any })}
                   style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    backgroundColor: theme.color,
-                    marginRight: 16,
-                    boxShadow: `0 4px 10px -2px ${theme.color}66`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '16px 8px',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    border: isSelected
+                      ? `2px solid ${theme.color}`
+                      : '2px solid var(--border)',
+                    background: isSelected
+                      ? `${theme.color}10`
+                      : 'var(--surface)',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
                   }}
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, color: '#1f2937', fontSize: 15 }}>
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = theme.color;
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 4px 12px -2px ${theme.color}33`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
+                  }}
+                >
+                  {/* 选中标记 */}
+                  {isSelected && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      color: theme.color,
+                      fontSize: 12,
+                      fontWeight: 'bold'
+                    }}>
+                      ✓
+                    </div>
+                  )}
+
+                  {/* 颜色圆球 */}
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      backgroundColor: theme.color,
+                      marginBottom: 10,
+                      boxShadow: `0 4px 10px -2px ${theme.color}66`,
+                    }}
+                  />
+
+                  {/* 主题名称 */}
+                  <div style={{
+                    fontWeight: 600,
+                    color: 'var(--text-main)',
+                    fontSize: 13,
+                    textAlign: 'center',
+                    marginBottom: 2,
+                  }}>
                     {theme.name}
                   </div>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+
+                  {/* 描述 */}
+                  <div style={{
+                    fontSize: 11,
+                    color: 'var(--text-subtle)',
+                    textAlign: 'center',
+                    lineHeight: 1.3,
+                  }}>
                     {theme.desc}
                   </div>
                 </div>
-                {settings.colorScheme === theme.key && (
-                  <div style={{ color: theme.color, fontWeight: 'bold' }}>✓</div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

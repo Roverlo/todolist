@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "npm run tauri -- dev",
-    "tauri:build": "npm run tauri -- build"
+    "tauri:build": "npm run tauri -- build",
+    "portable": "npm run tauri:build && powershell -ExecutionPolicy Bypass -File scripts/create-portable.ps1"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.0",

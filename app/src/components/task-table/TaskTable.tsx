@@ -3,6 +3,7 @@ import { useVisibleTasks } from '../../hooks/useVisibleTasks';
 import { useAppStoreShallow } from '../../state/appStore';
 import { TaskRow } from './TaskRow';
 import { confirm } from '@tauri-apps/plugin-dialog';
+import { DeleteChoiceDialog } from '../ui/DeleteChoiceDialog';
 import { getTaskZone, type TaskZone } from '../../utils/taskUtils';
 
 export interface TaskTableProps {
@@ -12,16 +13,18 @@ export interface TaskTableProps {
 
 export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTableProps) => {
   const { tasks, projectMap } = useVisibleTasks();
-  const { deleteTask, restoreTask, hardDeleteTask, settings } = useAppStoreShallow((state) => ({
+  const [deleteCandidateId, setDeleteCandidateId] = React.useState<string | null>(null);
+  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, settings } = useAppStoreShallow((state) => ({
     deleteTask: state.deleteTask,
+    moveToUncategorized: state.moveToUncategorized,
     restoreTask: state.restoreTask,
     hardDeleteTask: state.hardDeleteTask,
     settings: state.settings,
   }));
 
   const handleDeleteTask = useCallback((taskId: string) => {
-    deleteTask(taskId);
-  }, [deleteTask]);
+    setDeleteCandidateId(taskId);
+  }, []);
 
   const handleRestoreTask = useCallback((taskId: string) => {
     restoreTask(taskId);
@@ -43,12 +46,12 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
         const project = projectMap[task.projectId];
         const latest = task.progress?.length ? task.progress[task.progress.length - 1] : undefined;
         const zone = getTaskZone(task);
-        return { 
-          task, 
-          project, 
-          latestNote: latest?.note ?? '', 
+        return {
+          task,
+          project,
+          latestNote: latest?.note ?? '',
           latestProgressAt: latest?.at,
-          zone 
+          zone
         };
       }),
     [tasks, projectMap],
@@ -113,6 +116,24 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
           })}
         </tbody>
       </table>
+      <DeleteChoiceDialog
+        open={!!deleteCandidateId}
+        title="删除任务"
+        message="请选择删除方式："
+        onMoveToTrash={() => {
+          if (deleteCandidateId) {
+            deleteTask(deleteCandidateId);
+            setDeleteCandidateId(null);
+          }
+        }}
+        onMoveToUncategorized={() => {
+          if (deleteCandidateId) {
+            moveToUncategorized(deleteCandidateId);
+            setDeleteCandidateId(null);
+          }
+        }}
+        onCancel={() => setDeleteCandidateId(null)}
+      />
     </div>
   );
 });

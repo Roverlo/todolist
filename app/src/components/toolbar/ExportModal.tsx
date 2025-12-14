@@ -86,7 +86,7 @@ export const ExportModal = ({ open, onClose, tasks, projectMap }: Props) => {
           </button>
         </header>
 
-        <div className='create-dialog-body' style={{ background: '#fff' }}>
+        <div className='create-dialog-body' style={{ background: 'var(--surface)' }}>
           <div className='create-section'>
             <div className='create-field create-field-span-2'>
               <label className='create-field-label'>

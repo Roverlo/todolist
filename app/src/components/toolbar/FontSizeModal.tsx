@@ -42,14 +42,14 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
       <div className='create-dialog' style={{ width: 420 }} onClick={(e) => e.stopPropagation()}>
         <header className='create-dialog-header'>
           <div className='create-dialog-title-block' style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <div style={{ 
-              width: 32, 
-              height: 32, 
-              borderRadius: 8, 
-              background: 'var(--primary-soft)', 
-              color: 'var(--primary)', 
-              display: 'flex', 
-              alignItems: 'center', 
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: 'var(--primary-soft)',
+              color: 'var(--primary)',
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
               fontSize: 16,
               fontWeight: 'bold'
@@ -78,8 +78,8 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
                   padding: '12px 16px',
                   borderRadius: 12,
                   cursor: 'pointer',
-                  background: currentSize === size.value 
-                    ? 'var(--primary-soft)' 
+                  background: currentSize === size.value
+                    ? 'var(--primary-soft)'
                     : 'transparent',
                   border: currentSize === size.value
                     ? '1px solid var(--primary)'
@@ -99,22 +99,22 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ 
-                    fontSize: 14, 
+                  <div style={{
+                    fontSize: 14,
                     fontWeight: currentSize === size.value ? 600 : 500,
-                    color: currentSize === size.value ? 'var(--primary)' : '#374151'
+                    color: currentSize === size.value ? 'var(--primary)' : 'var(--text-main)'
                   }}>
                     {size.label}
                   </div>
-                  <div style={{ fontSize: 11, color: currentSize === size.value ? 'var(--primary)' : '#9ca3af', marginTop: 2, opacity: 0.8 }}>
+                  <div style={{ fontSize: 11, color: currentSize === size.value ? 'var(--primary)' : 'var(--text-subtle)', marginTop: 2, opacity: 0.8 }}>
                     {size.desc}
                   </div>
                 </div>
-                
+
                 {/* Preview text */}
-                <div style={{ 
-                  fontSize: size.value, 
-                  color: currentSize === size.value ? 'var(--primary)' : '#374151', 
+                <div style={{
+                  fontSize: size.value,
+                  color: currentSize === size.value ? 'var(--primary)' : 'var(--text-main)',
                   marginRight: 12,
                   opacity: 0.9,
                   fontFamily: 'inherit',
@@ -123,10 +123,10 @@ export const FontSizeModal = ({ open, onClose }: FontSizeModalProps) => {
                   预览 Text
                 </div>
 
-                <div style={{ 
-                  width: 20, 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  width: 20,
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   color: 'var(--primary)',
                   opacity: currentSize === size.value ? 1 : 0

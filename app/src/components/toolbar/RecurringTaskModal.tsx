@@ -259,14 +259,14 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                 )}
               </div>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13, color: '#4b5563' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13, color: 'var(--text-main)' }}>
               <input
                 type='checkbox'
                 checked={autoRenew}
                 onChange={(e) => setAutoRenew(e.target.checked)}
               />
               <span>完成后自动续期</span>
-              <span style={{ color: '#94a3af', fontSize: 12 }}>本期任务完成后，系统自动生成下一周期任务。</span>
+              <span style={{ color: 'var(--text-subtle)', fontSize: 12 }}>本期任务完成后，系统自动生成下一周期任务。</span>
             </label>
           </section>
 
