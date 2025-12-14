@@ -138,21 +138,9 @@ export const TaskRow = memo(({
     onHardDeleteTask?.(task.id);
   };
 
-  const handleQuickStatus = (e: React.MouseEvent) => {
+  const handleQuickStatus = (e: React.MouseEvent, targetStatus: Task['status']) => {
     e.stopPropagation();
-    // 状态循环: doing -> done -> paused -> doing
-    const nextStatus: Record<Task['status'], Task['status']> = {
-      doing: 'done',
-      done: 'paused',
-      paused: 'doing',
-    };
-    onQuickStatusChange?.(task.id, nextStatus[task.status]);
-  };
-
-  const statusActionLabel: Record<Task['status'], string> = {
-    doing: '✓ 完成',
-    done: '⏸ 挂起',
-    paused: '▶ 继续',
+    onQuickStatusChange?.(task.id, targetStatus);
   };
 
   const priorityClass = {
@@ -255,14 +243,39 @@ export const TaskRow = memo(({
             </>
           ) : (
             <>
-              <button
-                className='btn-xs btn-xs-primary'
-                type='button'
-                onClick={handleQuickStatus}
-                title={`点击${statusActionLabel[task.status]}`}
-              >
-                {statusActionLabel[task.status]}
-              </button>
+              {/* 进行中任务：显示“完成”和“挂起”按钮 */}
+              {task.status === 'doing' && (
+                <>
+                  <button
+                    className='btn-xs btn-xs-primary'
+                    type='button'
+                    onClick={(e) => handleQuickStatus(e, 'done')}
+                    title='标记为已完成'
+                  >
+                    ✓ 完成
+                  </button>
+                  <button
+                    className='btn-xs btn-xs-outline'
+                    type='button'
+                    onClick={(e) => handleQuickStatus(e, 'paused')}
+                    title='挂起任务'
+                  >
+                    ⏸ 挂起
+                  </button>
+                </>
+              )}
+              {/* 挂起任务：显示“继续”按钮 */}
+              {task.status === 'paused' && (
+                <button
+                  className='btn-xs btn-xs-primary'
+                  type='button'
+                  onClick={(e) => handleQuickStatus(e, 'doing')}
+                  title='继续任务'
+                >
+                  ▶ 继续
+                </button>
+              )}
+              {/* 已完成任务：不显示快速状态按钮，只能在编辑弹窗修改 */}
               <button
                 className='btn-xs btn-xs-outline'
                 type='button'

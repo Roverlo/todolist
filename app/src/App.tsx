@@ -15,6 +15,7 @@ import { useVisibleTasks } from './hooks/useVisibleTasks';
 import { ToastContainer } from './components/ui/Toast';
 import './components/ui/Toast.css';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
+import { NewTaskChoiceDialog } from './components/ui/NewTaskChoiceDialog';
 
 function App() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -26,6 +27,7 @@ function App() {
   const [themeOpen, setThemeOpen] = useState(false);
   const [fontSizeOpen, setFontSizeOpen] = useState(false);
   const [emptyTrashConfirmOpen, setEmptyTrashConfirmOpen] = useState(false);
+  const [newTaskChoiceOpen, setNewTaskChoiceOpen] = useState(false);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
@@ -112,14 +114,14 @@ function App() {
         event.preventDefault();
         redo();
       }
-      // Ctrl+N 或 单独 N 键新建任务
+      // Ctrl+N 或 单独 N 键新建任务（打开类型选择弹窗）
       if (event.ctrlKey && event.key.toLowerCase() === 'n') {
         event.preventDefault();
-        setAddOpen(true);
+        setNewTaskChoiceOpen(true);
       }
       if (!event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'n') {
         event.preventDefault();
-        setAddOpen(true);
+        setNewTaskChoiceOpen(true);
       }
       // Esc 键关闭详情抽屉
       if (event.key === 'Escape') {
@@ -250,6 +252,18 @@ function App() {
 
       <SingleTaskModal open={addOpen} onClose={() => setAddOpen(false)} />
       <RecurringTaskModal open={recurringOpen} onClose={() => setRecurringOpen(false)} />
+      <NewTaskChoiceDialog
+        open={newTaskChoiceOpen}
+        onSingleTask={() => {
+          setNewTaskChoiceOpen(false);
+          setAddOpen(true);
+        }}
+        onRecurringTask={() => {
+          setNewTaskChoiceOpen(false);
+          setRecurringOpen(true);
+        }}
+        onCancel={() => setNewTaskChoiceOpen(false)}
+      />
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
