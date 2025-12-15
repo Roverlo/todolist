@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStoreShallow, useAppStore } from '../../state/appStore';
-import { save, open } from '@tauri-apps/plugin-dialog';
+import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 
 interface BackupModalProps {
@@ -54,7 +54,7 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
 
     const handleImport = async () => {
         try {
-            const filePath = await open({
+            const filePath = await openDialog({
                 filters: [{ name: 'JSON', extensions: ['json'] }],
                 multiple: false,
             });
