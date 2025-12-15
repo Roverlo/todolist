@@ -16,6 +16,9 @@ interface TaskRowProps {
   trashRetentionDays?: number;
   isActive?: boolean;
   fontSize?: number;
+  isSelected?: boolean;
+  onSelect?: (taskId: string, selected: boolean) => void;
+  showCheckbox?: boolean;
 }
 
 const statusLabel: Record<Task['status'], string> = {
@@ -106,7 +109,10 @@ export const TaskRow = memo(({
   onCopyTask,
   trashRetentionDays = 30,
   isActive = false,
-  fontSize = 13
+  fontSize = 13,
+  isSelected = false,
+  onSelect,
+  showCheckbox = false
 }: TaskRowProps) => {
   const isTrash = project?.name === '回收站';
   const [showStatusMenu, setShowStatusMenu] = useState(false);
@@ -185,71 +191,86 @@ export const TaskRow = memo(({
 
   return (
     <tr
-      className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''}`}
+      className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''} ${isSelected ? 'task-row-selected' : ''}`}
       style={isTrash ? { cursor: 'default' } : undefined}
     >
       <td className={`col-main ${priorityClass}`}>
-        <div className='project-name'>{project?.name ?? '未分类'}</div>
-        <div className={`task-title-main ${isTrash ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
-        <div className='task-tags-row' style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={toggleStatusMenu}
-            className={`tag-pill tag-status-btn ${task.status === 'done'
-              ? 'tag-status-done'
-              : task.status === 'paused'
-                ? 'tag-status-paused'
-                : 'tag-status-doing'
-              }`}
-            title={isTrash ? '' : '点击切换状态'}
-            disabled={isTrash}
-          >
-            {statusLabel[task.status]}
-          </button>
-
-          {/* 状态切换菜单 */}
-          {showStatusMenu && (
-            <div className="status-menu-popover" ref={statusMenuRef}>
-              {task.status === 'doing' && (
-                <>
-                  <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'done')}>
-                    ✓ 完成
-                  </div>
-                  <div className="status-menu-item secondary" onClick={(e) => handleQuickStatus(e, 'paused')}>
-                    ‖ 挂起
-                  </div>
-                </>
-              )}
-              {task.status === 'paused' && (
-                <>
-                  <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'doing')}>
-                    ▶ 继续
-                  </div>
-                  <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'done')}>
-                    ✓ 完成
-                  </div>
-                </>
-              )}
-              {task.status === 'done' && (
-                <>
-                  <div className="status-menu-item secondary" onClick={(e) => handleQuickStatus(e, 'doing')}>
-                    ↺ 重开
-                  </div>
-                </>
-              )}
-            </div>
+        <div className='task-main-content'>
+          {showCheckbox && !isTrash && (
+            <label className='task-checkbox-wrapper' onClick={(e) => e.stopPropagation()}>
+              <input
+                type='checkbox'
+                className='task-checkbox'
+                checked={isSelected}
+                onChange={(e) => onSelect?.(task.id, e.target.checked)}
+              />
+              <span className='task-checkbox-custom' />
+            </label>
           )}
+          <div className='task-main-info'>
+            <div className='project-name'>{project?.name ?? '未分类'}</div>
+            <div className={`task-title-main ${isTrash ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+            <div className='task-tags-row' style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={toggleStatusMenu}
+                className={`tag-pill tag-status-btn ${task.status === 'done'
+                  ? 'tag-status-done'
+                  : task.status === 'paused'
+                    ? 'tag-status-paused'
+                    : 'tag-status-doing'
+                  }`}
+                title={isTrash ? '' : '点击切换状态'}
+                disabled={isTrash}
+              >
+                {statusLabel[task.status]}
+              </button>
 
-          <span
-            className={`tag-pill ${task.priority === 'high'
-              ? 'tag-priority-high'
-              : task.priority === 'low'
-                ? 'tag-priority-low'
-                : 'tag-priority-medium'
-              }`}
-          >
-            {priorityLabel[task.priority ?? 'medium']}
-          </span>
+              {/* 状态切换菜单 */}
+              {showStatusMenu && (
+                <div className="status-menu-popover" ref={statusMenuRef}>
+                  {task.status === 'doing' && (
+                    <>
+                      <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'done')}>
+                        ✓ 完成
+                      </div>
+                      <div className="status-menu-item secondary" onClick={(e) => handleQuickStatus(e, 'paused')}>
+                        ‖ 挂起
+                      </div>
+                    </>
+                  )}
+                  {task.status === 'paused' && (
+                    <>
+                      <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'doing')}>
+                        ▶ 继续
+                      </div>
+                      <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'done')}>
+                        ✓ 完成
+                      </div>
+                    </>
+                  )}
+                  {task.status === 'done' && (
+                    <>
+                      <div className="status-menu-item secondary" onClick={(e) => handleQuickStatus(e, 'doing')}>
+                        ↺ 重开
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              <span
+                className={`tag-pill ${task.priority === 'high'
+                  ? 'tag-priority-high'
+                  : task.priority === 'low'
+                    ? 'tag-priority-low'
+                    : 'tag-priority-medium'
+                  }`}
+              >
+                {priorityLabel[task.priority ?? 'medium']}
+              </span>
+            </div>
+          </div>
         </div>
       </td>
       <td className='col-text'>

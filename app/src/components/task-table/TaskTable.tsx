@@ -1,9 +1,11 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { useVisibleTasks } from '../../hooks/useVisibleTasks';
 import { useAppStoreShallow } from '../../state/appStore';
 import { TaskRow } from './TaskRow';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { DeleteChoiceDialog } from '../ui/DeleteChoiceDialog';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { BulkActionsBar } from '../bulk/BulkActionsBar';
 import { getTaskZone, type TaskZone } from '../../utils/taskUtils';
 
 export interface TaskTableProps {
@@ -14,7 +16,10 @@ export interface TaskTableProps {
 export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTableProps) => {
   const { tasks, projectMap } = useVisibleTasks();
   const [deleteCandidateId, setDeleteCandidateId] = React.useState<string | null>(null);
-  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, updateTask, addTask, settings } = useAppStoreShallow((state) => ({
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
+  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, updateTask, addTask, settings, bulkDeleteTasks } = useAppStoreShallow((state) => ({
     deleteTask: state.deleteTask,
     moveToUncategorized: state.moveToUncategorized,
     restoreTask: state.restoreTask,
@@ -22,7 +27,57 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
     updateTask: state.updateTask,
     addTask: state.addTask,
     settings: state.settings,
+    bulkDeleteTasks: state.bulkDeleteTasks,
   }));
+
+  // 判断是否为回收站视图
+  const isTrashView = useMemo(() => {
+    return tasks.length > 0 && tasks.every(t => projectMap[t.projectId]?.name === '回收站');
+  }, [tasks, projectMap]);
+
+  // 可选任务（非回收站任务）
+  const selectableTasks = useMemo(() => {
+    return tasks.filter(t => projectMap[t.projectId]?.name !== '回收站');
+  }, [tasks, projectMap]);
+
+  const handleSelectTask = useCallback((taskId: string, selected: boolean) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(taskId);
+      } else {
+        next.delete(taskId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((selected: boolean) => {
+    if (selected) {
+      setSelectedIds(new Set(selectableTasks.map(t => t.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  }, [selectableTasks]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkDelete = useCallback(() => {
+    setShowBulkDeleteConfirm(true);
+  }, []);
+
+  const confirmBulkDelete = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    if (bulkDeleteTasks) {
+      bulkDeleteTasks(ids);
+    } else {
+      ids.forEach(id => deleteTask(id));
+    }
+    setSelectedIds(new Set());
+    setShowBulkDeleteConfirm(false);
+  }, [selectedIds, bulkDeleteTasks, deleteTask]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
     setDeleteCandidateId(taskId);
@@ -87,8 +142,21 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
     done: { emoji: '✅', label: '已完成' },
   };
 
+  const showCheckbox = !isTrashView && selectableTasks.length > 0;
+  const allSelected = showCheckbox && selectableTasks.length > 0 && selectableTasks.every(t => selectedIds.has(t.id));
+  const someSelected = selectedIds.size > 0;
+
   return (
     <div className='task-table-wrapper'>
+      {/* 批量操作工具栏 */}
+      {someSelected && (
+        <BulkActionsBar
+          selectedIds={Array.from(selectedIds)}
+          onClear={handleClearSelection}
+          onBulkDelete={handleBulkDelete}
+        />
+      )}
+
       <table className='task-table'>
         <colgroup>
           <col style={{ width: '220px' }} />
@@ -99,7 +167,20 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
         </colgroup>
         <thead>
           <tr>
-            <th>项目 / 标题</th>
+            <th>
+              {showCheckbox && (
+                <label className='task-checkbox-wrapper header-checkbox' onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type='checkbox'
+                    className='task-checkbox'
+                    checked={allSelected}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                  />
+                  <span className='task-checkbox-custom' />
+                </label>
+              )}
+              项目 / 标题
+            </th>
             <th>详情</th>
             <th>最近进展</th>
             <th>下一步计划</th>
@@ -151,6 +232,9 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
                     trashRetentionDays={settings.trashRetentionDays ?? 60}
                     isActive={activeTaskId === task.id}
                     fontSize={settings.listFontSize}
+                    showCheckbox={showCheckbox}
+                    isSelected={selectedIds.has(task.id)}
+                    onSelect={handleSelectTask}
                   />
                 </React.Fragment>
               );
@@ -158,6 +242,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
           )}
         </tbody>
       </table>
+
       <DeleteChoiceDialog
         open={!!deleteCandidateId}
         title="删除任务"
@@ -175,6 +260,17 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
           }
         }}
         onCancel={() => setDeleteCandidateId(null)}
+      />
+
+      <ConfirmDialog
+        open={showBulkDeleteConfirm}
+        title="批量删除"
+        message={`确定要删除选中的 ${selectedIds.size} 项任务吗？任务将被移到回收站。`}
+        confirmLabel="确定删除"
+        cancelLabel="取消"
+        variant="danger"
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setShowBulkDeleteConfirm(false)}
       />
     </div>
   );

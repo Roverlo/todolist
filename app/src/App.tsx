@@ -349,7 +349,9 @@ function App() {
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         tasks={tasks}
+        allTasks={allTasks}
         projectMap={projectMap as any}
+        currentProjectId={filters.projectId}
       />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <ThemeModal open={themeOpen} onClose={() => setThemeOpen(false)} />

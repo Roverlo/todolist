@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { useEffect, useMemo, useRef, useState, useLayoutEffect, useCallback } from 'react';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, ProgressEntry, Status, Subtask } from '../../types';
@@ -47,6 +47,8 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   const [progressTime, setProgressTime] = useState(() => dayjs().format('YYYY-MM-DDTHH:mm'));
   const [editingProgressId, setEditingProgressId] = useState<string | null>(null);
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
+  const saveTimeoutRef = useRef<number | null>(null);
 
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
   const nextRef = useRef<HTMLTextAreaElement | null>(null);
@@ -97,31 +99,75 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     return `逾期 ${Math.abs(diff)} 天`;
   };
 
-  const handleSaveTask = () => {
-    if (!title.trim()) {
-      alert('标题不能为空');
+  // 防抖自动保存函数
+  const debouncedSave = useCallback(() => {
+    if (!task || !title.trim()) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    setSaveStatus('saving');
+    saveTimeoutRef.current = window.setTimeout(() => {
+      updateTask(task.id, {
+        title: title.trim(),
+        projectId,
+        status,
+        priority,
+        dueDate: dueDate || undefined,
+        onsiteOwner: onsiteOwner || undefined,
+        lineOwner: lineOwner || undefined,
+        notes,
+        nextStep,
+        progress,
+        subtasks,
+      });
+      setSaveStatus('saved');
+      // 3秒后重置状态
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }, 1000);
+  }, [task, title, projectId, status, priority, dueDate, onsiteOwner, lineOwner, notes, nextStep, progress, subtasks, updateTask]);
+
+  // 监听字段变化自动保存
+  useEffect(() => {
+    if (!task) return;
+    // 跳过初始化
+    if (title === task.title &&
+      projectId === task.projectId &&
+      status === task.status &&
+      priority === (task.priority ?? 'medium') &&
+      dueDate === (task.dueDate ?? '') &&
+      notes === (task.notes ?? '') &&
+      nextStep === (task.nextStep ?? '')) {
       return;
     }
-    updateTask(task.id, {
-      title: title.trim(),
-      projectId,
-      status,
-      priority,
-      dueDate: dueDate || undefined,
-      onsiteOwner: onsiteOwner || undefined,
-      lineOwner: lineOwner || undefined,
-      notes,
-      nextStep,
-      progress,
-      subtasks,
-    });
-    onClose();
-  };
+    debouncedSave();
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [title, projectId, status, priority, dueDate, onsiteOwner, lineOwner, notes, nextStep, task, debouncedSave]);
+
+
 
   const handleSubtasksChange = (newSubtasks: Subtask[]) => {
     setSubtasks(newSubtasks);
     // 实时保存子任务更改
     updateTask(task.id, { subtasks: newSubtasks });
+
+    // 子任务联动：检查是否所有子任务都已完成
+    const allCompleted = newSubtasks.length > 0 && newSubtasks.every(s => s.completed);
+    if (allCompleted && status !== 'done') {
+      // 使用 setTimeout 避免在渲染中更新状态
+      setTimeout(() => {
+        const confirmed = window.confirm('所有子任务都已完成！是否将主任务标记为"已完成"？');
+        if (confirmed) {
+          setStatus('done');
+          updateTask(task.id, { status: 'done', subtasks: newSubtasks });
+        }
+      }, 100);
+    }
   };
 
   const handleAddOrUpdateProgress = (_stayEditing: boolean) => {
@@ -468,13 +514,18 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
         </div>
 
         <footer className='dialog-footer'>
-          <div className='footer-meta'>上次更新：{lastUpdated}</div>
+          <div className='footer-meta'>
+            <span>上次更新：{lastUpdated}</span>
+            {saveStatus === 'saving' && (
+              <span className='save-indicator saving'>正在保存...</span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className='save-indicator saved'>✓ 已自动保存</span>
+            )}
+          </div>
           <div className='footer-actions'>
-            <button className='btn btn-ghost' type='button' onClick={onClose}>
-              取消
-            </button>
-            <button className='btn btn-primary-outline' type='button' onClick={handleSaveTask}>
-              保存修改
+            <button className='btn btn-primary-outline' type='button' onClick={onClose}>
+              关闭
             </button>
           </div>
         </footer>

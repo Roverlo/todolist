@@ -242,6 +242,7 @@ export interface AppStore extends AppData {
   emptyTrash: () => void;
   hardDeleteTask: (id: string) => void;
   bulkUpdateTasks: (ids: string[], updates: Partial<Task>, batchId?: string) => void;
+  bulkDeleteTasks: (ids: string[]) => void;
   addProgress: (
     id: string,
     entry: { note: string; at?: number; attachments?: Attachment[] },
@@ -656,6 +657,38 @@ export const useAppStore = create<AppStore>()(
               })()
               : task,
           );
+        });
+      },
+      bulkDeleteTasks: (ids) => {
+        withHistory(set, (state) => {
+          const trashId = state.projects.find((p) => p.name === '回收站')?.id ?? (() => {
+            const newProject = {
+              id: nanoid(),
+              name: '回收站',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            };
+            state.projects.push(newProject);
+            return newProject.id;
+          })();
+          const now = Date.now();
+          state.tasks = state.tasks.map((task) => {
+            if (ids.includes(task.id)) {
+              const from = task.projectId;
+              return {
+                ...task,
+                projectId: trashId,
+                updatedAt: now,
+                extras: {
+                  ...task.extras,
+                  trashedAt: String(now),
+                  trashedFrom: from,
+                },
+              };
+            }
+            return task;
+          });
+          rebuildDictionary(state);
         });
       },
       addProgress: (id, entry) => {

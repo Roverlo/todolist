@@ -1,140 +1,120 @@
 import { useState } from 'react';
 import { useAppStoreShallow } from '../../state/appStore';
+import { CustomSelect } from '../ui/CustomSelect';
+import type { Status, Priority } from '../../types';
 
 interface BulkActionsBarProps {
   selectedIds: string[];
   onClear: () => void;
+  onBulkDelete: () => void;
 }
 
-export const BulkActionsBar = ({ selectedIds, onClear }: BulkActionsBarProps) => {
-  const { bulkUpdateTasks, ensureProjectByName } = useAppStoreShallow((state) => ({
+const statusOptions = [
+  { value: 'doing', label: '进行中' },
+  { value: 'paused', label: '挂起' },
+  { value: 'done', label: '已完成' },
+];
+
+const priorityOptions = [
+  { value: 'high', label: '高优先级' },
+  { value: 'medium', label: '中优先级' },
+  { value: 'low', label: '低优先级' },
+];
+
+export const BulkActionsBar = ({ selectedIds, onClear, onBulkDelete }: BulkActionsBarProps) => {
+  const { bulkUpdateTasks, projects } = useAppStoreShallow((state) => ({
     bulkUpdateTasks: state.bulkUpdateTasks,
-    ensureProjectByName: state.ensureProjectByName,
+    projects: state.projects,
   }));
 
-  const [dueDate, setDueDate] = useState('');
-  const [onsiteOwner, setOnsiteOwner] = useState('');
-  const [lineOwner, setLineOwner] = useState('');
+  const [showProjectSelect, setShowProjectSelect] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   if (!selectedIds.length) {
     return null;
   }
 
-  const handleMoveProject = () => {
-    const name = prompt('Target project name');
-    if (!name) return;
-    const projectId = ensureProjectByName(name);
-    bulkUpdateTasks(selectedIds, { projectId });
-  };
-
-  const handleClearTags = () => {
-    bulkUpdateTasks(selectedIds, { tags: [] });
-  };
+  const projectOptions = projects
+    .filter((p) => p.name !== '回收站')
+    .map((p) => ({ value: p.id, label: p.name }));
 
   const handleStatusChange = (status: string) => {
-    bulkUpdateTasks(selectedIds, { status: status as 'doing' | 'done' | 'paused' });
+    bulkUpdateTasks(selectedIds, { status: status as Status });
   };
 
   const handlePriorityChange = (priority: string) => {
-    bulkUpdateTasks(selectedIds, { priority: priority as 'high' | 'medium' | 'low' });
+    bulkUpdateTasks(selectedIds, { priority: priority as Priority });
   };
 
-  const applyOwners = () => {
-    bulkUpdateTasks(selectedIds, {
-      onsiteOwner: onsiteOwner || undefined,
-      lineOwner: lineOwner || undefined,
-    });
-    setOnsiteOwner('');
-    setLineOwner('');
-  };
-
-  const applyDueDate = () => {
-    bulkUpdateTasks(selectedIds, {
-      dueDate: dueDate || undefined,
-    });
+  const handleMoveProject = () => {
+    if (selectedProjectId) {
+      bulkUpdateTasks(selectedIds, { projectId: selectedProjectId });
+      setShowProjectSelect(false);
+      setSelectedProjectId('');
+    }
   };
 
   return (
     <div className='bulk-actions-bar'>
-      <div>
-        Selected {selectedIds.length} items
-        <button type='button' onClick={onClear}>
-          Cancel
+      <div className='bulk-actions-left'>
+        <span className='bulk-selected-count'>
+          已选择 <strong>{selectedIds.length}</strong> 项任务
+        </span>
+        <button className='btn btn-ghost bulk-clear-btn' type='button' onClick={onClear}>
+          取消选择
         </button>
       </div>
-      <div className='bulk-actions-group'>
-        <button type='button' onClick={handleMoveProject}>
-          Move to Project
-        </button>
-        <label>
-          Status
-          <select
-            value=''
-            onChange={(event) => {
-              handleStatusChange(event.target.value);
-              event.target.selectedIndex = 0;
-            }}
-          >
-            <option value='' disabled>
-              Choose…
-            </option>
-            <option value='doing'>进行中</option>
-            <option value='done'>已完成</option>
-            <option value='paused'>挂起</option>
-          </select>
-        </label>
-        <label>
-          Priority
-          <select
-            value=''
-            onChange={(event) => {
-              handlePriorityChange(event.target.value);
-              event.target.selectedIndex = 0;
-            }}
-          >
-            <option value='' disabled>
-              Choose…
-            </option>
-            <option value='high'>High</option>
-            <option value='medium'>Medium</option>
-            <option value='low'>Low</option>
-          </select>
-        </label>
-        <label>
-          Due
-          <input
-            type='date'
-            value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            onBlur={applyDueDate}
+
+      <div className='bulk-actions-right'>
+        {/* 状态修改 */}
+        <div className='bulk-action-item'>
+          <span className='bulk-action-label'>状态</span>
+          <CustomSelect
+            value=""
+            options={[{ value: '', label: '选择...' }, ...statusOptions]}
+            onChange={(val) => val && handleStatusChange(val)}
+            placeholder="选择状态"
           />
-        </label>
-        <button type='button' onClick={applyDueDate}>
-          Apply Due
-        </button>
-        <label>
-          Onsite Owner
-          <input
-            type='text'
-            value={onsiteOwner}
-            onChange={(event) => setOnsiteOwner(event.target.value)}
-            onBlur={applyOwners}
+        </div>
+
+        {/* 优先级修改 */}
+        <div className='bulk-action-item'>
+          <span className='bulk-action-label'>优先级</span>
+          <CustomSelect
+            value=""
+            options={[{ value: '', label: '选择...' }, ...priorityOptions]}
+            onChange={(val) => val && handlePriorityChange(val)}
+            placeholder="选择优先级"
           />
-        </label>
-        <label>
-          Line Owner
-          <input
-            type='text'
-            value={lineOwner}
-            onChange={(event) => setLineOwner(event.target.value)}
-            onBlur={applyOwners}
-          />
-        </label>
-        <button type='button' onClick={applyOwners}>
-          Apply Owners
-        </button>
-        <button type='button' onClick={handleClearTags}>
-          Clear tags
+        </div>
+
+        {/* 移动项目 */}
+        <div className='bulk-action-item'>
+          {showProjectSelect ? (
+            <div className='bulk-project-select-row'>
+              <CustomSelect
+                value={selectedProjectId}
+                options={projectOptions}
+                onChange={setSelectedProjectId}
+                placeholder="选择项目"
+              />
+              <button className='btn btn-primary-outline btn-sm' type='button' onClick={handleMoveProject} disabled={!selectedProjectId}>
+                确定
+              </button>
+              <button className='btn btn-ghost btn-sm' type='button' onClick={() => setShowProjectSelect(false)}>
+                取消
+              </button>
+            </div>
+          ) : (
+            <button className='btn btn-outline btn-sm' type='button' onClick={() => setShowProjectSelect(true)}>
+              移动到...
+            </button>
+          )}
+        </div>
+
+        {/* 批量删除 */}
+        <button className='btn btn-danger-outline btn-sm' type='button' onClick={onBulkDelete}>
+          批量删除
         </button>
       </div>
     </div>
