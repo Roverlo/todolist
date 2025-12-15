@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import './App.css';
 import { ProjectSidebar } from './components/sidebar/ProjectSidebar';
 import { PrimaryToolbar } from './components/toolbar/PrimaryToolbar';
@@ -16,6 +16,8 @@ import { ToastContainer } from './components/ui/Toast';
 import './components/ui/Toast.css';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { NewTaskChoiceDialog } from './components/ui/NewTaskChoiceDialog';
+import { BackupModal } from './components/toolbar/BackupModal';
+import { DueReminderModal } from './components/ui/DueReminderModal';
 
 function App() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -28,11 +30,16 @@ function App() {
   const [fontSizeOpen, setFontSizeOpen] = useState(false);
   const [emptyTrashConfirmOpen, setEmptyTrashConfirmOpen] = useState(false);
   const [newTaskChoiceOpen, setNewTaskChoiceOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [reminderShown, setReminderShown] = useState(false);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
   const purgeTrash = useAppStore((state) => state.purgeTrash);
   const emptyTrash = useAppStore((state) => state.emptyTrash);
+  const setFilters = useAppStore((state) => state.setFilters);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 主题切换
   useEffect(() => {
@@ -43,6 +50,15 @@ function App() {
   const { tasks, projectMap } = useVisibleTasks();
   const projects = useAppStore((state) => state.projects);
   const filters = useAppStore((state) => state.filters);
+  const allTasks = useAppStore((state) => state.tasks);
+
+  // 构建完整的projectMap用于提醒模态框
+  const allProjectMap = useMemo(() => {
+    return projects.reduce<Record<string, typeof projects[number]>>((acc, project) => {
+      acc[project.id] = project;
+      return acc;
+    }, {});
+  }, [projects]);
 
   const isTrashView = useMemo(() => {
     const trashId = projects.find((p) => p.name === '回收站')?.id;
@@ -129,6 +145,11 @@ function App() {
           setActiveTaskId(null);
         }
       }
+      // Ctrl+F 或 / 键聚焦搜索框
+      if ((event.ctrlKey && event.key.toLowerCase() === 'f') || (!event.ctrlKey && !event.altKey && !event.metaKey && event.key === '/')) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -137,6 +158,18 @@ function App() {
   useEffect(() => {
     return () => { };
   }, [drawerOpen]);
+
+  // 启动时检查到期任务
+  useEffect(() => {
+    if (!reminderShown && allTasks.length > 0) {
+      // 稍微延迟显示，让用户先看到界面
+      const timer = setTimeout(() => {
+        setReminderOpen(true);
+        setReminderShown(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [allTasks, reminderShown]);
 
   return (
     <div className={`app theme-${colorScheme}`}>
@@ -150,6 +183,39 @@ function App() {
             </div>
             <div className='main-subtitle'>按截止时间升序</div>
           </div>
+
+          {/* 搜索框 */}
+          <div className='search-box'>
+            <span className='search-icon'>🔍</span>
+            <input
+              ref={searchInputRef}
+              type='text'
+              className='search-input'
+              placeholder='搜索任务... (Ctrl+F 或 /)'
+              defaultValue={filters.search || ''}
+              onChange={(e) => setFilters({ search: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+            {filters.search && (
+              <button
+                className='search-clear'
+                onClick={() => {
+                  setFilters({ search: '' });
+                  if (searchInputRef.current) {
+                    searchInputRef.current.value = '';
+                  }
+                }}
+                title='清除搜索'
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           <div className='toolbar'>
             {isTrashView ? (
               <>
@@ -232,6 +298,15 @@ function App() {
                 >
                   字号
                 </button>
+                <button
+                  className='btn btn-light'
+                  onClick={() => setBackupOpen(true)}
+                  aria-label='备份恢复'
+                  title='备份恢复'
+                  style={{ marginLeft: 4 }}
+                >
+                  备份
+                </button>
               </>
             )}
           </div>
@@ -273,6 +348,13 @@ function App() {
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <ThemeModal open={themeOpen} onClose={() => setThemeOpen(false)} />
       <FontSizeModal open={fontSizeOpen} onClose={() => setFontSizeOpen(false)} />
+      <BackupModal open={backupOpen} onClose={() => setBackupOpen(false)} />
+      <DueReminderModal
+        open={reminderOpen}
+        onClose={() => setReminderOpen(false)}
+        tasks={allTasks}
+        projectMap={allProjectMap as any}
+      />
       <ToastContainer />
       <ConfirmDialog
         open={emptyTrashConfirmOpen}

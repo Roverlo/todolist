@@ -2975,3 +2975,209 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   transform: translateY(-1px); /* 轻微上浮增强交互感 */
 }
+
+/* 搜索框样式 */
+.search-box {
+  display: flex;
+  align-items: center;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 6px 12px;
+  gap: 8px;
+  min-width: 280px;
+  max-width: 400px;
+  transition: all 0.2s ease;
+}
+
+.search-box:focus-within {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 3px var(--primary-soft, rgba(59, 130, 246, 0.15));
+}
+
+.search-icon {
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-main, #374151);
+}
+
+.search-input::placeholder {
+  color: var(--text-subtle, #9ca3af);
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-subtle, #9ca3af);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.search-clear:hover {
+  background: var(--bg-hover, #f3f4f6);
+  color: var(--text-main, #374151);
+}
+
+/* 备份模态框样式 */
+.backup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.backup-action-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.backup-action-card:hover {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.backup-action-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.backup-action-info {
+  flex: 1;
+}
+
+.backup-action-title {
+  font-weight: 600;
+  color: var(--text-main, #374151);
+  margin-bottom: 2px;
+}
+
+.backup-action-desc {
+  font-size: 12px;
+  color: var(--text-subtle, #9ca3af);
+}
+
+.backup-message {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.backup-message.success {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.backup-message.error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* 到期提醒模态框样式 */
+.reminder-section {
+  margin-bottom: 16px;
+}
+
+.reminder-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.reminder-section-title.overdue {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.reminder-section-title.today {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.reminder-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reminder-task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.reminder-task-item:hover {
+  border-color: var(--primary, #3b82f6);
+}
+
+.reminder-task-item.overdue {
+  border-left: 3px solid #dc2626;
+}
+
+.reminder-task-item.today {
+  border-left: 3px solid #d97706;
+}
+
+.reminder-task-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-task-project {
+  font-size: 11px;
+  color: var(--text-subtle, #9ca3af);
+  margin-bottom: 2px;
+}
+
+.reminder-task-title {
+  font-size: 13px;
+  color: var(--text-main, #374151);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reminder-task-due {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.reminder-task-item.overdue .reminder-task-due {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.reminder-task-item.today .reminder-task-due {
+  background: #fffbeb;
+  color: #d97706;
+}
