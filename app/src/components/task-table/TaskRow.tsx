@@ -243,55 +243,23 @@ export const TaskRow = memo(({
             </>
           ) : (
             <>
-              {/* 进行中任务：显示“完成”和“挂起”按钮 */}
+              {/* 第一行：状态操作按钮 */}
               {task.status === 'doing' && (
-                <>
-                  <button
-                    className='btn-xs btn-xs-primary'
-                    type='button'
-                    onClick={(e) => handleQuickStatus(e, 'done')}
-                    title='标记为已完成'
-                  >
-                    ✓ 完成
-                  </button>
-                  <button
-                    className='btn-xs btn-xs-outline'
-                    type='button'
-                    onClick={(e) => handleQuickStatus(e, 'paused')}
-                    title='挂起任务'
-                  >
-                    ⏸ 挂起
-                  </button>
-                </>
+                <div className='action-row'>
+                  <button className='btn-xs btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'done')} title='标记为已完成'>✓完成</button>
+                  <button className='btn-xs btn-xs-secondary' type='button' onClick={(e) => handleQuickStatus(e, 'paused')} title='挂起任务'>‖挂起</button>
+                </div>
               )}
-              {/* 挂起任务：显示“继续”按钮 */}
               {task.status === 'paused' && (
-                <button
-                  className='btn-xs btn-xs-primary'
-                  type='button'
-                  onClick={(e) => handleQuickStatus(e, 'doing')}
-                  title='继续任务'
-                >
-                  ▶ 继续
-                </button>
+                <div className='action-row'>
+                  <button className='btn-xs btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'doing')} title='继续任务'>▶继续</button>
+                </div>
               )}
-              {/* 已完成任务：不显示快速状态按钮，只能在编辑弹窗修改 */}
-              <button
-                className='btn-xs btn-xs-outline'
-                type='button'
-                onClick={handleEdit}
-                aria-label={`编辑任务: ${task.title}`}
-              >
-                编辑
-              </button>
-              <button
-                className='btn-xs btn-xs-danger'
-                type='button'
-                onClick={handleDelete}
-                aria-label={`删除任务: ${task.title}`}
-              >
-                删除
-              </button>
+              {/* 第二行：编辑/删除按钮 */}
+              <div className='action-row'>
+                <button className='btn-xs btn-xs-outline' type='button' onClick={handleEdit} aria-label={`编辑任务: ${task.title}`}>编辑</button>
+                <button className='btn-xs btn-xs-danger' type='button' onClick={handleDelete} aria-label={`删除任务: ${task.title}`}>删除</button>
+              </div>
             </>
           )}
         </div>

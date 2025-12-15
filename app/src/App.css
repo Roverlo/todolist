@@ -2746,3 +2746,40 @@ body {
   flex-direction: column;
   gap: 4px;
 }
+/* 操作按钮行优化 */
+.action-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+/* 成功按钮（完成/继续） */
+.btn-xs-success {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+  font-weight: 500;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.btn-xs-success:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+/* 次要按钮（挂起） */
+.btn-xs-secondary {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #4b5563;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.btn-xs-secondary:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
