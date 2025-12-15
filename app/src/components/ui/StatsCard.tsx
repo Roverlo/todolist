@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import type { Task, Project } from '../../types';
 
@@ -8,6 +8,8 @@ interface StatsCardProps {
 }
 
 export const StatsCard = ({ tasks, projectMap }: StatsCardProps) => {
+    const [collapsed, setCollapsed] = useState(false);
+
     const stats = useMemo(() => {
         const today = dayjs().startOf('day');
 
@@ -41,48 +43,94 @@ export const StatsCard = ({ tasks, projectMap }: StatsCardProps) => {
     }, [tasks, projectMap]);
 
     return (
-        <div className='stats-card'>
-            <div className='stats-title'>📊 任务概览</div>
-            <div className='stats-grid'>
-                <div className='stats-item'>
-                    <div className='stats-value'>{stats.total}</div>
-                    <div className='stats-label'>总任务</div>
+        <div className={`stats-card ${collapsed ? 'collapsed' : ''}`}>
+            <div className='stats-header'>
+                <div className='stats-header-left'>
+                    <span className='stats-icon'>📊</span>
+                    <span className='stats-title-text'>任务概览</span>
+                    {collapsed && (
+                        <div className='stats-summary-row'>
+                            <span className='stats-summary-item'>
+                                <span className='label'>进行中</span>
+                                <span className='value doing'>{stats.doing}</span>
+                            </span>
+                            <span className='stats-summary-divider'>/</span>
+                            <span className='stats-summary-item'>
+                                <span className='label'>逾期</span>
+                                <span className={`value ${stats.overdue > 0 ? 'danger' : ''}`}>{stats.overdue}</span>
+                            </span>
+                            <span className='stats-summary-divider'>/</span>
+                            <span className='stats-summary-item'>
+                                <span className='label'>完成率</span>
+                                <span className='value'>{stats.completionRate}%</span>
+                            </span>
+                        </div>
+                    )}
                 </div>
-                <div className='stats-item doing'>
-                    <div className='stats-value'>{stats.doing}</div>
-                    <div className='stats-label'>进行中</div>
-                </div>
-                <div className='stats-item paused'>
-                    <div className='stats-value'>{stats.paused}</div>
-                    <div className='stats-label'>挂起</div>
-                </div>
-                <div className='stats-item done'>
-                    <div className='stats-value'>{stats.done}</div>
-                    <div className='stats-label'>已完成</div>
-                </div>
+                <button
+                    className='stats-toggle-btn'
+                    onClick={() => setCollapsed(!collapsed)}
+                    title={collapsed ? '展开详情' : '收起详情'}
+                >
+                    {collapsed ? '▼' : '▲'}
+                </button>
             </div>
-            <div className='stats-row'>
-                <div className='stats-highlight'>
-                    {stats.overdue > 0 && (
-                        <span className='stats-badge overdue'>⚠️ {stats.overdue} 项已逾期</span>
-                    )}
-                    {stats.dueToday > 0 && (
-                        <span className='stats-badge today'>📅 {stats.dueToday} 项今日到期</span>
-                    )}
-                    {stats.overdue === 0 && stats.dueToday === 0 && (
-                        <span className='stats-badge ok'>✅ 暂无紧急任务</span>
-                    )}
-                </div>
-                <div className='stats-progress'>
-                    <div className='stats-progress-bar'>
-                        <div
-                            className='stats-progress-fill'
-                            style={{ width: `${stats.completionRate}%` }}
-                        />
+
+            {!collapsed && (
+                <div className='stats-content'>
+                    <div className='stats-grid'>
+                        <div className='stats-item'>
+                            <div className='stats-value'>{stats.total}</div>
+                            <div className='stats-label'>总任务</div>
+                        </div>
+                        <div className='stats-item'>
+                            <div className='stats-value doing'>{stats.doing}</div>
+                            <div className='stats-label'>进行中</div>
+                        </div>
+                        <div className='stats-item'>
+                            <div className='stats-value paused'>{stats.paused}</div>
+                            <div className='stats-label'>挂起</div>
+                        </div>
+                        <div className='stats-item'>
+                            <div className='stats-value done'>{stats.done}</div>
+                            <div className='stats-label'>已完成</div>
+                        </div>
                     </div>
-                    <span className='stats-progress-text'>{stats.completionRate}% 完成</span>
+
+                    <div className='stats-footer'>
+                        <div className='stats-alerts'>
+                            {stats.overdue > 0 && (
+                                <div className='stats-alert overdue'>
+                                    <span className='alert-icon'>⚠️</span>
+                                    <span>{stats.overdue} 项已逾期</span>
+                                </div>
+                            )}
+                            {stats.dueToday > 0 && (
+                                <div className='stats-alert today'>
+                                    <span className='alert-icon'>📅</span>
+                                    <span>{stats.dueToday} 项今日到期</span>
+                                </div>
+                            )}
+                            {stats.overdue === 0 && stats.dueToday === 0 && (
+                                <div className='stats-alert ok'>
+                                    <span className='alert-icon'>✅</span>
+                                    <span>暂无紧急任务</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className='stats-progress-wrapper'>
+                            <div className='stats-progress-bar'>
+                                <div
+                                    className='stats-progress-fill'
+                                    style={{ width: `${stats.completionRate}%` }}
+                                />
+                            </div>
+                            <span className='stats-progress-text'>{stats.completionRate}% 完成</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

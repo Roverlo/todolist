@@ -207,23 +207,10 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
           <main className='panel-main'>
             <section className='section'>
               <div className='section-title-row'>
-                <div className='section-title'>标题与项目</div>
-                <div className='section-hint'>修改任务标题或移动到其他项目。</div>
+                <div className='section-title'>属性</div>
+                <div className='section-hint'>管理任务的基本属性。</div>
               </div>
-              <div className='field-grid'>
-                <div className='field' style={{ gridColumn: 'span 2' }}>
-                  <label className='field-label'>
-                    任务标题<span>*</span>
-                  </label>
-                  <input
-                    className='field-input'
-                    type='text'
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder='请输入任务标题'
-                    maxLength={100}
-                  />
-                </div>
+              <div className='field-grid-3'>
                 <div className='field'>
                   <label className='field-label'>
                     所属项目<span>*</span>
@@ -235,51 +222,27 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                     placeholder='选择项目'
                   />
                 </div>
-              </div>
-            </section>
-
-            <section className='section'>
-              <div className='section-title-row'>
-                <div className='section-title'>基本信息</div>
-                <div className='section-hint'>调整状态、优先级和截止日期。</div>
-              </div>
-              <div className='field-grid'>
                 <div className='field'>
                   <label className='field-label'>
                     任务状态<span>*</span>
                   </label>
-                  <div className='pill-select'>
-                    {statusOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type='button'
-                        className={clsx('pill-option', { 'is-active': status === opt.value })}
-                        onClick={() => setStatus(opt.value)}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
+                  <CustomSelect
+                    value={status}
+                    options={statusOptions}
+                    onChange={(val) => setStatus(val as Status)}
+                    placeholder='选择状态'
+                  />
                 </div>
                 <div className='field'>
                   <label className='field-label'>
                     优先级<span>*</span>
                   </label>
-                  <div className='pill-select'>
-                    {priorityOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type='button'
-                        className={clsx('pill-option', {
-                          'is-active': priority === opt.value,
-                          'is-danger': opt.value === 'high',
-                        })}
-                        onClick={() => setPriority(opt.value)}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
+                  <CustomSelect
+                    value={priority}
+                    options={priorityOptions}
+                    onChange={(val) => setPriority(val as Priority)}
+                    placeholder='选择优先级'
+                  />
                 </div>
                 <div className='field'>
                   <label className='field-label'>
@@ -314,6 +277,21 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 </div>
               </div>
             </section>
+
+            <div className='field' style={{ marginBottom: 18 }}>
+              <label className='field-label'>
+                任务标题<span>*</span>
+              </label>
+              <input
+                className='field-input'
+                type='text'
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder='请输入任务标题'
+                maxLength={100}
+                style={{ fontSize: '15px', fontWeight: 600 }}
+              />
+            </div>
 
             <section className='section'>
               <div className='section-title-row'>
