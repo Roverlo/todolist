@@ -2941,3 +2941,19 @@ body {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* 优化菜单间距 */
+.status-menu-popover {
+  gap: 4px !important; /* 增加项之间的间距 */
+}
+
+/* 菜单项样式微调 */
+.status-menu-item {
+  margin-bottom: 0; /* 确保没有额外的margin干扰gap */
+  border: 1px solid transparent; /* 预留边框位置，防止hover抖动 */
+}
+
+.status-menu-item:hover {
+  background: var(--bg-hover, #f3f4f6);
+  border-color: var(--border, #e5e7eb); /* hover时显示轻微边框增强边界感 */
+}
