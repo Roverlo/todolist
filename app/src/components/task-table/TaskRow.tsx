@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useRef, useEffect } from 'react';
 import dayjs from 'dayjs';
 import type { Task, Project } from '../../types';
 
@@ -107,10 +107,28 @@ export const TaskRow = memo(({
   fontSize = 13
 }: TaskRowProps) => {
   const isTrash = project?.name === '回收站';
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(event.target as Node)) {
+        setShowStatusMenu(false);
+      }
+    };
+
+    if (showStatusMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showStatusMenu]);
 
   const handleRowClick = (e: React.MouseEvent) => {
-    // 如果点击的是按钮，不触发行点击
-    if ((e.target as HTMLElement).closest('button')) {
+    // 如果点击的是按钮或菜单，不触发行点击
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.status-menu-popover')) {
       return;
     }
     // 回收站任务不可查看详情/编辑
@@ -141,6 +159,13 @@ export const TaskRow = memo(({
   const handleQuickStatus = (e: React.MouseEvent, targetStatus: Task['status']) => {
     e.stopPropagation();
     onQuickStatusChange?.(task.id, targetStatus);
+    setShowStatusMenu(false); // 关闭菜单
+  };
+
+  const toggleStatusMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isTrash) return;
+    setShowStatusMenu(!showStatusMenu);
   };
 
   const priorityClass = {
@@ -173,17 +198,55 @@ export const TaskRow = memo(({
       <td className={`col-main ${priorityClass}`}>
         <div className='project-name'>{project?.name ?? '未分类'}</div>
         <div className={`task-title-main ${isTrash ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
-        <div className='task-tags-row'>
-          <span
-            className={`tag-pill ${task.status === 'done'
+        <div className='task-tags-row' style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={toggleStatusMenu}
+            className={`tag-pill tag-status-btn ${task.status === 'done'
               ? 'tag-status-done'
               : task.status === 'paused'
                 ? 'tag-status-paused'
                 : 'tag-status-doing'
               }`}
+            title={isTrash ? '' : '点击切换状态'}
+            disabled={isTrash}
           >
             {statusLabel[task.status]}
-          </span>
+          </button>
+
+          {/* 状态切换菜单 */}
+          {showStatusMenu && (
+            <div className="status-menu-popover" ref={statusMenuRef}>
+              {task.status === 'doing' && (
+                <>
+                  <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'done')}>
+                    ✓ 完成
+                  </div>
+                  <div className="status-menu-item secondary" onClick={(e) => handleQuickStatus(e, 'paused')}>
+                    ‖ 挂起
+                  </div>
+                </>
+              )}
+              {task.status === 'paused' && (
+                <>
+                  <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'doing')}>
+                    ▶ 继续
+                  </div>
+                  <div className="status-menu-item success" onClick={(e) => handleQuickStatus(e, 'done')}>
+                    ✓ 完成
+                  </div>
+                </>
+              )}
+              {task.status === 'done' && (
+                <>
+                  <div className="status-menu-item secondary" onClick={(e) => handleQuickStatus(e, 'doing')}>
+                    ↺ 重开
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <span
             className={`tag-pill ${task.priority === 'high'
               ? 'tag-priority-high'
@@ -195,27 +258,6 @@ export const TaskRow = memo(({
             {priorityLabel[task.priority ?? 'medium']}
           </span>
         </div>
-
-        {/* 状态切换按钮 - 独立一行 */}
-        {!isTrash && (task.status === 'doing' || task.status === 'paused') && (
-          <div className='task-quick-actions'>
-            {task.status === 'doing' && (
-              <>
-                <button className='btn-xs-pill btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'done')} title='标记为已完成'>
-                  ✓ 完成
-                </button>
-                <button className='btn-xs-pill btn-xs-secondary' type='button' onClick={(e) => handleQuickStatus(e, 'paused')} title='挂起任务'>
-                  ‖ 挂起
-                </button>
-              </>
-            )}
-            {task.status === 'paused' && (
-              <button className='btn-xs-pill btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'doing')} title='继续任务'>
-                ▶ 继续
-              </button>
-            )}
-          </div>
-        )}
       </td>
       <td className='col-text'>
         <div className='field-label'>详情</div>
