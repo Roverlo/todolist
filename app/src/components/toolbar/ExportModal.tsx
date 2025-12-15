@@ -140,16 +140,41 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
 
     if (format === 'csv') {
       const savedPath = await saveCsvWithTauri(filename, content);
+      if (savedPath === 'cancelled') {
+        // 用户取消，不做任何操作
+        return;
+      }
       if (savedPath) {
         alert(`已导出 ${tasksToExport.length} 条任务到：\n${savedPath}`);
         onClose();
         return;
       }
+      // savedPath 为 null 表示出错，继续使用浏览器下载
     }
 
-    triggerDownload(filename, content, format === 'csv' ? 'text/csv;charset=utf-8' : 'text/markdown;charset=utf-8');
-    alert(`已导出 ${tasksToExport.length} 条任务到: ${filename}`);
-    onClose();
+    // Markdown 格式或 CSV 出错时的备用下载
+    try {
+      const { save: tauriSave } = await import('@tauri-apps/plugin-dialog');
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+      const ext = format === 'csv' ? 'csv' : 'md';
+      const path = await tauriSave({
+        defaultPath: filename,
+        filters: [{ name: format.toUpperCase(), extensions: [ext] }]
+      });
+      if (!path) {
+        // 用户取消
+        return;
+      }
+      const bom = format === 'csv' ? '\ufeff' : '';
+      await writeTextFile(path, bom + content);
+      alert(`已导出 ${tasksToExport.length} 条任务到：\n${path}`);
+      onClose();
+    } catch {
+      // Tauri 对话框失败，使用浏览器下载
+      triggerDownload(filename, content, format === 'csv' ? 'text/csv;charset=utf-8' : 'text/markdown;charset=utf-8');
+      alert(`已导出 ${tasksToExport.length} 条任务到: ${filename}`);
+      onClose();
+    }
   };
 
   // Handle Esc key

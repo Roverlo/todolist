@@ -106,18 +106,17 @@ export const triggerDownload = (filename: string, content: string, mime = 'text/
   URL.revokeObjectURL(url);
 };
 
-export const saveCsvWithTauri = async (filename: string, content: string): Promise<string | null> => {
+export const saveCsvWithTauri = async (filename: string, content: string): Promise<string | null | 'cancelled'> => {
   const BOM = '\ufeff';
   const data = BOM + content.replace(/\n/g, '\r\n');
   try {
     const { save: tauriSave } = await import('@tauri-apps/plugin-dialog');
     const { writeTextFile: tauriWriteTextFile } = await import('@tauri-apps/plugin-fs');
     const path = await tauriSave({ defaultPath: filename, filters: [{ name: 'CSV', extensions: ['csv'] }] });
-    if (!path) return null;
+    if (!path) return 'cancelled'; // 用户取消
     await tauriWriteTextFile(path, data);
     return String(path);
   } catch {
-    triggerDownload(filename, content);
-    return null;
+    return null; // 错误情况
   }
 };
