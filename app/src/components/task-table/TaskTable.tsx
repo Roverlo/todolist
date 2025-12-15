@@ -14,12 +14,13 @@ export interface TaskTableProps {
 export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTableProps) => {
   const { tasks, projectMap } = useVisibleTasks();
   const [deleteCandidateId, setDeleteCandidateId] = React.useState<string | null>(null);
-  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, updateTask, settings } = useAppStoreShallow((state) => ({
+  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, updateTask, addTask, settings } = useAppStoreShallow((state) => ({
     deleteTask: state.deleteTask,
     moveToUncategorized: state.moveToUncategorized,
     restoreTask: state.restoreTask,
     hardDeleteTask: state.hardDeleteTask,
     updateTask: state.updateTask,
+    addTask: state.addTask,
     settings: state.settings,
   }));
 
@@ -44,6 +45,23 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
   const handleQuickStatusChange = useCallback((taskId: string, newStatus: 'doing' | 'done' | 'paused') => {
     updateTask(taskId, { status: newStatus });
   }, [updateTask]);
+
+  const handleCopyTask = useCallback((taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    addTask({
+      projectId: task.projectId,
+      title: `${task.title} (副本)`,
+      status: 'doing',
+      priority: task.priority,
+      dueDate: task.dueDate,
+      onsiteOwner: task.onsiteOwner,
+      lineOwner: task.lineOwner,
+      nextStep: task.nextStep,
+      notes: task.notes,
+      tags: task.tags,
+    });
+  }, [tasks, addTask]);
 
   const rows = useMemo(
     () =>
@@ -129,6 +147,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
                     onRestoreTask={handleRestoreTask}
                     onHardDeleteTask={handleHardDeleteTask}
                     onQuickStatusChange={handleQuickStatusChange}
+                    onCopyTask={handleCopyTask}
                     trashRetentionDays={settings.trashRetentionDays ?? 60}
                     isActive={activeTaskId === task.id}
                     fontSize={settings.listFontSize}

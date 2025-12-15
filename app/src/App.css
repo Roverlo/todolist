@@ -3181,3 +3181,268 @@ body {
   background: #fffbeb;
   color: #d97706;
 }
+
+/* 统计卡片样式 */
+.stats-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.stats-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main, #374151);
+  margin-bottom: 12px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stats-item {
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--bg-hover, #f9fafb);
+}
+
+.stats-item.doing {
+  background: #eff6ff;
+}
+
+.stats-item.paused {
+  background: #fefce8;
+}
+
+.stats-item.done {
+  background: #f0fdf4;
+}
+
+.stats-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main, #374151);
+}
+
+.stats-item.doing .stats-value {
+  color: #2563eb;
+}
+
+.stats-item.paused .stats-value {
+  color: #ca8a04;
+}
+
+.stats-item.done .stats-value {
+  color: #16a34a;
+}
+
+.stats-label {
+  font-size: 11px;
+  color: var(--text-subtle, #9ca3af);
+  margin-top: 2px;
+}
+
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stats-highlight {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stats-badge {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.stats-badge.overdue {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.stats-badge.today {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.stats-badge.ok {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.stats-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-progress-bar {
+  width: 80px;
+  height: 6px;
+  background: var(--bg-hover, #e5e7eb);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stats-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary, #3b82f6), #60a5fa);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.stats-progress-text {
+  font-size: 11px;
+  color: var(--text-subtle, #9ca3af);
+  white-space: nowrap;
+}
+
+/* 子任务列表样式 */
+.subtask-list {
+  margin-top: 12px;
+}
+
+.subtask-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.subtask-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-hover, #e5e7eb);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.subtask-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.subtask-progress-text {
+  font-size: 11px;
+  color: var(--text-subtle, #9ca3af);
+  white-space: nowrap;
+}
+
+.subtask-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.subtask-item:hover {
+  border-color: var(--primary, #3b82f6);
+}
+
+.subtask-item.completed {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.subtask-item.completed .subtask-title {
+  color: var(--text-subtle, #9ca3af);
+  text-decoration: line-through;
+}
+
+.subtask-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary, #3b82f6);
+}
+
+.subtask-title {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-main, #374151);
+}
+
+.subtask-delete {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--text-subtle, #9ca3af);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 2px 4px;
+}
+
+.subtask-item:hover .subtask-delete {
+  opacity: 1;
+}
+
+.subtask-delete:hover {
+  color: #dc2626;
+}
+
+.subtask-add {
+  display: flex;
+  gap: 8px;
+}
+
+.subtask-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--surface, #ffffff);
+  color: var(--text-main, #374151);
+}
+
+.subtask-input:focus {
+  outline: none;
+  border-color: var(--primary, #3b82f6);
+}
+
+.subtask-add-btn {
+  padding: 8px 14px;
+  background: var(--primary, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.subtask-add-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.subtask-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

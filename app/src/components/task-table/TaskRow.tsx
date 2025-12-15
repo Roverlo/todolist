@@ -12,6 +12,7 @@ interface TaskRowProps {
   onRestoreTask?: (taskId: string) => void;
   onHardDeleteTask?: (taskId: string) => void;
   onQuickStatusChange?: (taskId: string, newStatus: Task['status']) => void;
+  onCopyTask?: (taskId: string) => void;
   trashRetentionDays?: number;
   isActive?: boolean;
   fontSize?: number;
@@ -102,6 +103,7 @@ export const TaskRow = memo(({
   onRestoreTask,
   onHardDeleteTask,
   onQuickStatusChange,
+  onCopyTask,
   trashRetentionDays = 30,
   isActive = false,
   fontSize = 13
@@ -297,9 +299,10 @@ export const TaskRow = memo(({
             </>
           ) : (
             <>
-              {/* 编辑/删除按钮 */}
+              {/* 编辑/复制/删除按钮 */}
               <div className='action-row'>
                 <button className='btn-xs btn-xs-outline' type='button' onClick={handleEdit} aria-label={`编辑任务: ${task.title}`}>编辑</button>
+                <button className='btn-xs btn-xs-outline' type='button' onClick={(e) => { e.stopPropagation(); onCopyTask?.(task.id); }} aria-label={`复制任务: ${task.title}`}>复制</button>
                 <button className='btn-xs btn-xs-danger' type='button' onClick={handleDelete} aria-label={`删除任务: ${task.title}`}>删除</button>
               </div>
             </>

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
-import type { Priority, ProgressEntry, Status } from '../../types';
+import type { Priority, ProgressEntry, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
+import { SubtaskList } from '../ui/SubtaskList';
 
 interface DetailsDrawerProps {
   open: boolean;
@@ -42,6 +43,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   const [notes, setNotes] = useState('');
   const [nextStep, setNextStep] = useState('');
   const [progress, setProgress] = useState<ProgressEntry[]>([]);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [progressNote, setProgressNote] = useState('');
   const [progressTime, setProgressTime] = useState(() => dayjs().format('YYYY-MM-DDTHH:mm'));
   const [editingProgressId, setEditingProgressId] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       setNextStep(task.nextStep ?? '');
       const sorted = [...(task.progress ?? [])].sort((a, b) => a.at - b.at);
       setProgress(sorted);
+      setSubtasks(task.subtasks ?? []);
       setProgressNote('');
       setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
       setEditingProgressId(null);
@@ -110,8 +113,15 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       notes,
       nextStep,
       progress,
+      subtasks,
     });
     onClose();
+  };
+
+  const handleSubtasksChange = (newSubtasks: Subtask[]) => {
+    setSubtasks(newSubtasks);
+    // 实时保存子任务更改
+    updateTask(task.id, { subtasks: newSubtasks });
   };
 
   const handleAddOrUpdateProgress = (_stayEditing: boolean) => {
@@ -338,6 +348,14 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                   placeholder='例如：下周一前补齐案例，并提交知识库…'
                 />
               </div>
+            </section>
+
+            <section className='section'>
+              <div className='section-title-row'>
+                <div className='section-title'>☑️ 子任务</div>
+                <div className='section-hint'>拆分任务为可执行的小步骤。</div>
+              </div>
+              <SubtaskList subtasks={subtasks} onChange={handleSubtasksChange} />
             </section>
           </main>
 

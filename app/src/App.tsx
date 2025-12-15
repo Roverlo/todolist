@@ -18,6 +18,7 @@ import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { NewTaskChoiceDialog } from './components/ui/NewTaskChoiceDialog';
 import { BackupModal } from './components/toolbar/BackupModal';
 import { DueReminderModal } from './components/ui/DueReminderModal';
+import { StatsCard } from './components/ui/StatsCard';
 
 function App() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -313,6 +314,11 @@ function App() {
         </div>
 
         <PrimaryToolbar />
+
+        {/* 统计仪表盘 */}
+        {!isTrashView && (
+          <StatsCard tasks={allTasks} projectMap={allProjectMap as any} />
+        )}
 
         <section className='content'>
           <TaskTable onTaskFocus={setActiveTaskId} activeTaskId={activeTaskId} />

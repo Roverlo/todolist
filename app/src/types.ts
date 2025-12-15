@@ -68,6 +68,13 @@ export interface ProgressEntry {
   attachments?: Attachment[];
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+  createdAt: number;
+}
+
 export interface Task {
   id: string;
   projectId: string;
@@ -86,6 +93,7 @@ export interface Task {
   dependencies?: Dependency[];
   history?: HistoryLog[];
   progress?: ProgressEntry[];
+  subtasks?: Subtask[];
   extras?: Record<string, string>;
 }
 
