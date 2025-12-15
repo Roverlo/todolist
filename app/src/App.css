@@ -2783,3 +2783,39 @@ body {
   background: #e5e7eb;
   border-color: #9ca3af;
 }
+
+/* 内联状态按钮样式 */
+.btn-xs-inline {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-xs-inline.btn-xs-success {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.btn-xs-inline.btn-xs-success:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+.btn-xs-inline.btn-xs-secondary {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #4b5563;
+}
+
+.btn-xs-inline.btn-xs-secondary:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}

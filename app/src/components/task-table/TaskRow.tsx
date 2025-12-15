@@ -194,6 +194,16 @@ export const TaskRow = memo(({
           >
             {priorityLabel[task.priority ?? 'medium']}
           </span>
+          {/* 状态切换按钮 - 放在标签后面 */}
+          {!isTrash && task.status === 'doing' && (
+            <>
+              <button className='btn-xs-inline btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'done')} title='标记为已完成'>✓完成</button>
+              <button className='btn-xs-inline btn-xs-secondary' type='button' onClick={(e) => handleQuickStatus(e, 'paused')} title='挂起任务'>‖挂起</button>
+            </>
+          )}
+          {!isTrash && task.status === 'paused' && (
+            <button className='btn-xs-inline btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'doing')} title='继续任务'>▶继续</button>
+          )}
         </div>
       </td>
       <td className='col-text'>
@@ -243,19 +253,7 @@ export const TaskRow = memo(({
             </>
           ) : (
             <>
-              {/* 第一行：状态操作按钮 */}
-              {task.status === 'doing' && (
-                <div className='action-row'>
-                  <button className='btn-xs btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'done')} title='标记为已完成'>✓完成</button>
-                  <button className='btn-xs btn-xs-secondary' type='button' onClick={(e) => handleQuickStatus(e, 'paused')} title='挂起任务'>‖挂起</button>
-                </div>
-              )}
-              {task.status === 'paused' && (
-                <div className='action-row'>
-                  <button className='btn-xs btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'doing')} title='继续任务'>▶继续</button>
-                </div>
-              )}
-              {/* 第二行：编辑/删除按钮 */}
+              {/* 编辑/删除按钮 */}
               <div className='action-row'>
                 <button className='btn-xs btn-xs-outline' type='button' onClick={handleEdit} aria-label={`编辑任务: ${task.title}`}>编辑</button>
                 <button className='btn-xs btn-xs-danger' type='button' onClick={handleDelete} aria-label={`删除任务: ${task.title}`}>删除</button>
