@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
-import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, ProgressEntry, Status, Subtask } from '../../types';
