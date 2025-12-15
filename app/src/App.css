@@ -2957,3 +2957,21 @@ body {
   background: var(--bg-hover, #f3f4f6);
   border-color: var(--border, #e5e7eb); /* hover时显示轻微边框增强边界感 */
 }
+
+/* 优化菜单边框和间距 */
+.status-menu-popover {
+  gap: 2px !important; /* 减小间距 */
+  padding: 3px;
+}
+
+.status-menu-item {
+  border: 1px solid var(--border, #e5e7eb); /* 默认显示边框 */
+  background: #fff;
+}
+
+.status-menu-item:hover {
+  background: var(--bg-hover, #f9fafb);
+  border-color: var(--primary, #3b82f6); /* Hover时边框高亮 */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transform: translateY(-1px); /* 轻微上浮增强交互感 */
+}
