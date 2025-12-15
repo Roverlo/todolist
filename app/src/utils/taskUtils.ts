@@ -31,11 +31,11 @@ export type TaskZone = 'urgent' | 'future' | 'nodate' | 'done';
 export const getTaskZone = (task: Task): TaskZone => {
   if (task.status === 'done') return 'done';
   if (!task.dueDate) return 'nodate';
-  
+
   const now = dayjs().startOf('day');
   const dueDate = dayjs(task.dueDate).startOf('day');
   const diff = dueDate.diff(now, 'day');
-  
+
   if (diff <= 0) return 'urgent'; // 逾期或今天
   return 'future'; // 未来
 };
@@ -104,11 +104,11 @@ export const matchesDslTokens = (
 ) => {
   return parsed.tokens.every((token) => {
     const value = token.value.toLowerCase();
-  switch (token.key) {
-    case 'project':
-      return normalize(projectMap[task.projectId]?.name).includes(value);
-    case 'status':
-      return normalize(task.status) === value;
+    switch (token.key) {
+      case 'project':
+        return normalize(projectMap[task.projectId]?.name).includes(value);
+      case 'status':
+        return normalize(task.status) === value;
       case 'priority':
         return normalize(task.priority) === value;
       case 'onsiteowner':
@@ -140,6 +140,8 @@ const textArea = (task: Task, projectMap: Record<string, Project>) =>
     task.lineOwner,
     (task.tags ?? []).join(','),
     projectMap[task.projectId]?.name,
+    // 添加进展记录内容到搜索范围
+    ...(task.progress ?? []).map((p) => p.note),
   ]
     .filter(Boolean)
     .join(' ')
@@ -158,7 +160,7 @@ export const filterTasks = (
       const project = projectMap[task.projectId];
       if (project?.name === '回收站') return false;
     }
-    
+
     if (filters.projectId) {
       if (filters.projectId === ('UNASSIGNED' as unknown as string)) {
         if (task.projectId) return false;
@@ -242,13 +244,13 @@ export const sortTasks = (
     if (rules.length > 0 && rules[0].key === 'dueDate' && rules[0].direction === 'asc') {
       const statusA = STATUS_ORDER[a.status] ?? 99;
       const statusB = STATUS_ORDER[b.status] ?? 99;
-      
+
       // 0. 已完成任务沉底 (Done always at bottom)
       // 如果两个都是已完成，或者其中一个是，先按状态分
       if (a.status === 'done' || b.status === 'done') {
         if (a.status === b.status) {
-           // 都是已完成，按完成时间倒序（如果没有 completedAt，用 updatedAt）
-           return b.updatedAt - a.updatedAt; 
+          // 都是已完成，按完成时间倒序（如果没有 completedAt，用 updatedAt）
+          return b.updatedAt - a.updatedAt;
         }
         return statusA - statusB;
       }
@@ -257,7 +259,7 @@ export const sortTasks = (
       const pA = PRIORITY_ORDER[a.priority ?? 'medium'] ?? 1; // 0:high, 1:medium, 2:low
       const pB = PRIORITY_ORDER[b.priority ?? 'medium'] ?? 1;
       // 反转权重以便计算 (High=3, Med=2, Low=1)
-      const wA = 3 - pA; 
+      const wA = 3 - pA;
       const wB = 3 - pB;
 
       // 2. 解析日期
@@ -275,7 +277,7 @@ export const sortTasks = (
       const isNoDateB = !dateB;
 
       // === 层级比较 ===
-      
+
       // A 是紧急，B 不是 -> A 前
       if (isUrgentA && !isUrgentB) return -1;
       // B 是紧急，A 不是 -> B 前
