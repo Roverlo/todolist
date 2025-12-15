@@ -126,15 +126,7 @@ export const TaskRow = memo(({
     };
   }, [showStatusMenu]);
 
-  const handleRowClick = (e: React.MouseEvent) => {
-    // 如果点击的是按钮或菜单，不触发行点击
-    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.status-menu-popover')) {
-      return;
-    }
-    // 回收站任务不可查看详情/编辑
-    if (isTrash) return;
-    onTaskFocus(task.id);
-  };
+
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -192,7 +184,6 @@ export const TaskRow = memo(({
   return (
     <tr
       className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''}`}
-      onClick={handleRowClick}
       style={isTrash ? { cursor: 'default' } : undefined}
     >
       <td className={`col-main ${priorityClass}`}>
