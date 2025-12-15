@@ -61,6 +61,11 @@ export const StatsCard = ({ tasks, projectMap }: StatsCardProps) => {
                             </span>
                             <span className='stats-summary-divider'>/</span>
                             <span className='stats-summary-item'>
+                                <span className='label'>挂起</span>
+                                <span className='value paused'>{stats.paused}</span>
+                            </span>
+                            <span className='stats-summary-divider'>/</span>
+                            <span className='stats-summary-item'>
                                 <span className='label'>完成率</span>
                                 <span className='value'>{stats.completionRate}%</span>
                             </span>

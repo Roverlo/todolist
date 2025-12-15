@@ -5,9 +5,10 @@ import type { Subtask } from '../../types';
 interface SubtaskListProps {
     subtasks: Subtask[];
     onChange: (subtasks: Subtask[]) => void;
+    hideProgress?: boolean;
 }
 
-export const SubtaskList = ({ subtasks, onChange }: SubtaskListProps) => {
+export const SubtaskList = ({ subtasks, onChange, hideProgress }: SubtaskListProps) => {
     const [newTitle, setNewTitle] = useState('');
 
     const handleAdd = () => {
@@ -40,7 +41,7 @@ export const SubtaskList = ({ subtasks, onChange }: SubtaskListProps) => {
 
     return (
         <div className='subtask-list'>
-            {totalCount > 0 && (
+            {!hideProgress && totalCount > 0 && (
                 <div className='subtask-progress'>
                     <div className='subtask-progress-bar'>
                         <div

@@ -1,31 +1,31 @@
-/* ==================== 主题系统 ==================== */
+/* ==================== 涓婚绯荤粺 ==================== */
 
-/* 默认主题（回退） */
+/* 榛樿涓婚锛堝洖閫€锛?*/
 :root {
   --bg: #f0f5ff;
   --surface: #ffffff;
   --sidebar-bg: #f8fafc;
   --border: #cbd5e1;
-  /* 加深边框 Slate 300 */
+  /* 鍔犳繁杈规 Slate 300 */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
   --primary-soft: #eff6ff;
   --primary-text: #ffffff;
   --text-main: #0f172a;
   --text-secondary: #334155;
-  /* 加深次要文字 Slate 700 */
+  /* 鍔犳繁娆¤鏂囧瓧 Slate 700 */
   --text-subtle: #64748b;
-  /* 加深微弱文字 Slate 500 */
+  /* 鍔犳繁寰急鏂囧瓧 Slate 500 */
   --shadow-color: rgba(37, 99, 235, 0.1);
 }
 
-/* 1. 经典蓝 (Blue) - 专业、冷静 */
+/* 1. 缁忓吀钃?(Blue) - 涓撲笟銆佸喎闈?*/
 :root[data-theme='blue'] {
   --bg: #f0f5ff;
   --surface: #ffffff;
   --sidebar-bg: #f8fafc;
   --border: #cbd5e1;
-  /* 加深边框 */
+  /* 鍔犳繁杈规 */
   --primary: #2563eb;
   /* Blue 600 */
   --primary-hover: #1d4ed8;
@@ -39,14 +39,14 @@
   --shadow-color: rgba(37, 99, 235, 0.1);
 }
 
-/* 2. 清新绿 (Green) - 护眼、自然 */
+/* 2. 娓呮柊缁?(Green) - 鎶ょ溂銆佽嚜鐒?*/
 :root[data-theme='green'] {
   --bg: #f2fbf5;
-  /* Emerald 50 变体 */
+  /* Emerald 50 鍙樹綋 */
   --surface: #ffffff;
   --sidebar-bg: #f8fcf9;
   --border: #a7f3d0;
-  /* 加深边框 Emerald 200 */
+  /* 鍔犳繁杈规 Emerald 200 */
   --primary: #059669;
   /* Emerald 600 */
   --primary-hover: #047857;
@@ -62,14 +62,14 @@
   --shadow-color: rgba(5, 150, 105, 0.1);
 }
 
-/* 3. 优雅紫 (Purple) - 创意、现代 */
+/* 3. 浼橀泤绱?(Purple) - 鍒涙剰銆佺幇浠?*/
 :root[data-theme='purple'] {
   --bg: #fbf7ff;
-  /* Violet 50 变体 */
+  /* Violet 50 鍙樹綋 */
   --surface: #ffffff;
   --sidebar-bg: #faf5ff;
   --border: #ddd6fe;
-  /* 加深边框 Violet 200 */
+  /* 鍔犳繁杈规 Violet 200 */
   --primary: #7c3aed;
   /* Violet 600 */
   --primary-hover: #6d28d9;
@@ -84,14 +84,14 @@
   --shadow-color: rgba(124, 58, 237, 0.1);
 }
 
-/* 4. 活力橙 (Orange) - 温暖、动力 */
+/* 4. 娲诲姏姗?(Orange) - 娓╂殩銆佸姩鍔?*/
 :root[data-theme='orange'] {
   --bg: #fff7ed;
   /* Orange 50 */
   --surface: #ffffff;
   --sidebar-bg: #fffaf5;
   --border: #fed7aa;
-  /* Orange 200 (本来就比较深) */
+  /* Orange 200 (鏈潵灏辨瘮杈冩繁) */
   --primary: #ea580c;
   /* Orange 600 */
   --primary-hover: #c2410c;
@@ -106,7 +106,7 @@
   --shadow-color: rgba(234, 88, 12, 0.1);
 }
 
-/* 5. 极简黑 (Mono) - 专注、极致 */
+/* 5. 鏋佺畝榛?(Mono) - 涓撴敞銆佹瀬鑷?*/
 :root[data-theme='mono'] {
   --bg: #fafafa;
   /* Neutral 50 */
@@ -114,7 +114,7 @@
   --sidebar-bg: #f5f5f5;
   /* Neutral 100 */
   --border: #d4d4d4;
-  /* 加深边框 Neutral 300 */
+  /* 鍔犳繁杈规 Neutral 300 */
   --primary: #171717;
   /* Neutral 900 */
   --primary-hover: #000000;
@@ -128,7 +128,7 @@
   --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
-/* 6. 天空蓝 (Sky) - 通透、明快 */
+/* 6. 澶╃┖钃?(Sky) - 閫氶€忋€佹槑蹇?*/
 :root[data-theme='sky'] {
   --bg: #f0f9ff;
   /* Sky 50 */
@@ -136,7 +136,7 @@
   --sidebar-bg: #e0f2fe;
   /* Sky 100 */
   --border: #7dd3fc;
-  /* 加深边框 Sky 300 */
+  /* 鍔犳繁杈规 Sky 300 */
   --primary: #0284c7;
   /* Sky 600 */
   --primary-hover: #0369a1;
@@ -151,7 +151,7 @@
   --shadow-color: rgba(2, 132, 199, 0.15);
 }
 
-/* 7. 樱花粉 (Rose) - 治愈、温暖 - 优化：降低攻击性红调，转向柔和粉色 */
+/* 7. 妯辫姳绮?(Rose) - 娌绘剤銆佹俯鏆?- 浼樺寲锛氶檷浣庢敾鍑绘€х孩璋冿紝杞悜鏌斿拰绮夎壊 */
 :root[data-theme='rose'] {
   --bg: #fff1f2;
   /* Rose 50 */
@@ -159,9 +159,9 @@
   --sidebar-bg: #ffe4e6;
   /* Rose 100 */
   --border: #fbcfe8;
-  /* Pink 200 - 更柔和的边框 */
+  /* Pink 200 - 鏇存煍鍜岀殑杈规 */
   --primary: #ec4899;
-  /* Pink 500 - 从刺眼的红(Rose 600)改为更像樱花的粉 */
+  /* Pink 500 - 浠庡埡鐪肩殑绾?Rose 600)鏀逛负鏇村儚妯辫姳鐨勭矇 */
   --primary-hover: #db2777;
   /* Pink 600 */
   --primary-soft: #fdf2f8;
@@ -174,7 +174,7 @@
   --shadow-color: rgba(236, 72, 153, 0.15);
 }
 
-/* 8. 深邃靛 (Indigo) - 沉稳、商务 */
+/* 8. 娣遍們闈?(Indigo) - 娌夌ǔ銆佸晢鍔?*/
 :root[data-theme='indigo'] {
   --bg: #eef2ff;
   /* Indigo 50 */
@@ -182,7 +182,7 @@
   --sidebar-bg: #e0e7ff;
   /* Indigo 100 */
   --border: #a5b4fc;
-  /* 加深边框 Indigo 300 */
+  /* 鍔犳繁杈规 Indigo 300 */
   --primary: #4f46e5;
   /* Indigo 600 */
   --primary-hover: #4338ca;
@@ -198,16 +198,16 @@
 }
 
 
-/* 通用变量 (所有主题共享) */
+/* 閫氱敤鍙橀噺 (鎵€鏈変富棰樺叡浜? */
 :root {
-  /* 功能色 - 语义色融合优化 (Harmonious Danger/Warning) */
+  /* 鍔熻兘鑹?- 璇箟鑹茶瀺鍚堜紭鍖?(Harmonious Danger/Warning) */
   --danger: #dc2626;
-  /* Red 600 - 更沉稳的红 */
+  /* Red 600 - 鏇存矇绋崇殑绾?*/
   --danger-hover: #b91c1c;
   --danger-soft: #fef2f2;
   /* Red 50 */
   --warning: #d97706;
-  /* Amber 600 - 不那么刺眼的橙 */
+  /* Amber 600 - 涓嶉偅涔堝埡鐪肩殑姗?*/
   --warning-soft: #fffbeb;
   /* Amber 50 */
   --success: #059669;
@@ -217,34 +217,34 @@
   --accent: #0ea5e9;
   /* Sky 500 */
 
-  /* UI 组件 */
+  /* UI 缁勪欢 */
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 8px;
   --radius-full: 999px;
 
-  /* 阴影层级重构 (Elevation System) */
+  /* 闃村奖灞傜骇閲嶆瀯 (Elevation System) */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.08);
-  /* 加深阴影透明度 */
+  /* 鍔犳繁闃村奖閫忔槑搴?*/
   --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
   --shadow-float: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
   --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   --shadow-soft: 0 4px 20px -2px var(--shadow-color);
 
-  /* 交互与状态 */
+  /* 浜や簰涓庣姸鎬?*/
   --focus-ring: 0 0 0 3px var(--primary-soft);
   --hover-bg: rgba(0, 0, 0, 0.02);
 
-  /* 文字层级 (Typography Contrast) - 覆盖之前的浅色 */
+  /* 鏂囧瓧灞傜骇 (Typography Contrast) - 瑕嗙洊涔嬪墠鐨勬祬鑹?*/
   --text-subtle: #64748b;
-  /* Slate 500 - 提高可读性 */
+  /* Slate 500 - 鎻愰珮鍙鎬?*/
 
-  /* 边框 */
+  /* 杈规 */
   --border-subtle: #cbd5e1;
-  /* Slate 300 - 加深次级边框，大幅提高表格分割线清晰度 */
+  /* Slate 300 - 鍔犳繁娆＄骇杈规锛屽ぇ骞呮彁楂樿〃鏍煎垎鍓茬嚎娓呮櫚搴?*/
 }
 
-/* 基础样式调整 */
+/* 鍩虹鏍峰紡璋冩暣 */
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   background: var(--bg);
@@ -323,7 +323,7 @@ body {
   transition: all 0.2s ease;
   flex-shrink: 0;
   z-index: 10;
-  /* 创建堆叠上下文 */
+  /* 鍒涘缓鍫嗗彔涓婁笅鏂?*/
 }
 
 .help-icon:hover {
@@ -349,7 +349,7 @@ body {
   font-weight: normal;
 }
 
-/* 小三角箭头 */
+/* 灏忎笁瑙掔澶?*/
 .help-tooltip::before {
   content: '';
   position: absolute;
@@ -508,7 +508,7 @@ body {
   border: 1px solid var(--border-subtle);
   background: var(--surface);
   padding: 5px 12px;
-  /* 紧凑度调整 */
+  /* 绱у噾搴﹁皟鏁?*/
   font-size: 13px;
   cursor: pointer;
   display: inline-flex;
@@ -516,7 +516,7 @@ body {
   justify-content: center;
   gap: 6px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  /* 更自然的缓动 */
+  /* 鏇磋嚜鐒剁殑缂撳姩 */
   white-space: nowrap;
   color: var(--text-main);
   box-shadow: var(--shadow-sm);
@@ -531,16 +531,16 @@ body {
 
 .btn:active {
   transform: scale(0.97) translateY(0);
-  /* 微动效 */
+  /* 寰姩鏁?*/
   box-shadow: none;
 }
 
 .btn-primary {
   background: linear-gradient(180deg, var(--primary-hover) 0%, var(--primary) 100%);
-  /* 柔光渐变 */
+  /* 鏌斿厜娓愬彉 */
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-top: 1px solid rgba(255, 255, 255, 0.2);
-  /* 顶部高光 */
+  /* 椤堕儴楂樺厜 */
   color: #ffffff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.1);
   font-weight: 500;
@@ -548,6 +548,8 @@ body {
 }
 
 .btn-primary:hover {
+  background: linear-gradient(180deg, var(--primary-hover) 0%, var(--primary) 100%);
+  transform: translateY(-1px);
   filter: brightness(1.1);
   border-color: rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -732,7 +734,7 @@ body {
   opacity: 0.85;
 }
 
-/* 字体自适应 */
+/* 瀛椾綋鑷€傚簲 */
 @container (max-width: 110px) {
   .system-hint {
     font-size: 10.5px;
@@ -772,11 +774,11 @@ body {
   position: relative;
   border-radius: var(--radius-md);
   padding: 8px 10px;
-  /* 稍微增加 padding */
+  /* 绋嶅井澧炲姞 padding */
   border: 1px solid var(--border-subtle);
-  /* 恢复边框 */
+  /* 鎭㈠杈规 */
   background: var(--surface);
-  /* 恢复背景 */
+  /* 鎭㈠鑳屾櫙 */
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -786,14 +788,14 @@ body {
 
 .sidebar-item+.sidebar-item {
   margin-top: 2px;
-  /* 更紧凑 */
+  /* 鏇寸揣鍑?*/
 }
 
 .sidebar-item:hover {
   background: var(--hover-bg);
   color: var(--text-main);
   border-color: #d1d5db;
-  /* hover 时加深边框 */
+  /* hover 鏃跺姞娣辫竟妗?*/
   box-shadow: var(--shadow-card);
 }
 
@@ -809,12 +811,12 @@ body {
   box-shadow: 0 0 0 1px var(--shadow-color);
 }
 
-/* 保留指示条，但在有边框的卡片模式下，稍微调整位置 */
+/* 淇濈暀鎸囩ず鏉★紝浣嗗湪鏈夎竟妗嗙殑鍗＄墖妯″紡涓嬶紝绋嶅井璋冩暣浣嶇疆 */
 .sidebar-item-active::before {
   content: '';
   position: absolute;
   left: -1px;
-  /* 贴合边框 */
+  /* 璐村悎杈规 */
   top: 8px;
   bottom: 8px;
   width: 4px;
@@ -839,7 +841,7 @@ body {
   height: 18px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.06);
-  /* 更通用的灰色 */
+  /* 鏇撮€氱敤鐨勭伆鑹?*/
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -911,7 +913,7 @@ body {
   font-weight: 400;
 }
 
-/* 选中态适配 */
+/* 閫変腑鎬侀€傞厤 */
 .sidebar-item-active .ps-project-name {
   color: var(--primary);
 }
@@ -1127,7 +1129,7 @@ body {
   flex: 1;
   min-height: 0;
   background: #ffffff;
-  /* 纯白背景，对比更强 */
+  /* 绾櫧鑳屾櫙锛屽姣旀洿寮?*/
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-soft);
@@ -1196,7 +1198,7 @@ body {
   flex: 1;
 }
 
-/* 空状态引导 */
+/* 绌虹姸鎬佸紩瀵?*/
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1308,7 +1310,7 @@ body {
   border-color: var(--primary-soft);
 }
 
-/* 任务分组标题 */
+/* 浠诲姟鍒嗙粍鏍囬 */
 .zone-header {
   background: transparent !important;
 }
@@ -1367,7 +1369,7 @@ body {
   color: var(--primary);
   border-top-color: transparent !important;
   border-bottom-color: transparent !important;
-  /* 去除描边，保持与侧边栏一致的扁平风格 */
+  /* 鍘婚櫎鎻忚竟锛屼繚鎸佷笌渚ц竟鏍忎竴鑷寸殑鎵佸钩椋庢牸 */
   box-shadow: none !important;
 }
 
@@ -1377,11 +1379,11 @@ body {
   color: var(--primary);
 }
 
-/* 关键：复刻侧边栏的左侧指示条 */
+/* 鍏抽敭锛氬鍒讳晶杈规爮鐨勫乏渚ф寚绀烘潯 */
 .task-row-active td:first-child::before {
-  /* 强制覆盖优先级颜色，使用主题色作为选中指示 */
+  /* 寮哄埗瑕嗙洊浼樺厛绾ч鑹诧紝浣跨敤涓婚鑹蹭綔涓洪€変腑鎸囩ず */
   background-color: var(--primary) !important;
-  /* 确保指示条清晰 */
+  /* 纭繚鎸囩ず鏉℃竻鏅?*/
   width: 4px !important;
 }
 
@@ -1547,7 +1549,7 @@ body {
   font-weight: 500;
 }
 
-/* 3天内到期提醒徽章 */
+/* 3澶╁唴鍒版湡鎻愰啋寰界珷 */
 .due-soon-badge {
   display: inline-block;
   margin-left: 6px;
@@ -2747,7 +2749,7 @@ body {
   gap: 4px;
 }
 
-/* 操作按钮行优化 */
+/* 鎿嶄綔鎸夐挳琛屼紭鍖?*/
 .action-row {
   display: flex;
   gap: 4px;
@@ -2756,7 +2758,7 @@ body {
   justify-content: flex-end;
 }
 
-/* 成功按钮（完成/继续） */
+/* 鎴愬姛鎸夐挳锛堝畬鎴?缁х画锛?*/
 .btn-xs-success {
   background: #10b981;
   border-color: #10b981;
@@ -2771,7 +2773,7 @@ body {
   border-color: #059669;
 }
 
-/* 次要按钮（挂起） */
+/* 娆¤鎸夐挳锛堟寕璧凤級 */
 .btn-xs-secondary {
   background: #f3f4f6;
   border-color: #d1d5db;
@@ -2785,7 +2787,7 @@ body {
   border-color: #9ca3af;
 }
 
-/* 内联状态按钮样式 */
+/* 鍐呰仈鐘舵€佹寜閽牱寮?*/
 .btn-xs-inline {
   display: inline-flex;
   align-items: center;
@@ -2821,7 +2823,7 @@ body {
   border-color: #9ca3af;
 }
 
-/* 状态快速操作行 - 独立一行 */
+/* 鐘舵€佸揩閫熸搷浣滆 - 鐙珛涓€琛?*/
 .task-quick-actions {
   display: flex;
   gap: 8px;
@@ -2829,7 +2831,7 @@ body {
   width: 100%;
 }
 
-/* 胶囊按钮样式 */
+/* 鑳跺泭鎸夐挳鏍峰紡 */
 .btn-xs-pill {
   display: inline-flex;
   align-items: center;
@@ -2848,7 +2850,7 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 成功按钮 - 实心绿 */
+/* 鎴愬姛鎸夐挳 - 瀹炲績缁?*/
 .btn-xs-pill.btn-xs-success {
   background: #10b981;
   border-color: #10b981;
@@ -2860,7 +2862,7 @@ body {
   border-color: #059669;
 }
 
-/* 次要按钮 - 浅灰背景 */
+/* 娆¤鎸夐挳 - 娴呯伆鑳屾櫙 */
 .btn-xs-pill.btn-xs-secondary {
   background: #f3f4f6;
   border-color: #e5e7eb;
@@ -2873,7 +2875,7 @@ body {
   color: #1f2937;
 }
 
-/* 状态标签按钮化 */
+/* 鐘舵€佹爣绛炬寜閽寲 */
 .tag-status-btn {
   border: none;
   outline: none;
@@ -2894,7 +2896,7 @@ body {
   filter: brightness(0.9);
 }
 
-/* 状态切换菜单 Popover */
+/* 鐘舵€佸垏鎹㈣彍鍗?Popover */
 .status-menu-popover {
   position: absolute;
   top: 100%;
@@ -2950,49 +2952,49 @@ body {
   }
 }
 
-/* 优化菜单间距 */
+/* 浼樺寲鑿滃崟闂磋窛 */
 .status-menu-popover {
   gap: 4px !important;
-  /* 增加项之间的间距 */
+  /* 澧炲姞椤逛箣闂寸殑闂磋窛 */
 }
 
-/* 菜单项样式微调 */
+/* 鑿滃崟椤规牱寮忓井璋?*/
 .status-menu-item {
   margin-bottom: 0;
-  /* 确保没有额外的margin干扰gap */
+  /* 纭繚娌℃湁棰濆鐨刴argin骞叉壈gap */
   border: 1px solid transparent;
-  /* 预留边框位置，防止hover抖动 */
+  /* 棰勭暀杈规浣嶇疆锛岄槻姝over鎶栧姩 */
 }
 
 .status-menu-item:hover {
   background: var(--bg-hover, #f3f4f6);
   border-color: var(--border, #e5e7eb);
-  /* hover时显示轻微边框增强边界感 */
+  /* hover鏃舵樉绀鸿交寰竟妗嗗寮鸿竟鐣屾劅 */
 }
 
-/* 优化菜单边框和间距 */
+/* 浼樺寲鑿滃崟杈规鍜岄棿璺?*/
 .status-menu-popover {
   gap: 2px !important;
-  /* 减小间距 */
+  /* 鍑忓皬闂磋窛 */
   padding: 3px;
 }
 
 .status-menu-item {
   border: 1px solid var(--border, #e5e7eb);
-  /* 默认显示边框 */
+  /* 榛樿鏄剧ず杈规 */
   background: #fff;
 }
 
 .status-menu-item:hover {
   background: var(--bg-hover, #f9fafb);
   border-color: var(--primary, #3b82f6);
-  /* Hover时边框高亮 */
+  /* Hover鏃惰竟妗嗛珮浜?*/
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transform: translateY(-1px);
-  /* 轻微上浮增强交互感 */
+  /* 杞诲井涓婃诞澧炲己浜や簰鎰?*/
 }
 
-/* 搜索框样式 */
+/* 鎼滅储妗嗘牱寮?*/
 .search-box {
   display: flex;
   align-items: center;
@@ -3045,7 +3047,7 @@ body {
   color: var(--text-main, #374151);
 }
 
-/* 备份模态框样式 */
+/* 澶囦唤妯℃€佹鏍峰紡 */
 .backup-actions {
   display: flex;
   flex-direction: column;
@@ -3107,7 +3109,7 @@ body {
   border: 1px solid #fecaca;
 }
 
-/* 到期提醒模态框样式 */
+/* 鍒版湡鎻愰啋妯℃€佹鏍峰紡 */
 .reminder-section {
   margin-bottom: 16px;
 }
@@ -3198,7 +3200,7 @@ body {
   color: #d97706;
 }
 
-/* 统计卡片样式 */
+/* 缁熻鍗＄墖鏍峰紡 */
 .stats-card {
   background: var(--surface, #ffffff);
   border: 1px solid var(--border, #e5e7eb);
@@ -3260,7 +3262,7 @@ body {
   color: var(--text-main, #374151);
 }
 
-/* 收起态摘要 */
+/* 鏀惰捣鎬佹憳瑕?*/
 .stats-summary-row {
   display: flex;
   align-items: center;
@@ -3285,6 +3287,10 @@ body {
   color: #2563eb;
 }
 
+.stats-summary-item .value.paused {
+  color: #d97706;
+}
+
 .stats-summary-item .value.danger {
   color: #dc2626;
 }
@@ -3293,7 +3299,7 @@ body {
   color: var(--border, #e5e7eb);
 }
 
-/* 展开态内容 */
+/* 灞曞紑鎬佸唴瀹?*/
 .stats-content {
   padding: 16px;
   animation: slideDown 0.3s ease-out;
@@ -3322,15 +3328,16 @@ body {
   text-align: center;
   padding: 12px;
   border-radius: 8px;
-  background: var(--bg-body, #f9fafb);
-  border: 1px solid transparent;
+  background: #fff;
+  border: 1px solid var(--border, #e5e7eb);
   transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .stats-item:hover {
-  border-color: var(--border, #e5e7eb);
-  background: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  border-color: var(--primary, #2563eb);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
 .stats-value {
@@ -3435,7 +3442,7 @@ body {
   text-align: right;
 }
 
-/* 子任务列表样式 */
+/* 瀛愪换鍔″垪琛ㄦ牱寮?*/
 .subtask-list {
   margin-top: 12px;
 }
@@ -3570,7 +3577,9 @@ body {
 .subtask-add-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}.field-grid-3 {
+}
+
+.field-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;

@@ -46,6 +46,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   const [progressNote, setProgressNote] = useState('');
   const [progressTime, setProgressTime] = useState(() => dayjs().format('YYYY-MM-DDTHH:mm'));
   const [editingProgressId, setEditingProgressId] = useState<string | null>(null);
+  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
 
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
   const nextRef = useRef<HTMLTextAreaElement | null>(null);
@@ -204,6 +205,21 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
 
         <div className='dialog-body'>
           <main className='panel-main'>
+            <div className='field' style={{ marginBottom: 18 }}>
+              <label className='field-label'>
+                任务标题<span>*</span>
+              </label>
+              <input
+                className='field-input'
+                type='text'
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder='请输入任务标题'
+                maxLength={100}
+                style={{ fontSize: '15px', fontWeight: 600 }}
+              />
+            </div>
+
             <section className='section'>
               <div className='section-title-row'>
                 <div className='section-title'>属性</div>
@@ -277,20 +293,46 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
               </div>
             </section>
 
-            <div className='field' style={{ marginBottom: 18 }}>
-              <label className='field-label'>
-                任务标题<span>*</span>
-              </label>
-              <input
-                className='field-input'
-                type='text'
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder='请输入任务标题'
-                maxLength={100}
-                style={{ fontSize: '15px', fontWeight: 600 }}
-              />
-            </div>
+            <section className='section'>
+              <div
+                className='section-title-row'
+                onClick={() => setIsSubtasksExpanded(!isSubtasksExpanded)}
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className='section-title'>
+                    ☑️ 子任务
+                    <span style={{
+                      marginLeft: '6px',
+                      fontSize: '12px',
+                      transition: 'transform 0.2s ease',
+                      display: 'inline-block',
+                      transform: isSubtasksExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                      opacity: 0.6
+                    }}>
+                      ▼
+                    </span>
+                  </div>
+                  {subtasks.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ width: '80px', height: '5px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                        <div style={{
+                          width: `${Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%`,
+                          height: '100%',
+                          background: '#10b981',
+                          transition: 'width 0.3s ease'
+                        }} />
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
+                        {Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className='section-hint'>拆分任务为可执行的小步骤。</div>
+              </div>
+              {isSubtasksExpanded && <SubtaskList subtasks={subtasks} onChange={handleSubtasksChange} hideProgress={true} />}
+            </section>
 
             <section className='section'>
               <div className='section-title-row'>
@@ -326,14 +368,6 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 />
               </div>
             </section>
-
-            <section className='section'>
-              <div className='section-title-row'>
-                <div className='section-title'>☑️ 子任务</div>
-                <div className='section-hint'>拆分任务为可执行的小步骤。</div>
-              </div>
-              <SubtaskList subtasks={subtasks} onChange={handleSubtasksChange} />
-            </section>
           </main>
 
           <aside className='panel-progress'>
@@ -343,12 +377,36 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 <div className='section-hint'>一条记录对应一次关键动作。</div>
               </div>
               <div className='field' style={{ marginBottom: 8 }}>
-                <label className='field-label'>记录时间</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className='field-label' style={{ marginBottom: 0 }}>记录时间</label>
+                  <button
+                    type='button'
+                    onClick={() => setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'))}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563eb',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#eff6ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    title="重置为当前时间"
+                  >
+                    <span>🕒</span> 设为当前
+                  </button>
+                </div>
                 <input
                   className='field-input'
                   type='datetime-local'
                   value={progressTime}
                   onChange={(event) => setProgressTime(event.target.value)}
+                  style={{ fontFamily: 'inherit' }}
                 />
               </div>
               <div className='field' style={{ marginBottom: 10 }}>
