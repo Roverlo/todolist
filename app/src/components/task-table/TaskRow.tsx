@@ -194,17 +194,28 @@ export const TaskRow = memo(({
           >
             {priorityLabel[task.priority ?? 'medium']}
           </span>
-          {/* 状态切换按钮 - 放在标签后面 */}
-          {!isTrash && task.status === 'doing' && (
-            <>
-              <button className='btn-xs-inline btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'done')} title='标记为已完成'>✓完成</button>
-              <button className='btn-xs-inline btn-xs-secondary' type='button' onClick={(e) => handleQuickStatus(e, 'paused')} title='挂起任务'>‖挂起</button>
-            </>
-          )}
-          {!isTrash && task.status === 'paused' && (
-            <button className='btn-xs-inline btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'doing')} title='继续任务'>▶继续</button>
-          )}
         </div>
+
+        {/* 状态切换按钮 - 独立一行 */}
+        {!isTrash && (task.status === 'doing' || task.status === 'paused') && (
+          <div className='task-quick-actions'>
+            {task.status === 'doing' && (
+              <>
+                <button className='btn-xs-pill btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'done')} title='标记为已完成'>
+                  ✓ 完成
+                </button>
+                <button className='btn-xs-pill btn-xs-secondary' type='button' onClick={(e) => handleQuickStatus(e, 'paused')} title='挂起任务'>
+                  ‖ 挂起
+                </button>
+              </>
+            )}
+            {task.status === 'paused' && (
+              <button className='btn-xs-pill btn-xs-success' type='button' onClick={(e) => handleQuickStatus(e, 'doing')} title='继续任务'>
+                ▶ 继续
+              </button>
+            )}
+          </div>
+        )}
       </td>
       <td className='col-text'>
         <div className='field-label'>详情</div>
