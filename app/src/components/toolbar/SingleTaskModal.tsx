@@ -40,6 +40,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
   const [lineOwner, setLineOwner] = useState('');
   const [nextStep, setNextStep] = useState('');
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
   const [error, setError] = useState('');
 
   // Project options for CustomSelect
@@ -60,6 +61,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
       setLineOwner('');
       setNextStep('');
       setSubtasks([]);
+      setIsSubtasksExpanded(true);
       setError('');
     }
   }, [open, projects, filters.projectId]);
@@ -214,17 +216,52 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
           </section>
 
           <section className='create-section'>
-            <div className='create-section-title-row'>
-              <div className='create-section-title'>子任务</div>
+            <div
+              className='create-section-title-row'
+              onClick={() => setIsSubtasksExpanded(!isSubtasksExpanded)}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className='create-section-title'>
+                  子任务
+                  <span style={{
+                    marginLeft: '6px',
+                    fontSize: '12px',
+                    transition: 'transform 0.2s ease',
+                    display: 'inline-block',
+                    transform: isSubtasksExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    opacity: 0.6
+                  }}>
+                    ▼
+                  </span>
+                </div>
+                {subtasks.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ width: '80px', height: '5px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                      <div style={{
+                        width: `${Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%`,
+                        height: '100%',
+                        background: '#10b981',
+                        transition: 'width 0.3s ease'
+                      }} />
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
+                      {Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className='create-section-hint'>拆分任务步骤，便于跟踪进度。</div>
             </div>
-            <div className='create-field create-field-span-2'>
-              <SubtaskList
-                subtasks={subtasks}
-                onChange={setSubtasks}
-                hideProgress={true}
-              />
-            </div>
+            {isSubtasksExpanded && (
+              <div className='create-field create-field-span-2'>
+                <SubtaskList
+                  subtasks={subtasks}
+                  onChange={setSubtasks}
+                  hideProgress={true}
+                />
+              </div>
+            )}
           </section>
 
           <section className='create-section'>

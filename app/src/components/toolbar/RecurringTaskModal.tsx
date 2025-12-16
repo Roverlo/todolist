@@ -53,6 +53,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
   const [tpl, setTpl] = useState<RecurringTemplate | null>(null);
   const [autoRenew, setAutoRenew] = useState(true);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
     });
     setAutoRenew(true);
     setSubtasks([]);
+    setIsSubtasksExpanded(true);
     setError('');
   }, [open, projects, filters.projectId]);
 
@@ -280,12 +282,49 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
               <div className='create-section-hint'>为每次生成的任务预填常用信息，可在单条任务中微调。</div>
             </div>
             <div className='create-field create-field-span-2'>
-              <label className='create-field-label'>子任务</label>
-              <SubtaskList
-                subtasks={subtasks}
-                onChange={setSubtasks}
-                hideProgress={true}
-              />
+              <div
+                className='create-section-title-row'
+                onClick={() => setIsSubtasksExpanded(!isSubtasksExpanded)}
+                style={{ cursor: 'pointer', userSelect: 'none', marginBottom: 8 }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <label className='create-field-label' style={{ marginBottom: 0 }}>
+                    子任务
+                    <span style={{
+                      marginLeft: '6px',
+                      fontSize: '12px',
+                      transition: 'transform 0.2s ease',
+                      display: 'inline-block',
+                      transform: isSubtasksExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                      opacity: 0.6
+                    }}>
+                      ▼
+                    </span>
+                  </label>
+                  {subtasks.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ width: '80px', height: '5px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                        <div style={{
+                          width: `${Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%`,
+                          height: '100%',
+                          background: '#10b981',
+                          transition: 'width 0.3s ease'
+                        }} />
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
+                        {Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {isSubtasksExpanded && (
+                <SubtaskList
+                  subtasks={subtasks}
+                  onChange={setSubtasks}
+                  hideProgress={true}
+                />
+              )}
             </div>
             <div className='create-field create-field-span-2'>
               <label className='create-field-label'>详情</label>
