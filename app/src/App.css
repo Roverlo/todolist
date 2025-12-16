@@ -3843,3 +3843,16 @@ body {
   font-size: 11px;
   color: var(--text-subtle);
 }
+
+/* Subtask Input Optimization */
+.subtask-add {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 8px;
+}
+
+.subtask-add-btn {
+  flex-shrink: 0;
+  height: 32px;
+  align-self: flex-end;
+}
