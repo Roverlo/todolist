@@ -245,17 +245,10 @@ function App() {
               <>
                 <button
                   className='btn btn-primary-bold'
-                  onClick={() => setAddOpen(true)}
-                  aria-label='新建单次任务'
+                  onClick={() => setNewTaskChoiceOpen(true)}
+                  aria-label='新建任务'
                 >
-                  新建单次任务
-                </button>
-                <button
-                  className='btn btn-primary-bold'
-                  onClick={() => setRecurringOpen(true)}
-                  aria-label='新建周期任务'
-                >
-                  新建周期任务
+                  + 新建任务
                 </button>
                 <button
                   className='btn btn-light'
