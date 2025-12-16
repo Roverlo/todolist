@@ -2366,16 +2366,7 @@ body {
   position: relative;
 }
 
-/* 虚线连接线 */
-.timeline::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 12px;
-  bottom: 12px;
-  width: 0;
-  border-left: 2px dashed var(--primary, rgba(37, 99, 235, 0.5));
-}
+/* 移除全局虚线 - 改为每个 item 单独画连接线 */
 
 .timeline-item {
   position: relative;
@@ -2383,43 +2374,47 @@ body {
   padding-left: 4px;
 }
 
-/* 节点三角形（向上箭头） */
+/* 节点三角形（向上箭头）- 默认空心 */
 .timeline-item::before {
   content: '';
   position: absolute;
   left: -20px;
-  top: 4px;
+  top: 2px;
   width: 0;
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-bottom: 10px solid var(--primary, #3b82f6);
-  border-radius: 0;
-  background: transparent;
-  z-index: 1;
-  transition: all 0.2s ease;
+  z-index: 2;
 }
 
-/* 最新进展的特殊样式 - 更大的三角形 + 发光效果 */
+/* 空心三角的内层（白色填充） */
+.timeline-item::after {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 5px;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 6px solid var(--surface, #ffffff);
+  z-index: 3;
+}
+
+/* 最新进展（第一项）- 实心三角 + 发光效果 */
 .timeline-item:first-child::before {
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
   border-bottom: 12px solid var(--primary, #3b82f6);
-  left: -22px;
-  top: 2px;
+  left: -21px;
+  top: 0;
   filter: drop-shadow(0 0 4px var(--primary-soft, rgba(37, 99, 235, 0.4)));
 }
 
-/* 最新进展标识 */
+/* 最新进展不需要内部空心 - 隐藏内层三角 */
 .timeline-item:first-child::after {
-  content: '最新';
-  position: absolute;
-  left: -24px;
-  top: -14px;
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--primary, #3b82f6);
-  letter-spacing: 0.3px;
+  display: none;
 }
 
 .timeline-item-label {
@@ -2440,6 +2435,19 @@ body {
   word-break: break-word;
   margin-top: 4px;
   line-height: 1.5;
+  position: relative;
+}
+
+/* 虚线连接 - 从三角底部到下一个三角顶部 */
+.timeline-item:not(:last-child) .timeline-item-text::after {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 8px;
+  bottom: -20px;
+  width: 0;
+  border-left: 2px dashed var(--primary, rgba(37, 99, 235, 0.5));
+  z-index: 1;
 }
 
 .timeline-item-header {
