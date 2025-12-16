@@ -3997,19 +3997,22 @@ body {
   box-shadow: inset 3px 0 0 var(--primary);
 }
 
-/* ==================== 进展时间轴优化 (Progress Timeline) ==================== */
+/* ==================== 进展时间轴优化 (Progress Timeline - Premium Dot Design) ==================== */
 
 .timeline-list {
   display: flex;
   flex-direction: column;
-  padding: 10px 0 0 0;
+  padding: 12px 0 0 4px;
+  /* Slight left padding adjustment */
 }
 
 .timeline-item {
   display: flex;
-  gap: 16px;
+  gap: 20px;
+  /* Increased gap for cleaner look */
   position: relative;
-  padding-bottom: 24px;
+  padding-bottom: 32px;
+  /* More breathing room */
 }
 
 .timeline-item:last-child {
@@ -4021,119 +4024,159 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 20px;
+  width: 24px;
+  /* Fixed width */
   flex-shrink: 0;
+  position: relative;
 }
 
-/* 三角形图标 (Triangle Icon) */
+/* 圆点图标 (Dot Icon) */
 .timeline-icon {
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 10px solid var(--text-subtle);
-  /* 默认为空心/浅色 */
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border-subtle);
+  /* Grey ring */
+  background: var(--surface);
   position: relative;
   z-index: 2;
   margin-top: 5px;
-  /* 与文字基线对齐 */
-  transition: all 0.3s ease;
+  /* Visual alignment with text cap-height */
+  box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 最新一条其实心且高亮 (Solid Triangle for Latest) */
+/* 最新一条：实心高亮 + 柔光 (Latest: Solid & Glow) */
 .timeline-item.latest .timeline-icon {
-  border-bottom-color: var(--primary);
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+  /* Ring effect */
   transform: scale(1.1);
-  filter: drop-shadow(0 2px 4px var(--shadow-color));
 }
 
-/* 其他条目模拟空心效果 (Hollow effect for others) */
-.timeline-item:not(.latest) .timeline-icon::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: -4px;
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-bottom: 7px solid var(--surface);
-  /* 遮罩模拟空心 */
+/* 历史条目：空心灰点 (History: Hollow Grey) */
+.timeline-item:not(.latest) .timeline-icon {
+  border-color: var(--text-subtle);
+  opacity: 0.6;
 }
 
-/* 虚线连接 (Dashed Line) */
+/* 连接线 (Connecting Line) */
 .timeline-line {
-  flex: 1;
-  width: 0;
-  border-left: 2px dashed var(--text-subtle);
-  margin-top: 4px;
-  margin-bottom: 0;
-  opacity: 0.4;
+  position: absolute;
+  top: 24px;
+  /* Start below the dot */
+  bottom: -8px;
+  /* Extend to next dot */
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  /* Center perfectly */
+  background-color: var(--border-subtle);
+  opacity: 0.3;
+  z-index: 0;
+}
+
+/* 最新一条的连接线可以用渐变或实线 */
+.timeline-item.latest .timeline-line {
+  background: linear-gradient(to bottom, var(--primary-soft), var(--border-subtle));
+  opacity: 1;
 }
 
 /* 内容区域 (Content Column) */
 .timeline-content {
   flex: 1;
   min-width: 0;
-  padding-top: 2px;
+  padding-top: 0;
+  /* Aligned with dot */
 }
 
 .timeline-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
-  line-height: 1.4;
+  margin-bottom: 8px;
 }
 
 .timeline-time {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Clean sans */
   color: var(--text-subtle);
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
 .timeline-item.latest .timeline-time {
   color: var(--primary);
+  font-weight: 600;
 }
 
 .timeline-actions {
   display: flex;
-  gap: 12px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  gap: 8px;
+  opacity: 0;
+  /* Hidden by default for cleaner look */
+  transform: translateX(-5px);
+  transition: all 0.2s ease;
 }
 
 .timeline-item:hover .timeline-actions {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .timeline-actions button.icon-btn {
-  background: none;
-  border: none;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
   cursor: pointer;
   font-size: 12px;
   color: var(--text-subtle);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
   transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .timeline-actions button.icon-btn:hover {
   background: var(--bg-hover);
   color: var(--primary);
+  border-color: var(--border-subtle);
+  transform: translateY(-1px);
 }
 
 .timeline-actions button.icon-btn.danger:hover {
   color: var(--danger);
+  border-color: var(--danger-soft);
   background: var(--danger-soft);
 }
 
 .timeline-body {
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 15px;
+  /* Slightly larger for readability */
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+  background: var(--bg-body, #f9fafb);
+  /* Subtle background box */
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.timeline-item:hover .timeline-body {
+  border-color: var(--border-subtle);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.timeline-item.latest .timeline-body {
+  background: #fff;
+  border: 1px solid var(--primary-soft);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
 }
