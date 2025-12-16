@@ -2361,25 +2361,79 @@ body {
 }
 
 .timeline {
-  margin-top: 4px;
-  padding-left: 10px;
-  border-left: 1px solid #e5e7eb;
+  margin-top: 8px;
+  padding-left: 24px;
+  position: relative;
+}
+
+/* 虚线连接线 */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 12px;
+  bottom: 12px;
+  width: 0;
+  border-left: 2px dashed var(--primary-soft, rgba(37, 99, 235, 0.35));
 }
 
 .timeline-item {
-  margin-bottom: 8px;
+  position: relative;
+  margin-bottom: 16px;
+  padding-left: 4px;
+}
+
+/* 节点圆点 */
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -21px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface, #ffffff);
+  border: 2px solid var(--primary, #3b82f6);
+  z-index: 1;
+  transition: all 0.2s ease;
+}
+
+/* 最新进展的特殊样式 - 实心圆点 + 发光效果 */
+.timeline-item:first-child::before {
+  background: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 3px var(--primary-soft, rgba(37, 99, 235, 0.25));
+}
+
+/* 最新进展标识 */
+.timeline-item:first-child::after {
+  content: '最新';
+  position: absolute;
+  left: -24px;
+  top: -14px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--primary, #3b82f6);
+  letter-spacing: 0.3px;
 }
 
 .timeline-item-label {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--text-subtle, #9ca3af);
+  font-weight: 500;
+}
+
+/* 最新进展的时间标签高亮 */
+.timeline-item:first-child .timeline-item-label {
+  color: var(--primary, #3b82f6);
 }
 
 .timeline-item-text {
   font-size: 12px;
-  color: #4b5563;
+  color: var(--text-main, #4b5563);
   white-space: pre-wrap;
   word-break: break-word;
+  margin-top: 4px;
+  line-height: 1.5;
 }
 
 .timeline-item-header {
@@ -3908,6 +3962,7 @@ body {
 [data-theme='dark'] .markdown-preview pre {
   background: #1e293b;
 }
+
 /* Highlight Rows Feature */
 .task-row-highlight-overdue {
   background-color: var(--danger-soft);
