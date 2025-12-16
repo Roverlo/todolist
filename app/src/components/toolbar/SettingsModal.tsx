@@ -1,4 +1,5 @@
 import { useAppStoreShallow } from '../../state/appStore';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface SettingsModalProps {
   open: boolean;
@@ -31,18 +32,18 @@ export const SettingsModal = ({ open, onClose }: SettingsModalProps) => {
             <div className='create-form-grid' style={{ gridTemplateColumns: '1fr' }}>
               <div className='create-field'>
                 <label className='create-field-label'>保留时长</label>
-                <select
-                  className='create-field-select'
+                <CustomSelect
                   value={settings.trashRetentionDays ?? 30}
-                  onChange={(e) => setSettings({ trashRetentionDays: Number(e.target.value) })}
-                >
-                  <option value={7}>保留 7 天</option>
-                  <option value={30}>保留 30 天（推荐）</option>
-                  <option value={60}>保留 60 天</option>
-                  <option value={90}>保留 90 天</option>
-                  <option value={365}>保留 1 年</option>
-                  <option value={99999}>永久保留</option>
-                </select>
+                  options={[
+                    { value: '7', label: '保留 7 天' },
+                    { value: '30', label: '保留 30 天（推荐）' },
+                    { value: '60', label: '保留 60 天' },
+                    { value: '90', label: '保留 90 天' },
+                    { value: '365', label: '保留 1 年' },
+                    { value: '99999', label: '永久保留' },
+                  ]}
+                  onChange={(val) => setSettings({ trashRetentionDays: Number(val) })}
+                />
                 <div style={{ fontSize: 11, color: 'var(--text-subtle)', marginTop: 4 }}>
                   超过该时间后，回收站中的任务将被自动彻底清除
                 </div>
