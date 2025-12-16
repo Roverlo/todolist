@@ -12,6 +12,7 @@ interface TaskRowProps {
   onRestoreTask?: (taskId: string) => void;
   onHardDeleteTask?: (taskId: string) => void;
   onQuickStatusChange?: (taskId: string, newStatus: Task['status']) => void;
+  onTogglePin?: (taskId: string) => void;
   onCopyTask?: (taskId: string) => void;
   trashRetentionDays?: number;
   isActive?: boolean;
@@ -19,6 +20,7 @@ interface TaskRowProps {
   isSelected?: boolean;
   onSelect?: (taskId: string, selected: boolean) => void;
   showCheckbox?: boolean;
+  highlightRows?: boolean;
 }
 
 const statusLabel: Record<Task['status'], string> = {
@@ -106,13 +108,15 @@ export const TaskRow = memo(({
   onRestoreTask,
   onHardDeleteTask,
   onQuickStatusChange,
+  onTogglePin,
   onCopyTask,
   trashRetentionDays = 30,
   isActive = false,
   fontSize = 13,
   isSelected = false,
   onSelect,
-  showCheckbox = false
+  showCheckbox = false,
+  highlightRows = false,
 }: TaskRowProps) => {
   const isTrash = project?.name === '回收站';
   const [showStatusMenu, setShowStatusMenu] = useState(false);
@@ -189,9 +193,24 @@ export const TaskRow = memo(({
     wordBreak: 'break-word',
   };
 
+  // Highlight logic
+  const getHighlightClass = () => {
+    if (!highlightRows || isTrash || task.status === 'done' || !task.dueDate) return '';
+
+    const today = dayjs().startOf('day');
+    const dueDate = dayjs(task.dueDate).startOf('day');
+    const diff = dueDate.diff(today, 'day');
+
+    if (diff < 0) return 'task-row-highlight-overdue'; // Overdue
+    if (diff <= 3) return 'task-row-highlight-due-soon'; // Today or within 3 days
+    return '';
+  };
+
+  const highlightClass = getHighlightClass();
+
   return (
     <tr
-      className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''} ${isSelected ? 'task-row-selected' : ''}`}
+      className={`task-row ${isTrash ? 'opacity-60 grayscale-[0.5]' : ''} ${isActive ? 'task-row-active' : ''} ${isSelected ? 'task-row-selected' : ''} ${highlightClass}`}
       style={isTrash ? { cursor: 'default' } : undefined}
     >
       <td className={`col-main ${priorityClass}`}>
@@ -208,7 +227,12 @@ export const TaskRow = memo(({
             </label>
           )}
           <div className='task-main-info'>
-            <div className='project-name'>{project?.name ?? '未分类'}</div>
+            <div className='project-name'>
+              {project?.name ?? '未分类'}
+              {task.isPinned && task.status !== 'done' && (
+                <span style={{ marginLeft: '6px', fontSize: '12px' }} title="已置顶">📌</span>
+              )}
+            </div>
             <div className={`task-title-main ${isTrash ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
             <div className='task-tags-row' style={{ position: 'relative' }}>
               <button
@@ -322,6 +346,9 @@ export const TaskRow = memo(({
             <>
               {/* 编辑/复制/删除按钮 */}
               <div className='action-row'>
+                <button className={`btn-xs ${task.isPinned ? 'btn-xs-active' : 'btn-xs-outline'}`} type='button' onClick={(e) => { e.stopPropagation(); onTogglePin?.(task.id); }} aria-label={task.isPinned ? '取消置顶' : '置顶任务'}>
+                  {task.isPinned ? '已置顶' : '置顶'}
+                </button>
                 <button className='btn-xs btn-xs-outline' type='button' onClick={handleEdit} aria-label={`编辑任务: ${task.title}`}>编辑</button>
                 <button className='btn-xs btn-xs-outline' type='button' onClick={(e) => { e.stopPropagation(); onCopyTask?.(task.id); }} aria-label={`复制任务: ${task.title}`}>复制</button>
                 <button className='btn-xs btn-xs-danger' type='button' onClick={handleDelete} aria-label={`删除任务: ${task.title}`}>删除</button>

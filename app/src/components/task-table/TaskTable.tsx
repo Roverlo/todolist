@@ -19,7 +19,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, updateTask, addTask, settings, bulkDeleteTasks } = useAppStoreShallow((state) => ({
+  const { deleteTask, moveToUncategorized, restoreTask, hardDeleteTask, updateTask, addTask, settings, bulkDeleteTasks, togglePin } = useAppStoreShallow((state) => ({
     deleteTask: state.deleteTask,
     moveToUncategorized: state.moveToUncategorized,
     restoreTask: state.restoreTask,
@@ -28,6 +28,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
     addTask: state.addTask,
     settings: state.settings,
     bulkDeleteTasks: state.bulkDeleteTasks,
+    togglePin: state.togglePin,
   }));
 
   // 判断是否为回收站视图
@@ -100,6 +101,10 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
   const handleQuickStatusChange = useCallback((taskId: string, newStatus: 'doing' | 'done' | 'paused') => {
     updateTask(taskId, { status: newStatus });
   }, [updateTask]);
+
+  const handleTogglePin = useCallback((taskId: string) => {
+    togglePin(taskId);
+  }, [togglePin]);
 
   const handleCopyTask = useCallback((taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
@@ -228,8 +233,10 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
                     onRestoreTask={handleRestoreTask}
                     onHardDeleteTask={handleHardDeleteTask}
                     onQuickStatusChange={handleQuickStatusChange}
+                    onTogglePin={handleTogglePin}
                     onCopyTask={handleCopyTask}
                     trashRetentionDays={settings.trashRetentionDays ?? 60}
+                    highlightRows={settings.highlightRows}
                     isActive={activeTaskId === task.id}
                     fontSize={settings.listFontSize}
                     showCheckbox={showCheckbox}

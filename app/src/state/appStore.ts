@@ -72,6 +72,7 @@ const defaultSettings: Settings = {
   undoDepth: 10,
   trashRetentionDays: 30,
   listFontSize: 13,
+  highlightRows: false,
 };
 
 const makeProject = (name: string): Project => ({
@@ -241,6 +242,7 @@ export interface AppStore extends AppData {
   purgeTrash: () => void;
   emptyTrash: () => void;
   hardDeleteTask: (id: string) => void;
+  togglePin: (id: string) => void;
   bulkUpdateTasks: (ids: string[], updates: Partial<Task>, batchId?: string) => void;
   bulkDeleteTasks: (ids: string[]) => void;
   addProgress: (
@@ -587,6 +589,15 @@ export const useAppStore = create<AppStore>()(
         withHistory(set, (state) => {
           state.tasks = state.tasks.filter((t) => t.id !== id);
           rebuildDictionary(state);
+        });
+      },
+      togglePin: (id) => {
+        withHistory(set, (state) => {
+          const task = state.tasks.find((t) => t.id === id);
+          if (task) {
+            task.isPinned = !task.isPinned;
+            task.updatedAt = Date.now();
+          }
         });
       },
       restoreTask: (id) => {

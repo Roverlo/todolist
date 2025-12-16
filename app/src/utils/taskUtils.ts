@@ -237,6 +237,14 @@ export const sortTasks = (
 ) => {
   const copy = [...tasks];
   copy.sort((a, b) => {
+    // 0. 置顶任务 (Pinned) - 始终最前 (除非已完成)
+    // 如果任务已完成 (done)，则不参与置顶逻辑 (或者置顶的已完成任务也排在未完成任务后面)
+    // 这里设定：未完成的置顶任务 > 未完成的普通任务 > 已完成任务
+    const isPinnedA = a.isPinned && a.status !== 'done';
+    const isPinnedB = b.isPinned && b.status !== 'done';
+    if (isPinnedA && !isPinnedB) return -1;
+    if (!isPinnedA && isPinnedB) return 1;
+
     // Smart Hybrid Sort: 当首要规则是按截止日期升序时，启用智能分层排序
     // Layer 1 (Urgent): 逾期 & 今天 -> 按优先级降序
     // Layer 2 (Future): 未来 -> 按日期升序

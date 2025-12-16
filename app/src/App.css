@@ -3589,7 +3589,9 @@ body {
   .field-grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}/* ==================== 批量操作工具栏 ==================== */
+}
+
+/* ==================== 批量操作工具栏 ==================== */
 
 .bulk-actions-bar {
   display: flex;
@@ -3719,12 +3721,12 @@ body {
   transition: transform 0.15s ease;
 }
 
-.task-checkbox:checked + .task-checkbox-custom {
+.task-checkbox:checked+.task-checkbox-custom {
   background: var(--primary);
   border-color: var(--primary);
 }
 
-.task-checkbox:checked + .task-checkbox-custom::after {
+.task-checkbox:checked+.task-checkbox-custom::after {
   transform: rotate(-45deg) scale(1);
 }
 
@@ -3824,7 +3826,7 @@ body {
   border-color: var(--primary);
 }
 
-.export-format-option input[type="radio"]:checked + .format-label strong {
+.export-format-option input[type="radio"]:checked+.format-label strong {
   color: var(--primary);
 }
 
@@ -3855,4 +3857,73 @@ body {
   flex-shrink: 0;
   height: 32px;
   align-self: flex-end;
+}
+
+/* Markdown Preview */
+.markdown-preview {
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.markdown-preview p {
+  margin-bottom: 0.5em;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-preview li {
+  list-style-type: disc;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3 {
+  font-weight: 600;
+  margin-top: 0.5em;
+  margin-bottom: 0.3em;
+}
+
+.markdown-preview code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.markdown-preview pre {
+  background: #f1f5f9;
+  padding: 8px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+[data-theme='dark'] .markdown-preview code {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .markdown-preview pre {
+  background: #1e293b;
+}
+/* Highlight Rows Feature */
+.task-row-highlight-overdue {
+  background-color: var(--danger-soft);
+}
+
+.task-row-highlight-due-soon {
+  background-color: var(--warning-soft);
+}
+
+/* Ensure selected state overrides highlight */
+.task-row.task-row-selected {
+  background-color: var(--primary-soft) !important;
+}
+
+/* Ensure active state overrides highlight/selected mix if needed, or blends */
+.task-row.task-row-active {
+  background-color: var(--primary-soft);
+  box-shadow: inset 3px 0 0 var(--primary);
 }

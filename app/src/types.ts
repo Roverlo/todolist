@@ -80,6 +80,7 @@ export interface Task {
   projectId: string;
   title: string;
   status: Status;
+  isPinned?: boolean;
   priority?: Priority;
   dueDate?: string;
   createdAt: number;
@@ -183,6 +184,7 @@ export interface Settings {
   undoDepth: number;
   trashRetentionDays?: number;
   listFontSize?: number;
+  highlightRows?: boolean;
 }
 
 export interface SortScheme {

@@ -25,3 +25,4 @@ tauri = { version = "2.9.2", features = [] }
 tauri-plugin-log = "2.0.0"
 tauri-plugin-dialog = "2.4.2"
 tauri-plugin-fs = "2.4.4"
+tauri-plugin-notification = "2.0.0"
