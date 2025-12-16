@@ -334,6 +334,15 @@ function App() {
                 >
                   备份
                 </button>
+                <button
+                  className='btn btn-light'
+                  onClick={() => setSettingsOpen(true)}
+                  aria-label='更多设置'
+                  title='更多设置'
+                  style={{ marginLeft: 4 }}
+                >
+                  设置
+                </button>
               </>
             )}
           </div>
