@@ -157,17 +157,11 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     // 实时保存子任务更改
     updateTask(task.id, { subtasks: newSubtasks });
 
-    // 子任务联动：检查是否所有子任务都已完成
+    // 子任务联动：当所有子任务都完成时，自动将主任务标记为已完成
     const allCompleted = newSubtasks.length > 0 && newSubtasks.every(s => s.completed);
     if (allCompleted && status !== 'done') {
-      // 使用 setTimeout 避免在渲染中更新状态
-      setTimeout(() => {
-        const confirmed = window.confirm('所有子任务都已完成！是否将主任务标记为"已完成"？');
-        if (confirmed) {
-          setStatus('done');
-          updateTask(task.id, { status: 'done', subtasks: newSubtasks });
-        }
-      }, 100);
+      setStatus('done');
+      updateTask(task.id, { status: 'done', subtasks: newSubtasks });
     }
   };
 
