@@ -142,6 +142,61 @@ export const ThemeModal = ({ open, onClose }: ThemeModalProps) => {
               );
             })}
           </div>
+
+          <div style={{ marginTop: 24, padding: '0 4px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+              onClick={() => setSettings({ highlightRows: !settings.highlightRows })}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.backgroundColor = 'var(--hover-bg)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.backgroundColor = 'var(--surface)';
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-main)' }}>
+                  Highlight Rows (过期/近期任务高亮)
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-subtle)' }}>
+                  开启后，过期任务将显示红色背景，近期任务显示橙色背景
+                </div>
+              </div>
+
+              {/* Toggle Switch */}
+              <div style={{
+                width: 44,
+                height: 24,
+                borderRadius: 999,
+                background: settings.highlightRows ? 'var(--primary)' : 'var(--border)',
+                position: 'relative',
+                transition: 'background 0.2s ease'
+              }}>
+                <div style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: 'white',
+                  position: 'absolute',
+                  top: 2,
+                  left: settings.highlightRows ? 22 : 2,
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
