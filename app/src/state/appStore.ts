@@ -521,6 +521,7 @@ export const useAppStore = create<AppStore>()(
                 dependencies: [],
                 history: [],
                 progress: [],
+                subtasks: task.subtasks?.map(st => ({ ...st, id: nanoid(8), createdAt: Date.now(), completed: false })) ?? [],
                 extras: { recurring: recurringRaw },
               };
               state.tasks.push(newTask);
@@ -548,6 +549,7 @@ export const useAppStore = create<AppStore>()(
                 dependencies: [],
                 history: [],
                 progress: [],
+                subtasks: task.subtasks?.map(st => ({ ...st, id: nanoid(8), createdAt: Date.now(), completed: false })) ?? [],
                 extras: { recurring: recurringRaw },
               };
               state.tasks.push(newTask);
@@ -1015,6 +1017,7 @@ export const useAppStore = create<AppStore>()(
                 tags: tpl.defaults?.tags ?? [],
                 notes: tpl.defaults?.notes,
                 extras: { recurrenceId: tpl.id, periodKey },
+                subtasks: tpl.subtasks?.map(st => ({ ...st, id: nanoid(8), createdAt: Date.now(), completed: false })) ?? [],
               };
               state.tasks.push(newTask);
               registerFromTask(state, newTask);

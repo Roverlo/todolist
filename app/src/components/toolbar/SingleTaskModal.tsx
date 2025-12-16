@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAppStoreShallow } from '../../state/appStore';
-import type { Priority, Status } from '../../types';
+import type { Priority, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
+import { SubtaskList } from '../ui/SubtaskList';
 
 interface SingleTaskModalProps {
   open: boolean;
@@ -38,6 +39,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
   const [onsiteOwner, setOnsiteOwner] = useState('');
   const [lineOwner, setLineOwner] = useState('');
   const [nextStep, setNextStep] = useState('');
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [error, setError] = useState('');
 
   // Project options for CustomSelect
@@ -57,6 +59,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
       setOnsiteOwner('');
       setLineOwner('');
       setNextStep('');
+      setSubtasks([]);
       setError('');
     }
   }, [open, projects, filters.projectId]);
@@ -95,6 +98,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
       onsiteOwner: onsiteOwner || undefined,
       lineOwner: lineOwner || undefined,
       nextStep: nextStep || undefined,
+      subtasks: subtasks.length > 0 ? subtasks : undefined,
     });
     onClose();
   };
@@ -206,6 +210,20 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
                   ))}
                 </datalist>
               </div>
+            </div>
+          </section>
+
+          <section className='create-section'>
+            <div className='create-section-title-row'>
+              <div className='create-section-title'>子任务</div>
+              <div className='create-section-hint'>拆分任务步骤，便于跟踪进度。</div>
+            </div>
+            <div className='create-field create-field-span-2'>
+              <SubtaskList
+                subtasks={subtasks}
+                onChange={setSubtasks}
+                hideProgress={true}
+              />
             </div>
           </section>
 

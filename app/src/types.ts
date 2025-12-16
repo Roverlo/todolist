@@ -119,6 +119,7 @@ export interface RecurringTemplate {
     tags?: string[];
     notes?: string;
   };
+  subtasks?: Subtask[];
   active: boolean;
 }
 

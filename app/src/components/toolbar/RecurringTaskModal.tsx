@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
-import type { Priority, RecurringTemplate, Status } from '../../types';
+import type { Priority, RecurringTemplate, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
+import { SubtaskList } from '../ui/SubtaskList';
 
 const WEEK_OPTIONS = [
   { value: '1', label: '周一' },
@@ -51,6 +52,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
 
   const [tpl, setTpl] = useState<RecurringTemplate | null>(null);
   const [autoRenew, setAutoRenew] = useState(true);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -70,6 +72,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
       active: true,
     });
     setAutoRenew(true);
+    setSubtasks([]);
     setError('');
   }, [open, projects, filters.projectId]);
 
@@ -136,6 +139,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
         lineOwner: tpl.lineOwner,
         nextStep: tpl.defaults?.nextStep,
         notes: tpl.defaults?.notes,
+        subtasks: subtasks.length > 0 ? subtasks : undefined,
         extras: {
           recurring: JSON.stringify({
             type: tpl.schedule.type,
@@ -274,6 +278,14 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
             <div className='create-section-title-row'>
               <div className='create-section-title'>默认任务内容</div>
               <div className='create-section-hint'>为每次生成的任务预填常用信息，可在单条任务中微调。</div>
+            </div>
+            <div className='create-field create-field-span-2'>
+              <label className='create-field-label'>子任务</label>
+              <SubtaskList
+                subtasks={subtasks}
+                onChange={setSubtasks}
+                hideProgress={true}
+              />
             </div>
             <div className='create-field create-field-span-2'>
               <label className='create-field-label'>详情</label>
