@@ -3996,3 +3996,144 @@ body {
   background-color: var(--primary-soft);
   box-shadow: inset 3px 0 0 var(--primary);
 }
+
+/* ==================== 进展时间轴优化 (Progress Timeline) ==================== */
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0 0 0;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 24px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+/* 左侧时间轴 (Timeline Column) */
+.timeline-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+/* 三角形图标 (Triangle Icon) */
+.timeline-icon {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid var(--text-subtle);
+  /* 默认为空心/浅色 */
+  position: relative;
+  z-index: 2;
+  margin-top: 5px;
+  /* 与文字基线对齐 */
+  transition: all 0.3s ease;
+}
+
+/* 最新一条其实心且高亮 (Solid Triangle for Latest) */
+.timeline-item.latest .timeline-icon {
+  border-bottom-color: var(--primary);
+  transform: scale(1.1);
+  filter: drop-shadow(0 2px 4px var(--shadow-color));
+}
+
+/* 其他条目模拟空心效果 (Hollow effect for others) */
+.timeline-item:not(.latest) .timeline-icon::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: -4px;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 7px solid var(--surface);
+  /* 遮罩模拟空心 */
+}
+
+/* 虚线连接 (Dashed Line) */
+.timeline-line {
+  flex: 1;
+  width: 0;
+  border-left: 2px dashed var(--text-subtle);
+  margin-top: 4px;
+  margin-bottom: 0;
+  opacity: 0.4;
+}
+
+/* 内容区域 (Content Column) */
+.timeline-content {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.timeline-time {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: var(--text-subtle);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.timeline-item.latest .timeline-time {
+  color: var(--primary);
+}
+
+.timeline-actions {
+  display: flex;
+  gap: 12px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.timeline-item:hover .timeline-actions {
+  opacity: 1;
+}
+
+.timeline-actions button.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-subtle);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.timeline-actions button.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--primary);
+}
+
+.timeline-actions button.icon-btn.danger:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.timeline-body {
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

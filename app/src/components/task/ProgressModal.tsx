@@ -24,7 +24,7 @@ export const ProgressModal = ({ open, taskId, onClose }: ProgressModalProps) => 
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
 
   useEffect(() => {
     if (open) {
@@ -87,7 +87,7 @@ export const ProgressModal = ({ open, taskId, onClose }: ProgressModalProps) => 
           <button type='button' className='primary-btn' disabled={submitting} onClick={() => handleSubmit(true)}>提交并关闭</button>
         </div>
       </div>
-      
+
       <label>
         进展说明
         <textarea rows={10} style={{ width: '100%', minHeight: 180 }} value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => {
@@ -97,43 +97,41 @@ export const ProgressModal = ({ open, taskId, onClose }: ProgressModalProps) => 
           }
         }} />
       </label>
-      
-      
+
+
       <section>
         <h4>全部进展记录</h4>
-        <ul className='history-list'>
+        <div className='timeline-list'>
           {sortedProgress.map((p, idx) => (
-            <li key={p.id} style={{
-              background: idx % 2 === 0 ? '#e6f0ff' : '#fff7e6',
-              border: '1px solid var(--border-color)',
-              borderRadius: 8,
-              padding: 10,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontWeight: 600 }}>{dayjs(p.at).format('YYYY-MM-DD HH:mm')}</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type='button' onClick={() => {
-                  setEditingId(p.id);
-                  setAt(dayjs(p.at).format('YYYY-MM-DDTHH:mm'));
-                  setNote(p.note);
-                }}>编辑</button>
-                <button type='button' onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>{expanded[p.id] ? '收起' : '展开'}</button>
-                <button type='button' onClick={() => {
-                  if (confirm('确认删除该进展记录？')) {
-                    deleteProgress(task!.id, p.id);
-                  }
-                }} className='danger-btn'>删除</button>
+            <div key={p.id} className={`timeline-item ${idx === 0 ? 'latest' : ''}`}>
+              <div className='timeline-left'>
+                <div className='timeline-icon'></div>
+                {idx !== sortedProgress.length - 1 && <div className='timeline-line'></div>}
+              </div>
+              <div className='timeline-content'>
+                <div className='timeline-header'>
+                  <div className='timeline-time'>{dayjs(p.at).format('YYYY-MM-DD HH:mm')}</div>
+                  <div className='timeline-actions'>
+                    <button type='button' className='icon-btn' onClick={() => {
+                      setEditingId(p.id);
+                      setAt(dayjs(p.at).format('YYYY-MM-DDTHH:mm'));
+                      setNote(p.note);
+                    }}>编辑</button>
+                    <button type='button' className='icon-btn danger' onClick={() => {
+                      if (confirm('确认删除该进展记录？')) {
+                        deleteProgress(task!.id, p.id);
+                      }
+                    }}>删除</button>
+                  </div>
+                </div>
+                <div className='timeline-body'>
+                  {p.note}
+                </div>
               </div>
             </div>
-            <div style={{ whiteSpace: 'pre-wrap', marginTop: 6 }}>
-              {expanded[p.id] ? p.note : (p.note?.length > 240 ? (p.note.slice(0, 240) + '…') : p.note)}
-            </div>
-            
-            
-          </li>
-        ))}
-        {!task?.progress?.length && <li className='muted'>暂无进展</li>}
-      </ul>
+          ))}
+          {!task?.progress?.length && <div className='muted' style={{ padding: '20px', textAlign: 'center' }}>暂无进展</div>}
+        </div>
       </section>
     </Modal>
   );
