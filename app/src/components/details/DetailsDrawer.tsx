@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useLayoutEffect, useCallback } from 'react';
 import dayjs from 'dayjs';
-import ReactMarkdown from 'react-markdown';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, ProgressEntry, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
@@ -50,9 +49,6 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
 
-  // Markdown Preview States
-  const [showNotesPreview, setShowNotesPreview] = useState(false);
-  const [showNextStepPreview, setShowNextStepPreview] = useState(false);
   const saveTimeoutRef = useRef<number | null>(null);
 
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
@@ -88,8 +84,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       setProgressNote('');
       setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
       setEditingProgressId(null);
-      setShowNotesPreview(false);
-      setShowNextStepPreview(false);
+
       resize(notesRef.current);
       resize(nextRef.current);
       resize(progressRef.current);
@@ -390,58 +385,32 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
               <div className='field' style={{ marginBottom: 10 }}>
                 <label className='field-label'>
                   详情<span>*</span>
-                  <button
-                    className='btn-xs btn-ghost'
-                    style={{ marginLeft: 'auto', fontWeight: 'normal' }}
-                    onClick={() => setShowNotesPreview(!showNotesPreview)}
-                  >
-                    {showNotesPreview ? '编辑' : '预览'}
-                  </button>
                 </label>
-                {showNotesPreview ? (
-                  <div className='markdown-preview field-textarea' style={{ minHeight: '80px', height: 'auto' }}>
-                    {notes ? <ReactMarkdown>{notes}</ReactMarkdown> : <span className="text-gray-400">无内容</span>}
-                  </div>
-                ) : (
-                  <textarea
-                    className='field-textarea'
-                    value={notes}
-                    ref={notesRef}
-                    onChange={(event) => {
-                      setNotes(event.target.value);
-                      resize(notesRef.current);
-                    }}
-                    placeholder='例如：当前已经完成了哪些工作，还有哪些待处理… (支持 Markdown)'
-                  />
-                )}
+                <textarea
+                  className='field-textarea'
+                  value={notes}
+                  ref={notesRef}
+                  onChange={(event) => {
+                    setNotes(event.target.value);
+                    resize(notesRef.current);
+                  }}
+                  placeholder='例如：当前已经完成了哪些工作，还有哪些待处理…'
+                />
               </div>
               <div className='field'>
                 <label className='field-label'>
                   下一步计划
-                  <button
-                    className='btn-xs btn-ghost'
-                    style={{ marginLeft: 'auto', fontWeight: 'normal' }}
-                    onClick={() => setShowNextStepPreview(!showNextStepPreview)}
-                  >
-                    {showNextStepPreview ? '编辑' : '预览'}
-                  </button>
                 </label>
-                {showNextStepPreview ? (
-                  <div className='markdown-preview field-textarea' style={{ minHeight: '60px', height: 'auto' }}>
-                    {nextStep ? <ReactMarkdown>{nextStep}</ReactMarkdown> : <span className="text-gray-400">无内容</span>}
-                  </div>
-                ) : (
-                  <textarea
-                    className='field-textarea'
-                    value={nextStep}
-                    ref={nextRef}
-                    onChange={(event) => {
-                      setNextStep(event.target.value);
-                      resize(nextRef.current);
-                    }}
-                    placeholder='例如：下周一前补齐案例，并提交知识库… (支持 Markdown)'
-                  />
-                )}
+                <textarea
+                  className='field-textarea'
+                  value={nextStep}
+                  ref={nextRef}
+                  onChange={(event) => {
+                    setNextStep(event.target.value);
+                    resize(nextRef.current);
+                  }}
+                  placeholder='例如：下周一前补齐案例，并提交知识库…'
+                />
               </div>
             </section>
           </main>
