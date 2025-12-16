@@ -89,17 +89,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     }
   }, [task]);
 
-  if (!open || !task) return null;
-
-  const dueLabel = () => {
-    if (!task.dueDate) return '无截止日期';
-    const diff = dayjs(task.dueDate).startOf('day').diff(dayjs().startOf('day'), 'day');
-    if (diff === 0) return '今日到期';
-    if (diff > 0) return `剩余 ${diff} 天`;
-    return `逾期 ${Math.abs(diff)} 天`;
-  };
-
-  // 防抖自动保存函数
+  // 防抖自动保存函数 - 必须在 early return 之前定义
   const debouncedSave = useCallback(() => {
     if (!task || !title.trim()) return;
 
@@ -128,7 +118,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     }, 1000);
   }, [task, title, projectId, status, priority, dueDate, onsiteOwner, lineOwner, notes, nextStep, progress, subtasks, updateTask]);
 
-  // 监听字段变化自动保存
+  // 监听字段变化自动保存 - 必须在 early return 之前定义
   useEffect(() => {
     if (!task) return;
     // 跳过初始化
@@ -148,6 +138,17 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       }
     };
   }, [title, projectId, status, priority, dueDate, onsiteOwner, lineOwner, notes, nextStep, task, debouncedSave]);
+
+  // Early return 必须在所有 hooks 之后
+  if (!open || !task) return null;
+
+  const dueLabel = () => {
+    if (!task.dueDate) return '无截止日期';
+    const diff = dayjs(task.dueDate).startOf('day').diff(dayjs().startOf('day'), 'day');
+    if (diff === 0) return '今日到期';
+    if (diff > 0) return `剩余 ${diff} 天`;
+    return `逾期 ${Math.abs(diff)} 天`;
+  };
 
 
 
