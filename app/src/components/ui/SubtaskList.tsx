@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import type { Subtask } from '../../types';
 
@@ -10,6 +10,19 @@ interface SubtaskListProps {
 
 export const SubtaskList = ({ subtasks, onChange, hideProgress }: SubtaskListProps) => {
     const [newTitle, setNewTitle] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const adjustHeight = () => {
+        const el = textareaRef.current;
+        if (el) {
+            el.style.height = 'auto';
+            el.style.height = `${el.scrollHeight}px`;
+        }
+    };
+
+    useEffect(() => {
+        adjustHeight();
+    }, [newTitle]);
 
     const handleAdd = () => {
         if (!newTitle.trim()) return;
@@ -78,14 +91,25 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress }: SubtaskListPro
             </div>
 
             <div className='subtask-add'>
-                <input
-                    type='text'
+                <textarea
+                    ref={textareaRef}
+                    rows={1}
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     placeholder='添加子任务...'
                     className='subtask-input'
+                    style={{
+                        resize: 'none',
+                        overflow: 'hidden',
+                        minHeight: '32px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        // make it look like an input
+                        fontFamily: 'inherit',
+                        lineHeight: 'inherit'
+                    }}
                     onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
                             handleAdd();
                         }
