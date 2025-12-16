@@ -481,31 +481,34 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 <div className='section-title'>全部进展记录</div>
                 <div className='section-hint'>按时间倒序展示，点击右侧操作可修改或删除。</div>
               </div>
-              <div className='timeline'>
-                {[...progress].sort((a, b) => b.at - a.at).map((p) => (
-                  <div className='timeline-item' key={p.id}>
-                    <div className='timeline-item-header'>
-                      <div className='timeline-item-label'>{dayjs(p.at).format('YYYY-MM-DD HH:mm')}</div>
-                      <div className='timeline-item-actions'>
-                        <button className='link-action' type='button' onClick={() => handleEditProgress(p.id)}>
-                          编辑
-                        </button>
-                        <button
-                          className='link-action danger'
-                          type='button'
-                          onClick={() => handleDeleteProgress(p.id)}
-                        >
-                          删除
-                        </button>
+              <div className='timeline-list'>
+                {(() => {
+                  const sorted = [...progress].sort((a, b) => b.at - a.at);
+                  return sorted.map((p, idx) => (
+                    <div className={`timeline-item ${idx === 0 ? 'latest' : ''}`} key={p.id}>
+                      <div className='timeline-left'>
+                        <div className='timeline-icon'></div>
+                        {idx !== sorted.length - 1 && <div className='timeline-line'></div>}
+                      </div>
+                      <div className='timeline-content'>
+                        <div className='timeline-header'>
+                          <div className='timeline-time'>{dayjs(p.at).format('YYYY-MM-DD HH:mm')}</div>
+                          <div className='timeline-actions'>
+                            <button type='button' className='icon-btn' onClick={() => handleEditProgress(p.id)}>
+                              编辑
+                            </button>
+                            <button type='button' className='icon-btn danger' onClick={() => handleDeleteProgress(p.id)}>
+                              删除
+                            </button>
+                          </div>
+                        </div>
+                        <div className='timeline-body'>{p.note}</div>
                       </div>
                     </div>
-                    <div className='timeline-item-text'>{p.note}</div>
-                  </div>
-                ))}
+                  ));
+                })()}
                 {!progress.length && (
-                  <div className='timeline-item'>
-                    <div className='timeline-item-label'>暂无更多记录</div>
-                  </div>
+                  <div className='muted' style={{ padding: '20px', textAlign: 'center' }}>暂无更多记录</div>
                 )}
               </div>
             </section>
