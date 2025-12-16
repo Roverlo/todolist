@@ -478,6 +478,7 @@ export const useAppStore = create<AppStore>()(
           attachments: rest.attachments ?? [],
           history: [],
           progress: [],
+          subtasks: rest.subtasks ?? [],
           extras: (rest as any).extras ?? {},
         };
         withHistory(set, (state) => {
