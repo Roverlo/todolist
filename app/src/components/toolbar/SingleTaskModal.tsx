@@ -121,15 +121,31 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
         <div className='create-dialog-body'>
           {error && <div className='error-panel' style={{ marginBottom: 12 }}>{error}</div>}
 
+          {/* 标题字段 - 全宽，置顶 */}
+          <div className='field' style={{ marginBottom: 18 }}>
+            <label className='field-label'>
+              任务标题<span>*</span>
+            </label>
+            <input
+              className='field-input'
+              type='text'
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder='请输入任务标题，建议 10~50 字，突出动词和对象'
+              maxLength={100}
+              style={{ fontSize: '15px', fontWeight: 600 }}
+            />
+          </div>
+
           <section className='create-section'>
             <div className='create-section-title-row'>
-              <div className='create-section-title'>基本信息</div>
-              <div className='create-section-hint'>先把任务的“标签”补全，后续筛选、排序会更好用。</div>
+              <div className='create-section-title'>属性</div>
+              <div className='create-section-hint'>管理任务的基本属性。</div>
             </div>
-            <div className='create-form-grid'>
-              <div className='create-field'>
-                <label className='create-field-label'>
-                  项目<span>*</span>
+            <div className='field-grid-3'>
+              <div className='field'>
+                <label className='field-label'>
+                  所属项目<span>*</span>
                 </label>
                 <CustomSelect
                   value={projectId}
@@ -138,52 +154,41 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
                   placeholder="选择项目"
                 />
               </div>
-              <div className='create-field'>
-                <label className='create-field-label'>
-                  状态<span>*</span>
+              <div className='field'>
+                <label className='field-label'>
+                  任务状态<span>*</span>
                 </label>
                 <CustomSelect
                   value={status}
                   options={statusOptions}
                   onChange={(val) => setStatus(val as Status)}
+                  placeholder="选择状态"
                 />
               </div>
-              <div className='create-field create-field-span-2'>
-                <label className='create-field-label'>
-                  标题<span>*</span>
-                </label>
-                <input
-                  className='create-field-input'
-                  type='text'
-                  value={title}
-                  maxLength={50}
-                  placeholder='请填写任务标题，建议 10~50 字，突出动词和对象'
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div className='create-field'>
-                <label className='create-field-label'>
+              <div className='field'>
+                <label className='field-label'>
                   优先级<span>*</span>
                 </label>
                 <CustomSelect
                   value={priority}
                   options={priorityOptions}
                   onChange={(val) => setPriority(val as Priority)}
+                  placeholder="选择优先级"
                 />
               </div>
-              <div className='create-field'>
-                <label className='create-field-label'>截止日期</label>
+              <div className='field'>
+                <label className='field-label'>截止日期</label>
                 <input
-                  className='create-field-input'
+                  className='field-input'
                   type='date'
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                 />
               </div>
-              <div className='create-field'>
-                <label className='create-field-label'>现场责任人</label>
+              <div className='field'>
+                <label className='field-label'>现场责任人</label>
                 <input
-                  className='create-field-input'
+                  className='field-input'
                   type='text'
                   value={onsiteOwner}
                   onChange={(e) => setOnsiteOwner(e.target.value)}
@@ -196,10 +201,10 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
                   ))}
                 </datalist>
               </div>
-              <div className='create-field'>
-                <label className='create-field-label'>产线责任人</label>
+              <div className='field'>
+                <label className='field-label'>产线责任人</label>
                 <input
-                  className='create-field-input'
+                  className='field-input'
                   type='text'
                   value={lineOwner}
                   onChange={(e) => setLineOwner(e.target.value)}

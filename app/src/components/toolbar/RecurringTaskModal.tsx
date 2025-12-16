@@ -172,56 +172,70 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
         <div className='create-dialog-body'>
           {error && <div className='error-panel' style={{ marginBottom: 12 }}>{error}</div>}
 
+          {/* 标题字段 - 全宽，置顶 */}
+          <div className='field' style={{ marginBottom: 18 }}>
+            <label className='field-label'>名称（用于列表展示）<span>*</span></label>
+            <input
+              className='field-input'
+              type='text'
+              value={tpl.title}
+              placeholder='例如：周例会检查清单'
+              onChange={(e) => setTpl({ ...tpl, title: e.target.value })}
+              style={{ fontSize: '15px', fontWeight: 600 }}
+            />
+          </div>
+
           <section className='create-section'>
             <div className='create-section-title-row'>
-              <div className='create-section-title'>基本信息</div>
+              <div className='create-section-title'>属性</div>
               <div className='create-section-hint'>先把任务的标签补全，后续筛选、排序会更好用。</div>
             </div>
-            <div className='create-form-grid'>
-              <div className='create-field create-field-span-2'>
-                <label className='create-field-label'>名称（用于列表展示）<span>*</span></label>
-                <input
-                  className='create-field-input'
-                  type='text'
-                  value={tpl.title}
-                  placeholder='例如：周例会检查清单'
-                  onChange={(e) => setTpl({ ...tpl, title: e.target.value })}
-                />
-              </div>
-              <div className='create-field'>
-                <label className='create-field-label'>优先级<span>*</span></label>
+            <div className='field-grid-3'>
+              <div className='field'>
+                <label className='field-label'>所属项目<span>*</span></label>
                 <CustomSelect
-                  value={tpl.priority ?? 'medium'}
-                  options={priorityOptions}
-                  onChange={(val) => setTpl({ ...tpl, priority: val as Priority })}
+                  value={tpl.projectId}
+                  options={projects.filter(p => p.name !== '回收站').map(p => ({ value: p.id, label: p.name }))}
+                  onChange={(val) => setTpl({ ...tpl, projectId: val })}
+                  placeholder="选择项目"
                 />
               </div>
-              <div className='create-field'>
-                <label className='create-field-label'>默认现场负责人</label>
-                <input
-                  className='create-field-input'
-                  type='text'
-                  value={tpl.onsiteOwner ?? ''}
-                  placeholder='新建任务时自动带入，可在单条任务中修改'
-                  onChange={(e) => setTpl({ ...tpl, onsiteOwner: e.target.value })}
-                />
-              </div>
-              <div className='create-field'>
-                <label className='create-field-label'>默认产线负责人</label>
-                <input
-                  className='create-field-input'
-                  type='text'
-                  value={tpl.lineOwner ?? ''}
-                  placeholder='例如：产线联络人 / 协作同事'
-                  onChange={(e) => setTpl({ ...tpl, lineOwner: e.target.value })}
-                />
-              </div>
-              <div className='create-field'>
-                <label className='create-field-label'>状态<span>*</span></label>
+              <div className='field'>
+                <label className='field-label'>状态<span>*</span></label>
                 <CustomSelect
                   value={tpl.status}
                   options={statusOptions}
                   onChange={(val) => setTpl({ ...tpl, status: val as Status })}
+                  placeholder="选择状态"
+                />
+              </div>
+              <div className='field'>
+                <label className='field-label'>优先级<span>*</span></label>
+                <CustomSelect
+                  value={tpl.priority ?? 'medium'}
+                  options={priorityOptions}
+                  onChange={(val) => setTpl({ ...tpl, priority: val as Priority })}
+                  placeholder="选择优先级"
+                />
+              </div>
+              <div className='field'>
+                <label className='field-label'>默认现场负责人</label>
+                <input
+                  className='field-input'
+                  type='text'
+                  value={tpl.onsiteOwner ?? ''}
+                  placeholder='新建任务时自动带入'
+                  onChange={(e) => setTpl({ ...tpl, onsiteOwner: e.target.value })}
+                />
+              </div>
+              <div className='field'>
+                <label className='field-label'>默认产线负责人</label>
+                <input
+                  className='field-input'
+                  type='text'
+                  value={tpl.lineOwner ?? ''}
+                  placeholder='例如：产线联络人'
+                  onChange={(e) => setTpl({ ...tpl, lineOwner: e.target.value })}
                 />
               </div>
             </div>
