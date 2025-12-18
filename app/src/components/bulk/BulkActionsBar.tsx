@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useAppStoreShallow } from '../../state/appStore';
 import { CustomSelect } from '../ui/CustomSelect';
 import type { Status, Priority } from '../../types';
@@ -10,15 +9,15 @@ interface BulkActionsBarProps {
 }
 
 const statusOptions = [
-  { value: 'doing', label: '进行中' },
-  { value: 'paused', label: '挂起' },
-  { value: 'done', label: '已完成' },
+  { value: 'doing', label: '🔵 进行中' },
+  { value: 'paused', label: '🟡 挂起' },
+  { value: 'done', label: '🟢 已完成' },
 ];
 
 const priorityOptions = [
-  { value: 'high', label: '高优先级' },
-  { value: 'medium', label: '中优先级' },
-  { value: 'low', label: '低优先级' },
+  { value: 'high', label: '🔴 高' },
+  { value: 'medium', label: '🟠 中' },
+  { value: 'low', label: '🔵 低' },
 ];
 
 export const BulkActionsBar = ({ selectedIds, onClear, onBulkDelete }: BulkActionsBarProps) => {
@@ -26,9 +25,6 @@ export const BulkActionsBar = ({ selectedIds, onClear, onBulkDelete }: BulkActio
     bulkUpdateTasks: state.bulkUpdateTasks,
     projects: state.projects,
   }));
-
-  const [showProjectSelect, setShowProjectSelect] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   if (!selectedIds.length) {
     return null;
@@ -39,82 +35,70 @@ export const BulkActionsBar = ({ selectedIds, onClear, onBulkDelete }: BulkActio
     .map((p) => ({ value: p.id, label: p.name }));
 
   const handleStatusChange = (status: string) => {
-    bulkUpdateTasks(selectedIds, { status: status as Status });
+    if (status) {
+      bulkUpdateTasks(selectedIds, { status: status as Status });
+    }
   };
 
   const handlePriorityChange = (priority: string) => {
-    bulkUpdateTasks(selectedIds, { priority: priority as Priority });
+    if (priority) {
+      bulkUpdateTasks(selectedIds, { priority: priority as Priority });
+    }
   };
 
-  const handleMoveProject = () => {
-    if (selectedProjectId) {
-      bulkUpdateTasks(selectedIds, { projectId: selectedProjectId });
-      setShowProjectSelect(false);
-      setSelectedProjectId('');
+  const handleMoveProject = (projectId: string) => {
+    if (projectId) {
+      bulkUpdateTasks(selectedIds, { projectId });
     }
   };
 
   return (
     <div className='bulk-actions-bar'>
+      {/* 左侧：选中计数和取消 */}
       <div className='bulk-actions-left'>
-        <span className='bulk-selected-count'>
-          已选择 <strong>{selectedIds.length}</strong> 项任务
+        <span className='bulk-selected-badge'>
+          <span className='bulk-check-icon'>✓</span>
+          <span className='bulk-count'>{selectedIds.length}</span>
+          项已选
         </span>
-        <button className='btn btn-ghost bulk-clear-btn' type='button' onClick={onClear}>
-          取消选择
+        <button className='bulk-cancel-btn' type='button' onClick={onClear}>
+          ✕
         </button>
       </div>
 
+      {/* 分隔线 */}
+      <div className='bulk-divider' />
+
+      {/* 右侧：批量操作 */}
       <div className='bulk-actions-right'>
         {/* 状态修改 */}
-        <div className='bulk-action-item'>
-          <span className='bulk-action-label'>状态</span>
-          <CustomSelect
-            value=""
-            options={[{ value: '', label: '选择...' }, ...statusOptions]}
-            onChange={(val) => val && handleStatusChange(val)}
-            placeholder="选择状态"
-          />
-        </div>
+        <CustomSelect
+          value=""
+          options={[{ value: '', label: '📋 状态' }, ...statusOptions]}
+          onChange={handleStatusChange}
+          placeholder="📋 状态"
+        />
 
         {/* 优先级修改 */}
-        <div className='bulk-action-item'>
-          <span className='bulk-action-label'>优先级</span>
-          <CustomSelect
-            value=""
-            options={[{ value: '', label: '选择...' }, ...priorityOptions]}
-            onChange={(val) => val && handlePriorityChange(val)}
-            placeholder="选择优先级"
-          />
-        </div>
+        <CustomSelect
+          value=""
+          options={[{ value: '', label: '🔥 优先级' }, ...priorityOptions]}
+          onChange={handlePriorityChange}
+          placeholder="🔥 优先级"
+        />
 
         {/* 移动项目 */}
-        <div className='bulk-action-item'>
-          {showProjectSelect ? (
-            <div className='bulk-project-select-row'>
-              <CustomSelect
-                value={selectedProjectId}
-                options={projectOptions}
-                onChange={setSelectedProjectId}
-                placeholder="选择项目"
-              />
-              <button className='btn btn-primary-outline btn-sm' type='button' onClick={handleMoveProject} disabled={!selectedProjectId}>
-                确定
-              </button>
-              <button className='btn btn-ghost btn-sm' type='button' onClick={() => setShowProjectSelect(false)}>
-                取消
-              </button>
-            </div>
-          ) : (
-            <button className='btn btn-outline btn-sm' type='button' onClick={() => setShowProjectSelect(true)}>
-              移动到...
-            </button>
-          )}
-        </div>
+        <CustomSelect
+          value=""
+          options={[{ value: '', label: '📁 移动' }, ...projectOptions]}
+          onChange={handleMoveProject}
+          placeholder="📁 移动"
+        />
 
         {/* 批量删除 */}
-        <button className='btn btn-danger-outline btn-sm' type='button' onClick={onBulkDelete}>
-          批量删除
+        <button className='bulk-delete-btn' type='button' onClick={onBulkDelete}>
+          <span className='bulk-delete-icon'>🗑</span>
+          <span className='bulk-delete-text'>删除</span>
         </button>
       </div>
     </div>
