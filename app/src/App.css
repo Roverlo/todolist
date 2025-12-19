@@ -4557,3 +4557,83 @@ body {
   color: var(--text-main);
   opacity: 0.85;
 }
+
+/* Subtask Add Form - Single Row */
+.subtask-add-row {
+  display: flex;
+  align-items: center;
+  /* Center inputs vertically */
+  gap: 8px;
+  margin-top: 12px;
+  /* Removed padding/bg to keep it clean like user image */
+}
+
+.subtask-add-input {
+  flex: 1;
+  /* Grows to fill space */
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+  /* Vertically align text if possible (for textarea usually padding) */
+  line-height: 20px;
+  padding-top: 7px;
+  /* (36 - 20 - 2 border) / 2 approx */
+  overflow: hidden;
+}
+
+.subtask-add-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.subtask-add-date,
+.subtask-add-assignee {
+  width: 110px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.subtask-add-date:focus,
+.subtask-add-assignee:focus {
+  border-color: var(--primary);
+}
+
+.subtask-add-btn {
+  height: 36px;
+  padding: 0 16px;
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.subtask-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--text-secondary);
+  /* Grey out */
+}
+
+.subtask-add-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}

@@ -418,23 +418,14 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
             </DndContext>
 
             {/* 添加新子任务 */}
-            <div className='subtask-add'>
+            <div className='subtask-add-row'>
                 <textarea
                     ref={textareaRef}
                     rows={1}
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     placeholder='添加子任务...'
-                    className='subtask-input'
-                    style={{
-                        resize: 'none',
-                        overflow: 'hidden',
-                        minHeight: '32px',
-                        paddingTop: '8px',
-                        paddingBottom: '8px',
-                        fontFamily: 'inherit',
-                        lineHeight: 'inherit',
-                    }}
+                    className='subtask-add-input'
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -442,30 +433,28 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
                         }
                     }}
                 />
-                <div className='subtask-add-meta'>
-                    <input
-                        type='text'
-                        onFocus={(e) => (e.target.type = 'date')}
-                        onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
-                        value={newDueDate}
-                        onChange={(e) => setNewDueDate(e.target.value)}
-                        className='subtask-add-date'
-                        placeholder='截止日期'
-                    />
-                    <input
-                        type='text'
-                        value={newAssignee}
-                        onChange={(e) => setNewAssignee(e.target.value)}
-                        className='subtask-add-assignee'
-                        placeholder='责任人 如小明/小红'
-                        list='subtask-add-assignee-options'
-                    />
-                    <datalist id='subtask-add-assignee-options'>
-                        {allAssignees.map((name) => (
-                            <option key={name} value={name} />
-                        ))}
-                    </datalist>
-                </div>
+                <input
+                    type='text'
+                    onFocus={(e) => (e.target.type = 'date')}
+                    onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
+                    value={newDueDate}
+                    onChange={(e) => setNewDueDate(e.target.value)}
+                    className='subtask-add-date'
+                    placeholder='截止日期'
+                />
+                <input
+                    type='text'
+                    value={newAssignee}
+                    onChange={(e) => setNewAssignee(e.target.value)}
+                    className='subtask-add-assignee'
+                    placeholder='责任人'
+                    list='subtask-add-assignee-options'
+                />
+                <datalist id='subtask-add-assignee-options'>
+                    {allAssignees.map((name) => (
+                        <option key={name} value={name} />
+                    ))}
+                </datalist>
                 <button
                     type='button'
                     onClick={handleAdd}
