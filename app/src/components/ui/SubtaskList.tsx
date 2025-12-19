@@ -154,28 +154,15 @@ const SortableSubtaskItem = ({
             ) : (
                 // 显示模式
                 <>
-                    {/* 勾选框和拖拽手柄的垂直容器 */}
-                    <div className='subtask-check-drag-wrapper'>
-                        <label className='subtask-checkbox-wrapper'>
-                            <input
-                                type='checkbox'
-                                checked={st.completed}
-                                onChange={onToggle}
-                                className='subtask-checkbox'
-                            />
-                            <span className='subtask-checkbox-custom' />
-                        </label>
-                        {/* 拖拽手柄 - 手形抓取图标 */}
-                        <button
-                            type='button'
-                            className='subtask-drag-handle'
-                            {...attributes}
-                            {...listeners}
-                            title='拖拽排序'
-                        >
-                            ✋
-                        </button>
-                    </div>
+                    <label className='subtask-checkbox-wrapper'>
+                        <input
+                            type='checkbox'
+                            checked={st.completed}
+                            onChange={onToggle}
+                            className='subtask-checkbox'
+                        />
+                        <span className='subtask-checkbox-custom' />
+                    </label>
                     <div className='subtask-content' onDoubleClick={onEdit}>
                         <span className='subtask-title'>{st.title}</span>
                         {(st.assignee || st.dueDate || st.completedAt) && (
@@ -207,6 +194,16 @@ const SortableSubtaskItem = ({
                             title='编辑'
                         >
                             ✏️
+                        </button>
+                        {/* 拖拽手柄 */}
+                        <button
+                            type='button'
+                            className='subtask-drag-handle'
+                            {...attributes}
+                            {...listeners}
+                            title='拖拽排序'
+                        >
+                            ✋
                         </button>
                         <button
                             type='button'
