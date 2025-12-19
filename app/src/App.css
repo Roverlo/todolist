@@ -4454,3 +4454,29 @@ body {
   font-weight: 400;
   color: var(--text-main);
 }
+
+/* Subtask Styles */
+.subtask-item {
+  display: flex !important;
+  /* Force flex to ensure layout */
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border-subtle);
+  transition: background 0.2s;
+}
+
+.subtask-item:last-child {
+  border-bottom: none;
+}
+
+.subtask-index {
+  color: #9ca3af;
+  font-size: 13px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  margin-right: 8px;
+  margin-top: 2px;
+  user-select: none;
+  min-width: 16px;
+  text-align: right;
+  flex-shrink: 0;
+}

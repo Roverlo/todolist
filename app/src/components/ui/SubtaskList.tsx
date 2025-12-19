@@ -43,6 +43,7 @@ interface SortableSubtaskItemProps {
     onEdit: () => void;
     onDelete: () => void;
     isOverdue: (dueDate?: string) => boolean;
+    index: number;
 }
 
 const SortableSubtaskItem = ({
@@ -62,6 +63,7 @@ const SortableSubtaskItem = ({
     onEdit,
     onDelete,
     isOverdue,
+    index,
 }: SortableSubtaskItemProps) => {
     const {
         attributes,
@@ -164,6 +166,7 @@ const SortableSubtaskItem = ({
                         />
                         <span className='subtask-checkbox-custom' />
                     </label>
+                    <span className='subtask-index'>{index + 1}.</span>
                     <div className='subtask-content' onDoubleClick={onEdit}>
                         <span className='subtask-title'>{st.title}</span>
                         {(st.assignee || st.dueDate || st.completedAt) && (
@@ -386,9 +389,10 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
                     strategy={verticalListSortingStrategy}
                 >
                     <div className='subtask-items'>
-                        {subtasks.map((st) => (
+                        {subtasks.map((st, index) => (
                             <SortableSubtaskItem
                                 key={st.id}
+                                index={index}
                                 subtask={st}
                                 isEditing={editingId === st.id}
                                 editTextareaRef={editTextareaRef}
