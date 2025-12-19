@@ -3,6 +3,7 @@ import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
 import { SubtaskList } from '../ui/SubtaskList';
+import { mergeOwners } from '../../utils/taskUtils';
 
 interface SingleTaskModalProps {
   open: boolean;
@@ -74,6 +75,23 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [open, onClose]);
+
+  // 监听子任务变化，自动同步责任人到主任务
+  useEffect(() => {
+    if (!open) return;
+    // 使用 mergeOwners 合并责任人
+    const timer = setTimeout(() => {
+      // 避免 undefined
+      const currentSubtasks = subtasks || [];
+      if (currentSubtasks.length === 0) return;
+
+      const merged = mergeOwners(owners, currentSubtasks);
+      if (merged !== owners) {
+        setOwners(merged);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [subtasks, open]); // 依赖 subtasks 和 open
 
   if (!open) return null;
 

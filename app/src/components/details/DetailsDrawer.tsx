@@ -5,6 +5,8 @@ import type { Priority, ProgressEntry, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
 import { SubtaskList } from '../ui/SubtaskList';
 
+import { mergeOwners } from '../../utils/taskUtils';
+
 interface DetailsDrawerProps {
   open: boolean;
   taskId?: string | null;
@@ -119,6 +121,21 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       setTimeout(() => setSaveStatus('idle'), 3000);
     }, 1000);
   }, [task, title, projectId, status, priority, dueDate, owners, notes, nextStep, progress, subtasks, updateTask]);
+
+  // 监听子任务变化，自动同步责任人到主任务
+  useEffect(() => {
+    // 使用 mergeOwners 合并责任人
+    if (!subtasks) return;
+
+    // 延迟执行以避免在输入时频繁更新
+    const timer = setTimeout(() => {
+      const merged = mergeOwners(owners, subtasks);
+      if (merged !== owners) {
+        setOwners(merged);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [subtasks]); // 不依赖 owners，防止循环
 
   // 监听字段变化自动保存 - 必须在 early return 之前定义
   useEffect(() => {

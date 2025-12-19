@@ -370,8 +370,17 @@ export const isOverdue = (task: Task, thresholdDays = 0) => {
   return dayjs().diff(due, 'day') > thresholdDays;
 };
 
+
 export const isDueSoon = (task: Task, thresholdDays = 3) => {
   if (!task.dueDate) return false;
   const diff = dayjs(task.dueDate).startOf('day').diff(dayjs().startOf('day'), 'day');
   return diff >= 0 && diff <= thresholdDays;
+};
+
+export const mergeOwners = (currentOwners: string | undefined, subtasks: Task['subtasks']): string => {
+  const set = new Set(currentOwners ? currentOwners.split('/').map(s => s.trim()).filter(Boolean) : []);
+  subtasks?.forEach(st => {
+    if (st.assignee) set.add(st.assignee.trim());
+  });
+  return Array.from(set).join('/');
 };
