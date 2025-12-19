@@ -2394,8 +2394,9 @@ body {
   background: rgba(15, 23, 42, 0.2);
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   padding: 24px;
+  padding-top: 80px;
   z-index: 80;
 }
 
