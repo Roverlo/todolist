@@ -4493,3 +4493,67 @@ body {
   gap: 4px;
   flex-shrink: 0;
 }
+
+/* Custom Subtask Checkbox */
+.subtask-checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+
+.subtask-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.subtask-checkbox-custom {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 18px;
+  width: 18px;
+  background-color: transparent;
+  border: 1.5px solid #d1d5db;
+  border-radius: 5px;
+  /* Slightly rounded */
+  transition: all 0.2s ease;
+}
+
+.subtask-checkbox-wrapper:hover .subtask-checkbox-custom {
+  border-color: var(--primary);
+}
+
+.subtask-checkbox:checked~.subtask-checkbox-custom {
+  border-color: var(--primary);
+  background-color: transparent;
+}
+
+.subtask-checkbox-custom::after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--primary);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.subtask-checkbox:checked~.subtask-checkbox-custom::after {
+  display: block;
+}
+
+/* Remove strikethrough for completed subtasks */
+.subtask-item.completed .subtask-title {
+  text-decoration: none !important;
+  color: var(--text-main);
+  opacity: 0.85;
+}
