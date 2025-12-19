@@ -3479,37 +3479,12 @@ body {
   border-color: #86efac;
 }
 
-/* 拖拽手柄 */
-.subtask-drag-handle {
-  background: none;
-  border: none;
-  cursor: grab;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: all 0.15s;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.subtask-drag-handle:hover {
-  background: var(--bg-hover, #f3f4f6);
-}
-
-.subtask-drag-handle:active {
-  cursor: grabbing;
-}
-
 /* 拖拽中的项目 */
 .subtask-item.dragging {
   box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
   border-color: var(--primary, #3b82f6);
   background: var(--bg-hover, #f8fafc);
   z-index: 1000;
-}
-
-.subtask-item.dragging .subtask-drag-handle {
-  opacity: 1;
-  color: var(--primary, #3b82f6);
 }
 
 /* 现代化 Checkbox */
@@ -3597,29 +3572,24 @@ body {
 
 .subtask-actions {
   display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
+  flex-direction: column;
+  gap: 2px;
   flex-shrink: 0;
-}
-
-.subtask-item:hover .subtask-actions {
-  opacity: 1;
+  align-items: center;
 }
 
 .subtask-edit-btn,
-.subtask-delete {
+.subtask-delete,
+.subtask-drag-handle {
   background: none;
   border: none;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 2px 4px;
   border-radius: 4px;
   transition: all 0.15s;
-}
-
-.subtask-edit-btn {
-  color: var(--text-subtle);
+  color: var(--text-subtle, #9ca3af);
+  line-height: 1;
 }
 
 .subtask-edit-btn:hover {
@@ -3627,8 +3597,16 @@ body {
   background: var(--primary-soft);
 }
 
-.subtask-delete {
-  color: var(--text-subtle);
+.subtask-drag-handle {
+  cursor: grab;
+}
+
+.subtask-drag-handle:hover {
+  background: var(--bg-hover, #f3f4f6);
+}
+
+.subtask-drag-handle:active {
+  cursor: grabbing;
 }
 
 .subtask-delete:hover {
