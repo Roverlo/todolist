@@ -154,25 +154,30 @@ const SortableSubtaskItem = ({
             ) : (
                 // 显示模式
                 <>
-                    {/* 拖拽手柄 */}
-                    <button
-                        type='button'
-                        className='subtask-drag-handle'
-                        {...attributes}
-                        {...listeners}
-                        title='拖拽排序'
-                    >
-                        ⋮⋮
-                    </button>
-                    <label className='subtask-checkbox-wrapper'>
-                        <input
-                            type='checkbox'
-                            checked={st.completed}
-                            onChange={onToggle}
-                            className='subtask-checkbox'
-                        />
-                        <span className='subtask-checkbox-custom' />
-                    </label>
+                    {/* 勾选框和拖拽手柄的垂直容器 */}
+                    <div className='subtask-check-drag-wrapper'>
+                        <label className='subtask-checkbox-wrapper'>
+                            <input
+                                type='checkbox'
+                                checked={st.completed}
+                                onChange={onToggle}
+                                className='subtask-checkbox'
+                            />
+                            <span className='subtask-checkbox-custom' />
+                        </label>
+                        {/* 拖拽手柄 - 手形图标 */}
+                        <button
+                            type='button'
+                            className='subtask-drag-handle'
+                            {...attributes}
+                            {...listeners}
+                            title='拖拽排序'
+                        >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z" />
+                            </svg>
+                        </button>
+                    </div>
                     <div className='subtask-content' onDoubleClick={onEdit}>
                         <span className='subtask-title'>{st.title}</span>
                         {(st.assignee || st.dueDate || st.completedAt) && (
