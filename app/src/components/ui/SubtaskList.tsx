@@ -447,7 +447,7 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
                         value={newAssignee}
                         onChange={(e) => setNewAssignee(e.target.value)}
                         className='subtask-add-assignee'
-                        placeholder='责任人'
+                        placeholder='责任人 如小明/小红'
                         list='subtask-add-assignee-options'
                     />
                     <datalist id='subtask-add-assignee-options'>
