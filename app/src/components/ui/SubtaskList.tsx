@@ -157,15 +157,7 @@ const SortableSubtaskItem = ({
             ) : (
                 // 显示模式
                 <>
-                    <label className='subtask-checkbox-wrapper'>
-                        <input
-                            type='checkbox'
-                            checked={st.completed}
-                            onChange={onToggle}
-                            className='subtask-checkbox'
-                        />
-                        <span className='subtask-checkbox-custom' />
-                    </label>
+
                     <span className='subtask-index'>{index + 1}.</span>
                     <div className='subtask-content' onDoubleClick={onEdit}>
                         <span className='subtask-title'>{st.title}</span>
@@ -191,6 +183,16 @@ const SortableSubtaskItem = ({
                         )}
                     </div>
                     <div className='subtask-actions'>
+                        <label className='subtask-checkbox-wrapper' title='标记完成' style={{ marginRight: 4 }}>
+                            <input
+                                type='checkbox'
+                                checked={st.completed}
+                                onChange={onToggle}
+                                className='subtask-checkbox'
+                            />
+                            <span className='subtask-checkbox-custom' />
+                        </label>
+
                         <button
                             type='button'
                             className='subtask-edit-btn'

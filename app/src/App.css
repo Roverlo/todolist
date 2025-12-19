@@ -4480,3 +4480,16 @@ body {
   text-align: right;
   flex-shrink: 0;
 }
+
+.subtask-content {
+  flex: 1;
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.subtask-actions {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
