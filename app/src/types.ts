@@ -73,6 +73,9 @@ export interface Subtask {
   title: string;
   completed: boolean;
   createdAt: number;
+  completedAt?: number;  // 完成时间戳
+  dueDate?: string;       // 截止日期 (YYYY-MM-DD)
+  assignee?: string;      // 责任人
 }
 
 export interface Task {

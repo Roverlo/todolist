@@ -24,10 +24,11 @@ const priorityOptions: { value: Priority; label: string; tone?: 'danger' }[] = [
 ];
 
 export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => {
-  const { tasks, projects, updateTask } = useAppStoreShallow((state) => ({
+  const { tasks, projects, updateTask, dictionary } = useAppStoreShallow((state) => ({
     tasks: state.tasks,
     projects: state.projects,
     updateTask: state.updateTask,
+    dictionary: state.dictionary,
   }));
 
   const task = useMemo(() => tasks.find((item) => item.id === taskId), [tasks, taskId]);
@@ -374,7 +375,15 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 </div>
                 <div className='section-hint'>拆分任务为可执行的小步骤。</div>
               </div>
-              {isSubtasksExpanded && <SubtaskList subtasks={subtasks} onChange={handleSubtasksChange} hideProgress={true} />}
+              {isSubtasksExpanded && (
+                <SubtaskList
+                  subtasks={subtasks}
+                  onChange={handleSubtasksChange}
+                  hideProgress={true}
+                  onsiteOwners={dictionary.onsiteOwners}
+                  lineOwners={dictionary.lineOwners}
+                />
+              )}
             </section>
 
             <section className='section'>
