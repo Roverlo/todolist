@@ -169,7 +169,7 @@ const SortableSubtaskItem = ({
                             <div className='subtask-meta'>
                                 {st.assignee && (
                                     <span className='subtask-meta-item'>
-                                        👤 {st.assignee}
+                                        责任人 {st.assignee}
                                     </span>
                                 )}
                                 {st.dueDate && (
