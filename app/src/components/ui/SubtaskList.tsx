@@ -154,30 +154,32 @@ const SortableSubtaskItem = ({
             ) : (
                 // 显示模式
                 <>
-                    {/* 勾选框和拖拽手柄的垂直容器 */}
-                    <div className='subtask-check-drag-wrapper'>
-                        <label className='subtask-checkbox-wrapper'>
-                            <input
-                                type='checkbox'
-                                checked={st.completed}
-                                onChange={onToggle}
-                                className='subtask-checkbox'
-                            />
-                            <span className='subtask-checkbox-custom' />
-                        </label>
-                        {/* 拖拽手柄 - 手形图标 */}
-                        <button
-                            type='button'
-                            className='subtask-drag-handle'
-                            {...attributes}
-                            {...listeners}
-                            title='拖拽排序'
-                        >
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                                <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z" />
-                            </svg>
-                        </button>
-                    </div>
+                    {/* 拖拽手柄 - 6点垂直拖拽图标 */}
+                    <button
+                        type='button'
+                        className='subtask-drag-handle'
+                        {...attributes}
+                        {...listeners}
+                        title='拖拽排序'
+                    >
+                        <svg viewBox="0 0 10 16" width="10" height="16" fill="currentColor">
+                            <circle cx="3" cy="3" r="1.5" />
+                            <circle cx="7" cy="3" r="1.5" />
+                            <circle cx="3" cy="8" r="1.5" />
+                            <circle cx="7" cy="8" r="1.5" />
+                            <circle cx="3" cy="13" r="1.5" />
+                            <circle cx="7" cy="13" r="1.5" />
+                        </svg>
+                    </button>
+                    <label className='subtask-checkbox-wrapper'>
+                        <input
+                            type='checkbox'
+                            checked={st.completed}
+                            onChange={onToggle}
+                            className='subtask-checkbox'
+                        />
+                        <span className='subtask-checkbox-custom' />
+                    </label>
                     <div className='subtask-content' onDoubleClick={onEdit}>
                         <span className='subtask-title'>{st.title}</span>
                         {(st.assignee || st.dueDate || st.completedAt) && (
@@ -189,7 +191,7 @@ const SortableSubtaskItem = ({
                                 )}
                                 {st.dueDate && (
                                     <span className={`subtask-meta-item ${!st.completed && isOverdue(st.dueDate) ? 'subtask-overdue' : ''}`}>
-                                        📅 {dayjs(st.dueDate).format('MM-DD')}
+                                        截止 {dayjs(st.dueDate).format('MM-DD')}
                                         {!st.completed && isOverdue(st.dueDate) && ' (逾期)'}
                                     </span>
                                 )}
