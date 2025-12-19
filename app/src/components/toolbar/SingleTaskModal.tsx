@@ -36,8 +36,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
   const [status, setStatus] = useState<Status>('doing');
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState('');
-  const [onsiteOwner, setOnsiteOwner] = useState('');
-  const [lineOwner, setLineOwner] = useState('');
+  const [owners, setOwners] = useState('');
   const [nextStep, setNextStep] = useState('');
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
@@ -57,8 +56,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
       setStatus('doing');
       setPriority('medium');
       setDueDate('');
-      setOnsiteOwner('');
-      setLineOwner('');
+      setOwners('');
       setNextStep('');
       setSubtasks([]);
       setIsSubtasksExpanded(true);
@@ -97,8 +95,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
       status,
       priority,
       dueDate: dueDate || undefined,
-      onsiteOwner: onsiteOwner || undefined,
-      lineOwner: lineOwner || undefined,
+      owners: owners || undefined,
       nextStep: nextStep || undefined,
       subtasks: subtasks.length > 0 ? subtasks : undefined,
     });
@@ -186,33 +183,17 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
                 />
               </div>
               <div className='field'>
-                <label className='field-label'>现场责任人</label>
+                <label className='field-label'>责任人</label>
                 <input
                   className='field-input'
                   type='text'
-                  value={onsiteOwner}
-                  onChange={(e) => setOnsiteOwner(e.target.value)}
-                  placeholder='例如：张三'
-                  list='onsite-owner-list'
+                  value={owners}
+                  onChange={(e) => setOwners(e.target.value)}
+                  placeholder='例如：张三/李四'
+                  list='owners-list'
                 />
-                <datalist id='onsite-owner-list'>
-                  {dictionary.onsiteOwners.map((o) => (
-                    <option key={o} value={o} />
-                  ))}
-                </datalist>
-              </div>
-              <div className='field'>
-                <label className='field-label'>产线责任人</label>
-                <input
-                  className='field-input'
-                  type='text'
-                  value={lineOwner}
-                  onChange={(e) => setLineOwner(e.target.value)}
-                  placeholder='例如：李四'
-                  list='line-owner-list'
-                />
-                <datalist id='line-owner-list'>
-                  {dictionary.lineOwners.map((o) => (
+                <datalist id='owners-list'>
+                  {[...new Set([...dictionary.onsiteOwners, ...dictionary.lineOwners])].map((o) => (
                     <option key={o} value={o} />
                   ))}
                 </datalist>

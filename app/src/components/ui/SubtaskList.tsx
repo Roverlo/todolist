@@ -23,8 +23,7 @@ interface SubtaskListProps {
     subtasks: Subtask[];
     onChange: (subtasks: Subtask[]) => void;
     hideProgress?: boolean;
-    onsiteOwners?: string[];
-    lineOwners?: string[];
+    owners?: string[];  // 合并后的责任人建议列表
 }
 
 interface SortableSubtaskItemProps {
@@ -220,7 +219,7 @@ const SortableSubtaskItem = ({
     );
 };
 
-export const SubtaskList = ({ subtasks, onChange, hideProgress, onsiteOwners = [], lineOwners = [] }: SubtaskListProps) => {
+export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: SubtaskListProps) => {
     const [newTitle, setNewTitle] = useState('');
     const [newDueDate, setNewDueDate] = useState('');
     const [newAssignee, setNewAssignee] = useState('');
@@ -323,7 +322,7 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, onsiteOwners = [
     const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     // 合并所有可用的责任人选项
-    const allAssignees = Array.from(new Set([...onsiteOwners, ...lineOwners])).sort();
+    const allAssignees = [...owners].sort();
 
     // 检查子任务是否逾期
     const isOverdue = (dueDate?: string) => {

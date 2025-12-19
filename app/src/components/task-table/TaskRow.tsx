@@ -64,6 +64,25 @@ const MetaBlock = memo(({ task, isTrash, retentionDays }: { task: Task; isTrash:
     return diff > 0 && diff <= 3;
   };
 
+  // 收集所有责任人（主任务 + 子任务）
+  const getAllOwners = () => {
+    const ownerSet = new Set<string>();
+    // 主任务责任人
+    if (task.owners) {
+      task.owners.split('/').filter(Boolean).forEach(o => ownerSet.add(o.trim()));
+    }
+    // 兼容旧字段
+    if (task.onsiteOwner) ownerSet.add(task.onsiteOwner);
+    if (task.lineOwner) ownerSet.add(task.lineOwner);
+    // 子任务责任人
+    if (task.subtasks) {
+      task.subtasks.forEach(st => {
+        if (st.assignee) ownerSet.add(st.assignee.trim());
+      });
+    }
+    return Array.from(ownerSet).join('/') || '--';
+  };
+
   return (
     <div className='meta-block'>
       <div className='meta-line'>
@@ -85,12 +104,8 @@ const MetaBlock = memo(({ task, isTrash, retentionDays }: { task: Task; isTrash:
         </div>
       )}
       <div className='meta-line'>
-        <span className='meta-label'>现场</span>
-        <span className='meta-value'>{task.onsiteOwner || '--'}</span>
-      </div>
-      <div className='meta-line'>
-        <span className='meta-label'>产线</span>
-        <span className='meta-value'>{task.lineOwner || '--'}</span>
+        <span className='meta-label'>责任人</span>
+        <span className='meta-value'>{getAllOwners()}</span>
       </div>
     </div>
   );

@@ -38,8 +38,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
   const [status, setStatus] = useState<Status>('doing');
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState('');
-  const [onsiteOwner, setOnsiteOwner] = useState('');
-  const [lineOwner, setLineOwner] = useState('');
+  const [owners, setOwners] = useState('');
   const [notes, setNotes] = useState('');
   const [nextStep, setNextStep] = useState('');
   const [progress, setProgress] = useState<ProgressEntry[]>([]);
@@ -75,8 +74,9 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       setStatus(task.status);
       setPriority(task.priority ?? 'medium');
       setDueDate(task.dueDate ?? '');
-      setOnsiteOwner(task.onsiteOwner ?? '');
-      setLineOwner(task.lineOwner ?? '');
+      // 迁移兼容：优先使用新的owners字段，否则合并旧字段
+      const migratedOwners = task.owners ?? [task.onsiteOwner, task.lineOwner].filter(Boolean).join('/');
+      setOwners(migratedOwners);
       setNotes(task.notes ?? '');
       setNextStep(task.nextStep ?? '');
       const sorted = [...(task.progress ?? [])].sort((a, b) => a.at - b.at);
@@ -108,8 +108,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
         status,
         priority,
         dueDate: dueDate || undefined,
-        onsiteOwner: onsiteOwner || undefined,
-        lineOwner: lineOwner || undefined,
+        owners: owners || undefined,
         notes,
         nextStep,
         progress,
@@ -119,7 +118,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       // 3秒后重置状态
       setTimeout(() => setSaveStatus('idle'), 3000);
     }, 1000);
-  }, [task, title, projectId, status, priority, dueDate, onsiteOwner, lineOwner, notes, nextStep, progress, subtasks, updateTask]);
+  }, [task, title, projectId, status, priority, dueDate, owners, notes, nextStep, progress, subtasks, updateTask]);
 
   // 监听字段变化自动保存 - 必须在 early return 之前定义
   useEffect(() => {
@@ -140,7 +139,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, projectId, status, priority, dueDate, onsiteOwner, lineOwner, notes, nextStep, task, debouncedSave]);
+  }, [title, projectId, status, priority, dueDate, owners, notes, nextStep, task, debouncedSave]);
 
   // Early return 必须在所有 hooks 之后
   if (!open || !task) return null;
@@ -189,8 +188,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       status,
       priority,
       dueDate: dueDate || undefined,
-      onsiteOwner: onsiteOwner || undefined,
-      lineOwner: lineOwner || undefined,
+      owners: owners || undefined,
       notes,
       nextStep,
       progress: nextList,
@@ -212,8 +210,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       status,
       priority,
       dueDate: dueDate || undefined,
-      onsiteOwner: onsiteOwner || undefined,
-      lineOwner: lineOwner || undefined,
+      owners: owners || undefined,
       notes,
       nextStep,
       progress: updatedProgress,
@@ -315,23 +312,13 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                   />
                 </div>
                 <div className='field'>
-                  <label className='field-label'>现场责任人</label>
+                  <label className='field-label'>责任人</label>
                   <input
                     className='field-input'
                     type='text'
-                    value={onsiteOwner}
-                    onChange={(event) => setOnsiteOwner(event.target.value)}
-                    placeholder='例如：张三'
-                  />
-                </div>
-                <div className='field'>
-                  <label className='field-label'>产线责任人</label>
-                  <input
-                    className='field-input'
-                    type='text'
-                    value={lineOwner}
-                    onChange={(event) => setLineOwner(event.target.value)}
-                    placeholder='例如：李四'
+                    value={owners}
+                    onChange={(event) => setOwners(event.target.value)}
+                    placeholder='例如：张三/李四'
                   />
                 </div>
               </div>
@@ -380,8 +367,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                   subtasks={subtasks}
                   onChange={handleSubtasksChange}
                   hideProgress={true}
-                  onsiteOwners={dictionary.onsiteOwners}
-                  lineOwners={dictionary.lineOwners}
+                  owners={[...new Set([...(owners || '').split('/').filter(Boolean), ...dictionary.onsiteOwners, ...dictionary.lineOwners])]}
                 />
               )}
             </section>

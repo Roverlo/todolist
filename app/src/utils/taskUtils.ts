@@ -111,12 +111,9 @@ export const matchesDslTokens = (
         return normalize(task.status) === value;
       case 'priority':
         return normalize(task.priority) === value;
-      case 'onsiteowner':
-      case 'onsite':
-        return compareText(task.onsiteOwner, value);
-      case 'lineowner':
-      case 'line':
-        return compareText(task.lineOwner, value);
+      case 'owner':
+      case 'owners':
+        return compareText(task.owners, value) || compareText(task.onsiteOwner, value) || compareText(task.lineOwner, value);
       case 'tag':
       case 'tags':
         return (task.tags ?? []).some((tag) => normalize(tag) === value || normalize(tag).includes(value));
@@ -136,6 +133,7 @@ const textArea = (task: Task, projectMap: Record<string, Project>) =>
     task.title,
     task.nextStep,
     task.notes,
+    task.owners,
     task.onsiteOwner,
     task.lineOwner,
     (task.tags ?? []).join(','),
@@ -213,10 +211,8 @@ const toSortable = (task: Task, key: SortRule['key'], projectMap: Record<string,
       return task.dueDate ? dayjs(task.dueDate).valueOf() : Number.MAX_SAFE_INTEGER;
     case 'createdAt':
       return task.createdAt;
-    case 'onsiteOwner':
-      return (task.onsiteOwner ?? '').toLowerCase();
-    case 'lineOwner':
-      return (task.lineOwner ?? '').toLowerCase();
+    case 'owners':
+      return (task.owners ?? task.onsiteOwner ?? task.lineOwner ?? '').toLowerCase();
     case 'notes':
       return (task.notes ?? '').toLowerCase();
     case 'nextStep':

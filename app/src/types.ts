@@ -11,8 +11,7 @@ export type SortKey =
   | 'nextStep'
   | 'dueDate'
   | 'createdAt'
-  | 'onsiteOwner'
-  | 'lineOwner';
+  | 'owners';
 
 export type GroupBy = 'project' | 'status' | null;
 
@@ -88,6 +87,8 @@ export interface Task {
   dueDate?: string;
   createdAt: number;
   updatedAt: number;
+  owners?: string;  // 责任人（格式: 小明/小红/小张）
+  // 保留旧字段用于数据迁移兼容
   onsiteOwner?: string;
   lineOwner?: string;
   nextStep?: string;

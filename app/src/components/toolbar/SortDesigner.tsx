@@ -18,8 +18,7 @@ const availableKeys: SortRule['key'][] = [
   'dueDate',
   'priority',
   'createdAt',
-  'onsiteOwner',
-  'lineOwner',
+  'owners',
 ];
 
 export const SortDesigner = ({
@@ -139,10 +138,8 @@ const labelForKey = (key: SortRule['key']) => {
       return '优先级';
     case 'createdAt':
       return '创建时间';
-    case 'onsiteOwner':
-      return '现场责任人';
-    case 'lineOwner':
-      return '产线责任人';
+    case 'owners':
+      return '责任人';
     default:
       return key;
   }
