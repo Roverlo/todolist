@@ -112,7 +112,9 @@ const SortableSubtaskItem = ({
                     />
                     <div className='subtask-edit-meta'>
                         <input
-                            type='date'
+                            type='text'
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
                             value={editDueDate}
                             onChange={(e) => setEditDueDate(e.target.value)}
                             className='subtask-edit-date'
@@ -436,7 +438,9 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
                 />
                 <div className='subtask-add-meta'>
                     <input
-                        type='date'
+                        type='text'
+                        onFocus={(e) => (e.target.type = 'date')}
+                        onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
                         value={newDueDate}
                         onChange={(e) => setNewDueDate(e.target.value)}
                         className='subtask-add-date'
