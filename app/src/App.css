@@ -3461,8 +3461,8 @@ body {
 .subtask-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 12px 14px;
   background: var(--surface, #ffffff);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 8px;
@@ -3470,8 +3470,8 @@ body {
 }
 
 .subtask-item:hover {
-  border-color: var(--primary, #3b82f6);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-color: var(--primary-light, #93c5fd);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .subtask-item.completed {
@@ -3494,6 +3494,7 @@ body {
   cursor: pointer;
   position: relative;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .subtask-checkbox {
@@ -3573,9 +3574,16 @@ body {
 .subtask-actions {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   flex-shrink: 0;
   align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  margin-top: 2px;
+}
+
+.subtask-item:hover .subtask-actions {
+  opacity: 1;
 }
 
 .subtask-edit-btn,
@@ -3583,12 +3591,12 @@ body {
 .subtask-drag-handle {
   background: none;
   border: none;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px 6px;
   border-radius: 4px;
   transition: all 0.15s;
-  color: var(--text-subtle, #9ca3af);
+  color: var(--text-tertiary, #d1d5db);
   line-height: 1;
 }
 
@@ -3602,6 +3610,7 @@ body {
 }
 
 .subtask-drag-handle:hover {
+  color: var(--text-subtle, #9ca3af);
   background: var(--bg-hover, #f3f4f6);
 }
 

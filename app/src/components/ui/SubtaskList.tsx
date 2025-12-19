@@ -193,7 +193,7 @@ const SortableSubtaskItem = ({
                             onClick={onEdit}
                             title='编辑'
                         >
-                            ✏️
+                            ✎
                         </button>
                         {/* 拖拽手柄 */}
                         <button
@@ -203,7 +203,7 @@ const SortableSubtaskItem = ({
                             {...listeners}
                             title='拖拽排序'
                         >
-                            ✋
+                            ⋮⋮
                         </button>
                         <button
                             type='button'
@@ -211,7 +211,7 @@ const SortableSubtaskItem = ({
                             onClick={onDelete}
                             title='删除'
                         >
-                            ✕
+                            ×
                         </button>
                     </div>
                 </>
