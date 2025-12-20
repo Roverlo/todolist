@@ -152,9 +152,12 @@ const InlineSubtaskItem = ({
                     </label>
 
                     {st.completedAt && (
-                        <span className='subtask-completed-info'>
-                            ⏱ 完成于 {dayjs(st.completedAt).format('MM-DD HH:mm')}
-                        </span>
+                        <>
+                            <div className='subtask-meta-spacer' />
+                            <span className='subtask-completed-info'>
+                                ⏱ 完成于 {dayjs(st.completedAt).format('MM-DD HH:mm')}
+                            </span>
+                        </>
                     )}
                 </div>
             </div>
