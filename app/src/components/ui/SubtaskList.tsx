@@ -24,6 +24,7 @@ interface SubtaskListProps {
     onChange: (subtasks: Subtask[]) => void;
     hideProgress?: boolean;
     owners?: string[];  // 合并后的责任人建议列表
+    mainDueDate?: string;  // 主任务截止日期，用于冲突检测
 }
 
 interface InlineSubtaskItemProps {
@@ -34,6 +35,7 @@ interface InlineSubtaskItemProps {
     onDelete: () => void;
     isOverdue: (dueDate?: string) => boolean;
     index: number;
+    mainDueDate?: string;  // 主任务截止日期
 }
 
 const InlineSubtaskItem = ({
@@ -44,6 +46,7 @@ const InlineSubtaskItem = ({
     onDelete,
     isOverdue,
     index,
+    mainDueDate,
 }: InlineSubtaskItemProps) => {
     const {
         attributes,
@@ -122,6 +125,20 @@ const InlineSubtaskItem = ({
                 {/* Meta 信息行 - inline 编辑 */}
                 <div className='subtask-meta-inline'>
                     <label className='subtask-meta-label'>
+                        {/* 截止日期冲突警告 */}
+                        {mainDueDate && st.dueDate && st.dueDate > mainDueDate && (
+                            <span
+                                title="该日期晚于主任务截止日期"
+                                style={{
+                                    color: '#f59e0b',
+                                    fontSize: '14px',
+                                    cursor: 'help',
+                                    marginRight: '4px'
+                                }}
+                            >
+                                ⚠️
+                            </span>
+                        )}
                         <span className='subtask-meta-prefix'>截止</span>
                         <input
                             type='date'
@@ -198,7 +215,7 @@ const InlineSubtaskItem = ({
     );
 };
 
-export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: SubtaskListProps) => {
+export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [], mainDueDate }: SubtaskListProps) => {
 
     // 添加空白子任务
     const handleAddEmpty = () => {
@@ -315,6 +332,7 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
                                 onToggle={() => handleToggle(st.id)}
                                 onDelete={() => handleDelete(st.id)}
                                 isOverdue={isOverdue}
+                                mainDueDate={mainDueDate}
                             />
                         ))}
                     </div>
