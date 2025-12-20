@@ -4638,18 +4638,31 @@ body {
   opacity: 0.9;
 }
 
-/* Subtask Edit Form - Single Row */
-.subtask-edit-row {
+/* Subtask Edit Form - Two Row Layout */
+.subtask-edit-container {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
+  width: 100%;
+  padding: 8px 0;
+}
+
+.subtask-edit-row-title {
   width: 100%;
 }
 
+.subtask-edit-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .subtask-edit-input {
-  flex: 1;
-  height: 36px;
-  padding: 0 12px;
+  width: 100%;
+  min-height: 32px;
+  max-height: 72px;
+  /* 最多约3行 */
+  padding: 6px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   background-color: var(--bg-primary);
@@ -4659,9 +4672,8 @@ body {
   resize: none;
   outline: none;
   transition: border-color 0.2s;
-  line-height: 20px;
-  padding-top: 7px;
-  overflow: hidden;
+  line-height: 1.4;
+  overflow-y: auto;
 }
 
 .subtask-edit-input:focus {
@@ -4672,7 +4684,7 @@ body {
 .subtask-edit-date,
 .subtask-edit-assignee {
   width: 110px;
-  height: 36px;
+  height: 32px;
   padding: 0 10px;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
@@ -4690,20 +4702,30 @@ body {
 
 .subtask-edit-save,
 .subtask-edit-cancel {
-  height: 36px;
-  padding: 0 12px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: none;
   border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: opacity 0.2s;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .subtask-edit-save {
   background-color: var(--primary);
   color: #fff;
+}
+
+.subtask-edit-save:hover:not(:disabled) {
+  background-color: var(--primary-hover, #5b21b6);
+  transform: scale(1.05);
 }
 
 .subtask-edit-cancel {
@@ -4712,12 +4734,13 @@ body {
   border: 1px solid var(--border-subtle);
 }
 
+.subtask-edit-cancel:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--text-secondary);
+}
+
 .subtask-edit-save:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.subtask-edit-save:hover:not(:disabled),
-.subtask-edit-cancel:hover {
-  opacity: 0.8;
+  transform: none;
 }

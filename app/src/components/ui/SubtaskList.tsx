@@ -87,65 +87,69 @@ const SortableSubtaskItem = ({
             className={`subtask-item ${st.completed ? 'completed' : ''} ${isDragging ? 'dragging' : ''}`}
         >
             {isEditing ? (
-                // 编辑模式
-                <div className='subtask-edit-row'>
-                    <textarea
-                        ref={editTextareaRef}
-                        rows={1}
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className='subtask-edit-input'
-                        placeholder='子任务标题'
-                        autoFocus
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                onSaveEdit();
-                            }
-                            if (e.key === 'Escape') {
-                                onCancelEdit();
-                            }
-                        }}
-                    />
-                    <input
-                        type='text'
-                        onFocus={(e) => (e.target.type = 'date')}
-                        onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
-                        value={editDueDate}
-                        onChange={(e) => setEditDueDate(e.target.value)}
-                        className='subtask-edit-date'
-                        placeholder='截止日期'
-                    />
-                    <input
-                        type='text'
-                        value={editAssignee}
-                        onChange={(e) => setEditAssignee(e.target.value)}
-                        className='subtask-edit-assignee'
-                        placeholder='责任人'
-                        list={`subtask-assignee-options-${st.id}`}
-                    />
-                    <datalist id={`subtask-assignee-options-${st.id}`}>
-                        {allAssignees.map((name) => (
-                            <option key={name} value={name} />
-                        ))}
-                    </datalist>
-                    <button
-                        type='button'
-                        className='subtask-edit-save'
-                        onClick={onSaveEdit}
-                        disabled={!editTitle.trim()}
-                        title='保存'
-                    >
-                        保存
-                    </button>
-                    <button
-                        type='button'
-                        className='subtask-edit-cancel'
-                        onClick={onCancelEdit}
-                        title='取消'
-                    >
-                        取消
-                    </button>
+                // 编辑模式 - 两行布局
+                <div className='subtask-edit-container'>
+                    <div className='subtask-edit-row-title'>
+                        <textarea
+                            ref={editTextareaRef}
+                            rows={1}
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className='subtask-edit-input'
+                            placeholder='子任务标题'
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    onSaveEdit();
+                                }
+                                if (e.key === 'Escape') {
+                                    onCancelEdit();
+                                }
+                            }}
+                        />
+                    </div>
+                    <div className='subtask-edit-row-controls'>
+                        <input
+                            type='text'
+                            onFocus={(e) => (e.target.type = 'date')}
+                            onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
+                            value={editDueDate}
+                            onChange={(e) => setEditDueDate(e.target.value)}
+                            className='subtask-edit-date'
+                            placeholder='截止日期'
+                        />
+                        <input
+                            type='text'
+                            value={editAssignee}
+                            onChange={(e) => setEditAssignee(e.target.value)}
+                            className='subtask-edit-assignee'
+                            placeholder='责任人'
+                            list={`subtask-assignee-options-${st.id}`}
+                        />
+                        <datalist id={`subtask-assignee-options-${st.id}`}>
+                            {allAssignees.map((name) => (
+                                <option key={name} value={name} />
+                            ))}
+                        </datalist>
+                        <button
+                            type='button'
+                            className='subtask-edit-save'
+                            onClick={onSaveEdit}
+                            disabled={!editTitle.trim()}
+                            title='保存'
+                        >
+                            ✓
+                        </button>
+                        <button
+                            type='button'
+                            className='subtask-edit-cancel'
+                            onClick={onCancelEdit}
+                            title='取消'
+                        >
+                            ✕
+                        </button>
+                    </div>
                 </div>
             ) : (
                 // 显示模式
