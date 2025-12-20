@@ -4,6 +4,7 @@ import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, RecurringTemplate, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
 import { SubtaskList } from '../ui/SubtaskList';
+import { mergeOwners } from '../../utils/taskUtils';
 
 const WEEK_OPTIONS = [
   { value: '1', label: '周一' },
@@ -87,6 +88,20 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [open, onClose]);
+
+  // 监听子任务变化，自动同步责任人到模板
+  useEffect(() => {
+    if (!open || !tpl) return;
+    const timer = setTimeout(() => {
+      const currentSubtasks = subtasks || [];
+      if (currentSubtasks.length === 0) return;
+      const merged = mergeOwners(tpl.owners, currentSubtasks);
+      if (merged !== (tpl.owners ?? '')) {
+        setTpl({ ...tpl, owners: merged });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [subtasks, open]);
 
   if (!open || !tpl) return null;
 
