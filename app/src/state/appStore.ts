@@ -1023,8 +1023,7 @@ export const useAppStore = create<AppStore>()(
                 dueDate: due,
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
-                onsiteOwner: tpl.onsiteOwner,
-                lineOwner: tpl.lineOwner,
+                owners: tpl.owners,
                 nextStep: tpl.defaults?.nextStep,
                 tags: tpl.defaults?.tags ?? [],
                 notes: tpl.defaults?.notes,
@@ -1132,8 +1131,7 @@ export const useAppStore = create<AppStore>()(
               : undefined;
             return {
               ...tpl,
-              onsiteOwner: tpl.onsiteOwner ?? onsiteOwner,
-              lineOwner: tpl.lineOwner ?? lineOwner,
+              owners: (tpl as any).owners ?? (tpl as any).onsiteOwner,
               defaults: cleanedDefaults,
               schedule: {
                 ...tpl.schedule,

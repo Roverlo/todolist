@@ -137,8 +137,7 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
         status: tpl.status,
         priority: tpl.priority ?? 'medium',
         dueDate: dateStr,
-        onsiteOwner: tpl.onsiteOwner,
-        lineOwner: tpl.lineOwner,
+        owners: tpl.owners,
         nextStep: tpl.defaults?.nextStep,
         notes: tpl.defaults?.notes,
         subtasks: subtasks.length > 0 ? subtasks : undefined,
@@ -219,23 +218,13 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                 />
               </div>
               <div className='field'>
-                <label className='field-label'>默认现场负责人</label>
+                <label className='field-label'>责任人</label>
                 <input
                   className='field-input'
                   type='text'
-                  value={tpl.onsiteOwner ?? ''}
-                  placeholder='新建任务时自动带入'
-                  onChange={(e) => setTpl({ ...tpl, onsiteOwner: e.target.value })}
-                />
-              </div>
-              <div className='field'>
-                <label className='field-label'>默认产线负责人</label>
-                <input
-                  className='field-input'
-                  type='text'
-                  value={tpl.lineOwner ?? ''}
-                  placeholder='例如：产线联络人'
-                  onChange={(e) => setTpl({ ...tpl, lineOwner: e.target.value })}
+                  value={tpl.owners ?? ''}
+                  placeholder='例如：张三/李四'
+                  onChange={(e) => setTpl({ ...tpl, owners: e.target.value })}
                 />
               </div>
             </div>

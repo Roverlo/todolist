@@ -117,8 +117,7 @@ export interface RecurringTemplate {
     anchorDate?: string;
   };
   dueStrategy: 'sameDay' | 'endOfWeek' | 'endOfMonth' | 'none';
-  onsiteOwner?: string;
-  lineOwner?: string;
+  owners?: string;
   defaults?: {
     nextStep?: string;
     tags?: string[];
