@@ -131,9 +131,10 @@ const InlineSubtaskItem = ({
                                 title="该日期晚于主任务截止日期"
                                 style={{
                                     color: '#f59e0b',
-                                    fontSize: '14px',
+                                    fontSize: '12px',
                                     cursor: 'help',
-                                    marginRight: '4px'
+                                    marginRight: '2px',
+                                    lineHeight: 1
                                 }}
                             >
                                 ⚠️
