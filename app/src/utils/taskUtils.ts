@@ -380,7 +380,12 @@ export const isDueSoon = (task: Task, thresholdDays = 3) => {
 export const mergeOwners = (currentOwners: string | undefined, subtasks: Task['subtasks']): string => {
   const set = new Set(currentOwners ? currentOwners.split('/').map(s => s.trim()).filter(Boolean) : []);
   subtasks?.forEach(st => {
-    if (st.assignee) set.add(st.assignee.trim());
+    if (st.assignee) {
+      st.assignee.split('/').forEach(s => {
+        const trimmed = s.trim();
+        if (trimmed) set.add(trimmed);
+      });
+    }
   });
   return Array.from(set).join('/');
 };
