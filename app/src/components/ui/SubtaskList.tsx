@@ -122,6 +122,19 @@ const InlineSubtaskItem = ({
                 {/* Meta 信息行 - inline 编辑 */}
                 <div className='subtask-meta-inline'>
                     <label className='subtask-meta-label'>
+                        <span className='subtask-meta-prefix'>截止</span>
+                        <input
+                            type='date'
+                            value={st.dueDate || ''}
+                            onChange={handleDueDateChange}
+                            className={`subtask-inline-date ${!st.completed && isOverdue(st.dueDate) ? 'overdue' : ''}`}
+                        />
+                        {!st.completed && isOverdue(st.dueDate) && (
+                            <span className='subtask-overdue-tag'>逾期</span>
+                        )}
+                    </label>
+
+                    <label className='subtask-meta-label'>
                         <span className='subtask-meta-prefix'>责任人</span>
                         <input
                             type='text'
@@ -136,19 +149,6 @@ const InlineSubtaskItem = ({
                                 <option key={name} value={name} />
                             ))}
                         </datalist>
-                    </label>
-
-                    <label className='subtask-meta-label'>
-                        <span className='subtask-meta-prefix'>截止</span>
-                        <input
-                            type='date'
-                            value={st.dueDate || ''}
-                            onChange={handleDueDateChange}
-                            className={`subtask-inline-date ${!st.completed && isOverdue(st.dueDate) ? 'overdue' : ''}`}
-                        />
-                        {!st.completed && isOverdue(st.dueDate) && (
-                            <span className='subtask-overdue-tag'>逾期</span>
-                        )}
                     </label>
 
                     {st.completedAt && (
