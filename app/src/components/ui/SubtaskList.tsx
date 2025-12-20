@@ -75,13 +75,16 @@ const InlineSubtaskItem = ({
         }
     }, [st.title, onUpdate]);
 
-    // 处理标题回车
+    // 处理标题回车 - 允许换行，Shift+Enter 保存
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            titleRef.current?.blur();
+        // Escape 取消编辑并恢复
+        if (e.key === 'Escape') {
+            if (titleRef.current) {
+                titleRef.current.innerText = st.title;
+                titleRef.current.blur();
+            }
         }
-    }, []);
+    }, [st.title]);
 
     // 处理日期变更
     const handleDueDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

@@ -4780,14 +4780,16 @@ body {
   font-size: 12px;
 }
 
-/* 操作按钮区域 */
+/* 操作按钮区域 - 竖向排列 */
 .subtask-actions-inline {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   flex-shrink: 0;
   opacity: 0.6;
   transition: opacity 0.15s;
+  padding: 0 4px;
 }
 
 .subtask-item-inline:hover .subtask-actions-inline {
