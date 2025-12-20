@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useRef, useCallback, useState, useEffect, useLayoutEffect } from 'react';
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import type { Subtask } from '../../types';
@@ -57,7 +57,7 @@ const InlineSubtaskItem = ({
         isDragging,
     } = useSortable({ id: st.id });
 
-    const titleRef = useRef<HTMLSpanElement>(null);
+
 
     const style = {
         transform: CSS.Translate.toString(transform),
@@ -66,17 +66,51 @@ const InlineSubtaskItem = ({
     };
 
     // 处理标题编辑
-    const handleTitleBlur = useCallback(() => {
-        if (titleRef.current) {
-            const newTitle = titleRef.current.innerText.trim();
-            if (newTitle && newTitle !== st.title) {
-                onUpdate({ title: newTitle });
-            } else if (!newTitle) {
-                // 如果清空了，恢复原标题
-                titleRef.current.innerText = st.title;
+
+    // 本地状态用于防止输入过程中的频繁更新和光标跳动
+    const [localTitle, setLocalTitle] = useState(st.title);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // 同步外部标题变化（仅当非编辑状态或强制同步时）
+    useEffect(() => {
+        if (document.activeElement !== textareaRef.current) {
+            setLocalTitle(st.title);
+        }
+    }, [st.title]);
+
+    // 自动调整高度
+    const adjustHeight = () => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'inherit'; // Reset
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    };
+
+    useLayoutEffect(() => {
+        adjustHeight();
+    }, [localTitle]);
+
+    const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setLocalTitle(e.target.value);
+    };
+
+    const handleTitleBlur = () => {
+        if (localTitle.trim() !== st.title) {
+            if (localTitle.trim()) {
+                onUpdate({ title: localTitle.trim() });
+            } else {
+                setLocalTitle(st.title); // 恢复原标题
+                // Optional: ask to delete? But here we just revert.
             }
         }
-    }, [st.title, onUpdate]);
+    };
+
+    const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            e.currentTarget.blur();
+        }
+    };
 
 
     // 本地状态用于防止输入过程中的频繁更新
@@ -85,17 +119,6 @@ const InlineSubtaskItem = ({
     useEffect(() => {
         setLocalAssignee(st.assignee || '');
     }, [st.assignee]);
-
-    // 处理标题回车 - 允许换行，Shift+Enter 保存
-    const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        // Escape 取消编辑并恢复
-        if (e.key === 'Escape') {
-            if (titleRef.current) {
-                titleRef.current.innerText = st.title;
-                titleRef.current.blur();
-            }
-        }
-    }, [st.title]);
 
     // 处理日期变更
     const handleDueDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,16 +156,16 @@ const InlineSubtaskItem = ({
             {/* 主内容区 */}
             <div className='subtask-content-inline'>
                 {/* 可编辑标题 */}
-                <span
-                    ref={titleRef}
+                {/* 可编辑标题 */}
+                <textarea
+                    ref={textareaRef}
                     className='subtask-title-editable'
-                    contentEditable
-                    suppressContentEditableWarning
+                    value={localTitle}
+                    onChange={handleTitleChange}
                     onBlur={handleTitleBlur}
                     onKeyDown={handleTitleKeyDown}
-                >
-                    {st.title}
-                </span>
+                    rows={1}
+                />
 
                 {/* Meta 信息行 - inline 编辑 */}
                 <div className='subtask-meta-inline'>

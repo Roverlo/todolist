@@ -3657,6 +3657,26 @@ body {
 }
 
 .subtask-edit-date,
+.subtask-title-editable {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: text;
+  word-break: break-word;
+  /* Textarea 适配 */
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  overflow: hidden;
+  height: auto;
+}
+
+.subtask-edit-date,
 .subtask-edit-assignee {
   flex: 1;
   min-width: 120px;
