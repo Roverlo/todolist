@@ -4689,7 +4689,7 @@ body {
 /* 可编辑标题 */
 .subtask-title-editable {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--text-main);
   cursor: text;
