@@ -88,7 +88,7 @@ const SortableSubtaskItem = ({
         >
             {isEditing ? (
                 // 编辑模式
-                <div className='subtask-edit-mode'>
+                <div className='subtask-edit-row'>
                     <textarea
                         ref={editTextareaRef}
                         rows={1}
@@ -97,11 +97,6 @@ const SortableSubtaskItem = ({
                         className='subtask-edit-input'
                         placeholder='子任务标题'
                         autoFocus
-                        style={{
-                            resize: 'none',
-                            overflow: 'hidden',
-                            minHeight: '32px',
-                        }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -112,47 +107,45 @@ const SortableSubtaskItem = ({
                             }
                         }}
                     />
-                    <div className='subtask-edit-meta'>
-                        <input
-                            type='text'
-                            onFocus={(e) => (e.target.type = 'date')}
-                            onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
-                            value={editDueDate}
-                            onChange={(e) => setEditDueDate(e.target.value)}
-                            className='subtask-edit-date'
-                            placeholder='截止日期'
-                        />
-                        <input
-                            type='text'
-                            value={editAssignee}
-                            onChange={(e) => setEditAssignee(e.target.value)}
-                            className='subtask-edit-assignee'
-                            placeholder='责任人'
-                            list={`subtask-assignee-options-${st.id}`}
-                        />
-                        <datalist id={`subtask-assignee-options-${st.id}`}>
-                            {allAssignees.map((name) => (
-                                <option key={name} value={name} />
-                            ))}
-                        </datalist>
-                    </div>
-                    <div className='subtask-edit-actions'>
-                        <button
-                            type='button'
-                            className='subtask-edit-save'
-                            onClick={onSaveEdit}
-                            disabled={!editTitle.trim()}
-                        >
-                            保存
-                        </button>
-                        <button
-                            type='button'
-                            className='subtask-edit-cancel'
-                            onClick={onCancelEdit}
-                        >
-                            取消
-                        </button>
-                    </div>
+                    <input
+                        type='text'
+                        onFocus={(e) => (e.target.type = 'date')}
+                        onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
+                        value={editDueDate}
+                        onChange={(e) => setEditDueDate(e.target.value)}
+                        className='subtask-edit-date'
+                        placeholder='截止日期'
+                    />
+                    <input
+                        type='text'
+                        value={editAssignee}
+                        onChange={(e) => setEditAssignee(e.target.value)}
+                        className='subtask-edit-assignee'
+                        placeholder='责任人'
+                        list={`subtask-assignee-options-${st.id}`}
+                    />
+                    <datalist id={`subtask-assignee-options-${st.id}`}>
+                        {allAssignees.map((name) => (
+                            <option key={name} value={name} />
+                        ))}
+                    </datalist>
+                    <button
+                        type='button'
+                        className='subtask-edit-save'
+                        onClick={onSaveEdit}
+                        disabled={!editTitle.trim()}
+                        title='保存'
+                    >
+                        保存
+                    </button>
+                    <button
+                        type='button'
+                        className='subtask-edit-cancel'
+                        onClick={onCancelEdit}
+                        title='取消'
+                    >
+                        取消
+                    </button>
                 </div>
             ) : (
                 // 显示模式
