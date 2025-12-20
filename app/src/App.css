@@ -4805,14 +4805,16 @@ body {
   flex-shrink: 0;
   opacity: 0.6;
   transition: opacity 0.15s;
-  padding: 0 6px;
-  /* 稍微增加内边距 */
-  /* width: 24px;  移除固定宽度，避免box-sizing导致的内容溢出 */
+  padding: 0;
+  /* 移除水平内边距 */
+  width: 20px;
+  /* 强制固定宽度 */
 }
 
 /* 统一右侧按钮尺寸 */
 .subtask-actions-inline>* {
   width: 20px;
+  /* 确保所有子元素填满容器 */
   height: 20px;
   margin: 0 !important;
   /* 强制移除外边距确保对齐 */
