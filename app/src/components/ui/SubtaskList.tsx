@@ -199,38 +199,26 @@ const InlineSubtaskItem = ({
 };
 
 export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: SubtaskListProps) => {
-    const [newTitle, setNewTitle] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
     const [newDueDate, setNewDueDate] = useState('');
     const [newAssignee, setNewAssignee] = useState('');
 
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const newTitleRef = useRef<HTMLSpanElement>(null);
 
-    const adjustHeight = (ref: React.RefObject<HTMLTextAreaElement | null>) => {
-        const el = ref.current;
-        if (el) {
-            el.style.height = 'auto';
-            el.style.height = `${el.scrollHeight}px`;
-        }
-    };
-
+    // 聚焦新子任务标题
     useEffect(() => {
-        adjustHeight(textareaRef);
-    }, [newTitle]);
+        if (isAdding && newTitleRef.current) {
+            newTitleRef.current.focus();
+        }
+    }, [isAdding]);
 
-    const handleAdd = () => {
-        if (!newTitle.trim()) return;
-        const newSubtask: Subtask = {
-            id: nanoid(8),
-            title: newTitle.trim(),
-            completed: false,
-            createdAt: Date.now(),
-            dueDate: newDueDate || undefined,
-            assignee: newAssignee || undefined,
-        };
-        onChange([...subtasks, newSubtask]);
-        setNewTitle('');
+    const handleCancelAdd = () => {
+        if (newTitleRef.current) {
+            newTitleRef.current.innerText = '';
+        }
         setNewDueDate('');
         setNewAssignee('');
+        setIsAdding(false);
     };
 
     const handleToggle = (id: string) => {
@@ -344,52 +332,95 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
             </DndContext>
 
             {/* 添加新子任务 */}
-            <div className='subtask-add-row'>
-                <textarea
-                    ref={textareaRef}
-                    rows={1}
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder='添加子任务...'
-                    className='subtask-add-input'
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleAdd();
-                        }
-                    }}
-                />
-                <input
-                    type='text'
-                    onFocus={(e) => (e.target.type = 'date')}
-                    onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
-                    value={newDueDate}
-                    onChange={(e) => setNewDueDate(e.target.value)}
-                    className='subtask-add-date'
-                    placeholder='截止日期'
-                />
-                <input
-                    type='text'
-                    value={newAssignee}
-                    onChange={(e) => setNewAssignee(e.target.value)}
-                    className='subtask-add-assignee'
-                    placeholder='责任人'
-                    list='subtask-add-assignee-options'
-                />
-                <datalist id='subtask-add-assignee-options'>
-                    {allAssignees.map((name) => (
-                        <option key={name} value={name} />
-                    ))}
-                </datalist>
+            {isAdding ? (
+                <div className='subtask-item subtask-item-inline subtask-adding'>
+                    <span className='subtask-index'>+</span>
+                    <div className='subtask-content-inline'>
+                        <span
+                            ref={newTitleRef}
+                            className='subtask-title-editable'
+                            contentEditable
+                            suppressContentEditableWarning
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                    handleCancelAdd();
+                                }
+                            }}
+                            data-placeholder='输入子任务标题...'
+                        />
+                        <div className='subtask-meta-inline'>
+                            <label className='subtask-meta-label'>
+                                <span className='subtask-meta-prefix'>截止</span>
+                                <input
+                                    type='date'
+                                    value={newDueDate}
+                                    onChange={(e) => setNewDueDate(e.target.value)}
+                                    className='subtask-inline-date'
+                                />
+                            </label>
+                            <label className='subtask-meta-label'>
+                                <span className='subtask-meta-prefix'>责任人</span>
+                                <input
+                                    type='text'
+                                    value={newAssignee}
+                                    onChange={(e) => setNewAssignee(e.target.value)}
+                                    className='subtask-inline-input'
+                                    placeholder='未指定'
+                                    list='subtask-add-assignee-options'
+                                />
+                                <datalist id='subtask-add-assignee-options'>
+                                    {allAssignees.map((name) => (
+                                        <option key={name} value={name} />
+                                    ))}
+                                </datalist>
+                            </label>
+                        </div>
+                    </div>
+                    <div className='subtask-actions-inline'>
+                        <button
+                            type='button'
+                            className='subtask-add-confirm'
+                            onClick={() => {
+                                const text = newTitleRef.current?.innerText.trim() || '';
+                                if (text) {
+                                    const newSubtask: Subtask = {
+                                        id: nanoid(8),
+                                        title: text,
+                                        completed: false,
+                                        createdAt: Date.now(),
+                                        dueDate: newDueDate || undefined,
+                                        assignee: newAssignee || undefined,
+                                    };
+                                    onChange([...subtasks, newSubtask]);
+                                }
+                                if (newTitleRef.current) newTitleRef.current.innerText = '';
+                                setNewDueDate('');
+                                setNewAssignee('');
+                                setIsAdding(false);
+                            }}
+                            title='确认添加'
+                        >
+                            ✓
+                        </button>
+                        <button
+                            type='button'
+                            className='subtask-add-cancel'
+                            onClick={handleCancelAdd}
+                            title='取消'
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+            ) : (
                 <button
                     type='button'
-                    onClick={handleAdd}
-                    className='subtask-add-btn'
-                    disabled={!newTitle.trim()}
+                    className='subtask-add-trigger'
+                    onClick={() => setIsAdding(true)}
                 >
-                    添加
+                    + 添加子任务
                 </button>
-            </div>
+            )}
         </div>
     );
 };
