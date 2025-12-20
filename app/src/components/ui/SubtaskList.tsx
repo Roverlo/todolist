@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import type { Subtask } from '../../types';
@@ -78,6 +78,14 @@ const InlineSubtaskItem = ({
         }
     }, [st.title, onUpdate]);
 
+
+    // 本地状态用于防止输入过程中的频繁更新
+    const [localAssignee, setLocalAssignee] = useState(st.assignee || '');
+
+    useEffect(() => {
+        setLocalAssignee(st.assignee || '');
+    }, [st.assignee]);
+
     // 处理标题回车 - 允许换行，Shift+Enter 保存
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
         // Escape 取消编辑并恢复
@@ -94,10 +102,24 @@ const InlineSubtaskItem = ({
         onUpdate({ dueDate: e.target.value || undefined });
     }, [onUpdate]);
 
-    // 处理责任人变更
-    const handleAssigneeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        onUpdate({ assignee: e.target.value || undefined });
-    }, [onUpdate]);
+    // 处理责任人变更 - 仅更地状态
+    const handleAssigneeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalAssignee(e.target.value);
+    };
+
+    // 处理责任人失焦 - 提交更新
+    const handleAssigneeBlur = () => {
+        if (localAssignee !== (st.assignee || '')) {
+            onUpdate({ assignee: localAssignee || undefined });
+        }
+    };
+
+    // 处理责任人回车
+    const handleAssigneeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        }
+    };
 
     return (
         <div
@@ -156,8 +178,10 @@ const InlineSubtaskItem = ({
                         <span className='subtask-meta-prefix'>责任人</span>
                         <input
                             type='text'
-                            value={st.assignee || ''}
+                            value={localAssignee}
                             onChange={handleAssigneeChange}
+                            onBlur={handleAssigneeBlur}
+                            onKeyDown={handleAssigneeKeyDown}
                             className='subtask-inline-input'
                             placeholder='例如:张三/李四'
                             list={`subtask-assignee-${st.id}`}
