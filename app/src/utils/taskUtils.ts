@@ -21,9 +21,9 @@ const STATUS_ORDER: Record<string, number> = {
 };
 
 const PRIORITY_ORDER: Record<string, number> = {
-  high: 0,
-  medium: 1,
-  low: 2,
+  high: 2,    // 高优先级 = 最高权重
+  medium: 1,  // 中优先级 = 中等权重
+  low: 0,     // 低优先级 = 最低权重
 };
 
 export type TaskZone = 'urgent' | 'future' | 'nodate' | 'done';
@@ -259,12 +259,9 @@ export const sortTasks = (
         return statusA - statusB;
       }
 
-      // 1. 获取优先级权重
-      const pA = PRIORITY_ORDER[a.priority ?? 'medium'] ?? 1; // 0:high, 1:medium, 2:low
+      // 1. 获取优先级权重 (high=2, medium=1, low=0，数值越大优先级越高)
+      const pA = PRIORITY_ORDER[a.priority ?? 'medium'] ?? 1;
       const pB = PRIORITY_ORDER[b.priority ?? 'medium'] ?? 1;
-      // 反转权重以便计算 (High=3, Med=2, Low=1)
-      const wA = 3 - pA;
-      const wB = 3 - pB;
 
       // 2. 解析日期
       const now = dayjs().startOf('day');
@@ -295,8 +292,8 @@ export const sortTasks = (
 
       // Case 1: 都在紧急区 (Urgent)
       if (isUrgentA && isUrgentB) {
-        // 先比优先级 (权重高的在前)
-        if (wA !== wB) return wB - wA;
+        // 先比优先级 (数值大的在前，即高优先级在前)
+        if (pA !== pB) return pB - pA;
         // 优先级相同，比逾期程度 (日期越早越前)
         return dateA!.diff(dateB!);
       }
@@ -307,13 +304,13 @@ export const sortTasks = (
         const diff = dateA.diff(dateB);
         if (diff !== 0) return diff;
         // 日期相同，比优先级
-        return wB - wA;
+        return pB - pA;
       }
 
       // Case 3: 都无日期 (No Date)
       if (isNoDateA && isNoDateB) {
-        // 比优先级
-        if (wA !== wB) return wB - wA;
+        // 比优先级 (数值大的在前，即高优先级在前)
+        if (pA !== pB) return pB - pA;
         // 优先级相同，按创建时间倒序 (新的在前)
         return b.createdAt - a.createdAt;
       }

@@ -36,12 +36,15 @@ function App() {
   const [backupOpen, setBackupOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderShown, setReminderShown] = useState(false);
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
   const purgeTrash = useAppStore((state) => state.purgeTrash);
   const emptyTrash = useAppStore((state) => state.emptyTrash);
   const setFilters = useAppStore((state) => state.setFilters);
+  const sortRules = useAppStore((state) => state.sortRules);
+  const setSortRules = useAppStore((state) => state.setSortRules);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 主题切换
@@ -215,7 +218,97 @@ function App() {
               <span>任务看板</span>
               <span className='chip'>共 {metrics.total || 0} 条</span>
             </div>
-            <div className='main-subtitle'>按截止时间升序</div>
+            <div className='sort-dropdown-container'>
+              <button
+                className='sort-dropdown-trigger'
+                onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                title='点击切换排序方式'
+              >
+                {(() => {
+                  const primary = sortRules[0];
+                  if (!primary) return '默认排序';
+                  const keyLabels: Record<string, string> = {
+                    dueDate: '截止时间',
+                    createdAt: '创建时间',
+                    priority: '优先级',
+                    status: '状态',
+                    title: '标题',
+                    project: '项目',
+                    updatedAt: '更新时间',
+                  };
+                  const label = keyLabels[primary.key] || primary.key;
+                  return `按${label}${primary.direction === 'asc' ? '升序' : '降序'}`;
+                })()}
+                <span className='sort-dropdown-arrow'>{sortDropdownOpen ? '▲' : '▼'}</span>
+              </button>
+              {sortDropdownOpen && (
+                <div className='sort-dropdown-menu'>
+                  <div
+                    className='sort-dropdown-item'
+                    onClick={() => {
+                      setSortRules([{ key: 'dueDate', direction: 'asc' }]);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    📅 按截止时间升序
+                  </div>
+                  <div
+                    className='sort-dropdown-item'
+                    onClick={() => {
+                      setSortRules([{ key: 'dueDate', direction: 'desc' }]);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    📅 按截止时间降序
+                  </div>
+                  <div
+                    className='sort-dropdown-item'
+                    onClick={() => {
+                      setSortRules([{ key: 'createdAt', direction: 'desc' }]);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    🕐 按创建时间降序
+                  </div>
+                  <div
+                    className='sort-dropdown-item'
+                    onClick={() => {
+                      setSortRules([{ key: 'createdAt', direction: 'asc' }]);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    🕐 按创建时间升序
+                  </div>
+                  <div
+                    className='sort-dropdown-item'
+                    onClick={() => {
+                      setSortRules([{ key: 'priority', direction: 'desc' }]);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    🔥 按优先级降序
+                  </div>
+                  <div
+                    className='sort-dropdown-item'
+                    onClick={() => {
+                      setSortRules([{ key: 'status', direction: 'asc' }]);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    📊 按状态升序
+                  </div>
+                  <div
+                    className='sort-dropdown-item'
+                    onClick={() => {
+                      setSortRules([{ key: 'title', direction: 'asc' }]);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    🔤 按标题升序
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 搜索框 */}

@@ -174,7 +174,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
           <tr>
             <th>
               {showCheckbox && (
-                <label className='task-checkbox-wrapper header-checkbox' onClick={(e) => e.stopPropagation()}>
+                <label className='task-checkbox-wrapper header-checkbox' onClick={(e) => e.stopPropagation()} title='全选/取消全选'>
                   <input
                     type='checkbox'
                     className='task-checkbox'

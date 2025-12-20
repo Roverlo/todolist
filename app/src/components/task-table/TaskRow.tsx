@@ -231,7 +231,7 @@ export const TaskRow = memo(({
       <td className={`col-main ${priorityClass}`}>
         <div className='task-main-content'>
           {showCheckbox && !isTrash && (
-            <label className='task-checkbox-wrapper' onClick={(e) => e.stopPropagation()}>
+            <label className='task-checkbox-wrapper' onClick={(e) => e.stopPropagation()} title='选择后可批量操作'>
               <input
                 type='checkbox'
                 className='task-checkbox'
