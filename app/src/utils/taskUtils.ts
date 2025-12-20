@@ -384,3 +384,24 @@ export const mergeOwners = (currentOwners: string | undefined, subtasks: Task['s
   });
   return Array.from(set).join('/');
 };
+
+/**
+ * 检查子任务截止时间是否与主任务冲突
+ * @returns 冲突信息：是否冲突、最晚的子任务截止日期、子任务标题
+ */
+export const checkSubtaskDueDateConflict = (
+  mainDueDate: string | undefined,
+  subtasks: { dueDate?: string; title: string }[]
+): { conflict: boolean; latestDate?: string; subtaskTitle?: string } => {
+  if (!mainDueDate || !subtasks || subtasks.length === 0) {
+    return { conflict: false };
+  }
+
+  // 找到所有晚于主任务的子任务
+  for (const st of subtasks) {
+    if (st.dueDate && st.dueDate > mainDueDate) {
+      return { conflict: true, latestDate: st.dueDate, subtaskTitle: st.title };
+    }
+  }
+  return { conflict: false };
+};

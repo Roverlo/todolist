@@ -3,7 +3,7 @@ import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
 import { SubtaskList } from '../ui/SubtaskList';
-import { mergeOwners } from '../../utils/taskUtils';
+import { mergeOwners, checkSubtaskDueDateConflict } from '../../utils/taskUtils';
 
 interface SingleTaskModalProps {
   open: boolean;
@@ -178,12 +178,34 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
               </div>
               <div className='field'>
                 <label className='field-label'>截止日期</label>
-                <input
-                  className='field-input'
-                  type='date'
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    className='field-input'
+                    type='date'
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  {(() => {
+                    const conflict = checkSubtaskDueDateConflict(dueDate, subtasks);
+                    if (conflict.conflict) {
+                      return (
+                        <span
+                          title={`子任务"${conflict.subtaskTitle}"截止日期(${conflict.latestDate})晚于主任务`}
+                          style={{
+                            color: '#f59e0b',
+                            fontSize: '16px',
+                            cursor: 'help',
+                            flexShrink: 0
+                          }}
+                        >
+                          ⚠️
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
               </div>
               <div className='field'>
                 <label className='field-label'>责任人</label>
