@@ -3674,6 +3674,8 @@ body {
   line-height: inherit;
   overflow: hidden;
   height: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .subtask-edit-date,

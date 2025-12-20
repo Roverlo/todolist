@@ -81,7 +81,7 @@ const InlineSubtaskItem = ({
     // 自动调整高度
     const adjustHeight = () => {
         if (textareaRef.current) {
-            textareaRef.current.style.height = 'inherit'; // Reset
+            textareaRef.current.style.height = 'auto'; // 使用 auto 正确计算高度
             textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
         }
     };
@@ -106,9 +106,9 @@ const InlineSubtaskItem = ({
     };
 
     const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            e.currentTarget.blur();
+        // 允许回车换行，仅阻止事件冒泡防止触发其他快捷键
+        if (e.key === 'Enter') {
+            e.stopPropagation();
         }
     };
 
@@ -164,6 +164,7 @@ const InlineSubtaskItem = ({
                     onChange={handleTitleChange}
                     onBlur={handleTitleBlur}
                     onKeyDown={handleTitleKeyDown}
+                    onPointerDown={(e) => e.stopPropagation()} // 防止拖拽干扰
                     rows={1}
                 />
 
