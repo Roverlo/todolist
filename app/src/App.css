@@ -4721,11 +4721,19 @@ body {
   padding: 2px 4px;
   font-size: 12px;
   color: var(--primary);
-  min-width: 60px;
-  max-width: 120px;
+  min-width: 40px;
   width: auto;
   outline: none;
   transition: border-color 0.15s, background 0.15s;
+}
+
+/* 隐藏 datalist 下拉箭头 */
+.subtask-inline-input::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
+.subtask-inline-input::-webkit-list-button {
+  display: none !important;
 }
 
 .subtask-inline-input:hover {
