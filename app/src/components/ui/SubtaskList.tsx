@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import type { Subtask } from '../../types';
@@ -199,26 +199,16 @@ const InlineSubtaskItem = ({
 };
 
 export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: SubtaskListProps) => {
-    const [isAdding, setIsAdding] = useState(false);
-    const [newDueDate, setNewDueDate] = useState('');
-    const [newAssignee, setNewAssignee] = useState('');
 
-    const newTitleRef = useRef<HTMLSpanElement>(null);
-
-    // 聚焦新子任务标题
-    useEffect(() => {
-        if (isAdding && newTitleRef.current) {
-            newTitleRef.current.focus();
-        }
-    }, [isAdding]);
-
-    const handleCancelAdd = () => {
-        if (newTitleRef.current) {
-            newTitleRef.current.innerText = '';
-        }
-        setNewDueDate('');
-        setNewAssignee('');
-        setIsAdding(false);
+    // 添加空白子任务
+    const handleAddEmpty = () => {
+        const newSubtask: Subtask = {
+            id: nanoid(8),
+            title: '新子任务（点击编辑）',
+            completed: false,
+            createdAt: Date.now(),
+        };
+        onChange([...subtasks, newSubtask]);
     };
 
     const handleToggle = (id: string) => {
@@ -332,95 +322,13 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
             </DndContext>
 
             {/* 添加新子任务 */}
-            {isAdding ? (
-                <div className='subtask-item subtask-item-inline subtask-adding'>
-                    <span className='subtask-index'>+</span>
-                    <div className='subtask-content-inline'>
-                        <span
-                            ref={newTitleRef}
-                            className='subtask-title-editable'
-                            contentEditable
-                            suppressContentEditableWarning
-                            onKeyDown={(e) => {
-                                if (e.key === 'Escape') {
-                                    handleCancelAdd();
-                                }
-                            }}
-                            data-placeholder='输入子任务标题...'
-                        />
-                        <div className='subtask-meta-inline'>
-                            <label className='subtask-meta-label'>
-                                <span className='subtask-meta-prefix'>截止</span>
-                                <input
-                                    type='date'
-                                    value={newDueDate}
-                                    onChange={(e) => setNewDueDate(e.target.value)}
-                                    className='subtask-inline-date'
-                                />
-                            </label>
-                            <label className='subtask-meta-label'>
-                                <span className='subtask-meta-prefix'>责任人</span>
-                                <input
-                                    type='text'
-                                    value={newAssignee}
-                                    onChange={(e) => setNewAssignee(e.target.value)}
-                                    className='subtask-inline-input'
-                                    placeholder='未指定'
-                                    list='subtask-add-assignee-options'
-                                />
-                                <datalist id='subtask-add-assignee-options'>
-                                    {allAssignees.map((name) => (
-                                        <option key={name} value={name} />
-                                    ))}
-                                </datalist>
-                            </label>
-                        </div>
-                    </div>
-                    <div className='subtask-actions-inline'>
-                        <button
-                            type='button'
-                            className='subtask-add-confirm'
-                            onClick={() => {
-                                const text = newTitleRef.current?.innerText.trim() || '';
-                                if (text) {
-                                    const newSubtask: Subtask = {
-                                        id: nanoid(8),
-                                        title: text,
-                                        completed: false,
-                                        createdAt: Date.now(),
-                                        dueDate: newDueDate || undefined,
-                                        assignee: newAssignee || undefined,
-                                    };
-                                    onChange([...subtasks, newSubtask]);
-                                }
-                                if (newTitleRef.current) newTitleRef.current.innerText = '';
-                                setNewDueDate('');
-                                setNewAssignee('');
-                                setIsAdding(false);
-                            }}
-                            title='确认添加'
-                        >
-                            ✓
-                        </button>
-                        <button
-                            type='button'
-                            className='subtask-add-cancel'
-                            onClick={handleCancelAdd}
-                            title='取消'
-                        >
-                            ×
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                <button
-                    type='button'
-                    className='subtask-add-trigger'
-                    onClick={() => setIsAdding(true)}
-                >
-                    + 添加子任务
-                </button>
-            )}
+            <button
+                type='button'
+                className='subtask-add-trigger'
+                onClick={handleAddEmpty}
+            >
+                + 添加子任务
+            </button>
         </div>
     );
 };
