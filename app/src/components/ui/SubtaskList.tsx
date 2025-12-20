@@ -141,7 +141,7 @@ const InlineSubtaskItem = ({
                             value={st.assignee || ''}
                             onChange={handleAssigneeChange}
                             className='subtask-inline-input'
-                            placeholder='未指定'
+                            placeholder='例如:张三/李四'
                             list={`subtask-assignee-${st.id}`}
                         />
                         <datalist id={`subtask-assignee-${st.id}`}>
@@ -204,7 +204,7 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
     const handleAddEmpty = () => {
         const newSubtask: Subtask = {
             id: nanoid(8),
-            title: '新子任务（点击编辑）',
+            title: '请点击此处编辑子任务',
             completed: false,
             createdAt: Date.now(),
         };
