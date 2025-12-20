@@ -4654,14 +4654,14 @@ body {
 .subtask-edit-row-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .subtask-edit-input {
   width: 100%;
   min-height: 32px;
-  max-height: 72px;
-  /* 最多约3行 */
+  /* 移除max-height限制，允许自适应高度 */
   padding: 6px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
@@ -4672,8 +4672,9 @@ body {
   resize: none;
   outline: none;
   transition: border-color 0.2s;
-  line-height: 1.4;
-  overflow-y: auto;
+  line-height: 1.5;
+  overflow-y: hidden;
+  /* 隐藏滚动条，高度自适应 */
 }
 
 .subtask-edit-input:focus {
@@ -4681,11 +4682,24 @@ body {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
+/* 标签样式 */
+.subtask-edit-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subtask-edit-label-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 .subtask-edit-date,
 .subtask-edit-assignee {
-  width: 110px;
+  width: 100px;
   height: 32px;
-  padding: 0 10px;
+  padding: 0 8px;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   background-color: var(--bg-primary);
@@ -4705,7 +4719,6 @@ body {
   width: 32px;
   height: 32px;
   padding: 0;
-  border: none;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 600;
@@ -4718,13 +4731,15 @@ body {
   flex-shrink: 0;
 }
 
+/* 保存按钮 - 边框带色，背景透明，勾选带色 */
 .subtask-edit-save {
-  background-color: var(--primary);
-  color: #fff;
+  background-color: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
 }
 
 .subtask-edit-save:hover:not(:disabled) {
-  background-color: var(--primary-hover, #5b21b6);
+  background-color: var(--primary-soft, rgba(99, 102, 241, 0.1));
   transform: scale(1.05);
 }
 
@@ -4740,7 +4755,9 @@ body {
 }
 
 .subtask-edit-save:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
 }

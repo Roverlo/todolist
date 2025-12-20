@@ -110,23 +110,29 @@ const SortableSubtaskItem = ({
                         />
                     </div>
                     <div className='subtask-edit-row-controls'>
-                        <input
-                            type='text'
-                            onFocus={(e) => (e.target.type = 'date')}
-                            onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
-                            value={editDueDate}
-                            onChange={(e) => setEditDueDate(e.target.value)}
-                            className='subtask-edit-date'
-                            placeholder='截止日期'
-                        />
-                        <input
-                            type='text'
-                            value={editAssignee}
-                            onChange={(e) => setEditAssignee(e.target.value)}
-                            className='subtask-edit-assignee'
-                            placeholder='责任人'
-                            list={`subtask-assignee-options-${st.id}`}
-                        />
+                        <label className='subtask-edit-label'>
+                            <span className='subtask-edit-label-text'>截止日期：</span>
+                            <input
+                                type='text'
+                                onFocus={(e) => (e.target.type = 'date')}
+                                onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
+                                value={editDueDate}
+                                onChange={(e) => setEditDueDate(e.target.value)}
+                                className='subtask-edit-date'
+                                placeholder='选择日期'
+                            />
+                        </label>
+                        <label className='subtask-edit-label'>
+                            <span className='subtask-edit-label-text'>责任人：</span>
+                            <input
+                                type='text'
+                                value={editAssignee}
+                                onChange={(e) => setEditAssignee(e.target.value)}
+                                className='subtask-edit-assignee'
+                                placeholder='输入姓名'
+                                list={`subtask-assignee-options-${st.id}`}
+                            />
+                        </label>
                         <datalist id={`subtask-assignee-options-${st.id}`}>
                             {allAssignees.map((name) => (
                                 <option key={name} value={name} />
