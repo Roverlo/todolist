@@ -4638,121 +4638,173 @@ body {
   opacity: 0.9;
 }
 
-/* Subtask Edit Form - Two Row Layout */
-.subtask-edit-container {
+/* ==================== Subtask Inline Edit Styles ==================== */
+
+/* Inline 编辑模式的子任务项 */
+.subtask-item-inline {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
+  align-items: flex-start;
   padding: 8px 0;
+  border-bottom: 1px dashed var(--border-subtle);
+  transition: background 0.2s;
 }
 
-.subtask-edit-row-title {
-  width: 100%;
+.subtask-item-inline:last-child {
+  border-bottom: none;
 }
 
-.subtask-edit-row-controls {
+.subtask-item-inline:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.02));
+}
+
+/* 主内容区域 */
+.subtask-content-inline {
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+/* 可编辑标题 */
+.subtask-title-editable {
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-main);
+  cursor: text;
+  outline: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+  word-break: break-word;
+}
+
+.subtask-title-editable:hover {
+  background: var(--bg-input, rgba(0, 0, 0, 0.03));
+}
+
+.subtask-title-editable:focus {
+  background: var(--bg-input, #fff);
+  box-shadow: 0 0 0 2px var(--primary-soft, rgba(99, 102, 241, 0.15));
+}
+
+.subtask-item-inline.completed .subtask-title-editable {
+  opacity: 0.7;
+}
+
+/* Meta 信息行 */
+.subtask-meta-inline {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-top: 4px;
   flex-wrap: wrap;
 }
 
-.subtask-edit-input {
-  width: 100%;
-  min-height: 32px;
-  padding: 6px 0;
-  border: none;
-  /* 移除边框 */
-  background-color: transparent;
-  color: var(--text-main);
-  font-family: inherit;
-  font-size: 14px;
-  resize: none;
-  outline: none;
-  line-height: 1.5;
-  overflow-y: hidden;
-}
-
-.subtask-edit-input:focus {
-  outline: none;
-}
-
-/* 标签样式 */
-.subtask-edit-label {
+.subtask-meta-label {
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 12px;
 }
 
-.subtask-edit-label-text {
-  font-size: 13px;
-  color: var(--text-secondary);
+.subtask-meta-prefix {
+  color: var(--text-subtle, #9ca3af);
   white-space: nowrap;
 }
 
-.subtask-edit-date,
-.subtask-edit-assignee {
-  width: 100px;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  background-color: var(--bg-primary);
-  color: var(--text-main);
-  font-size: 13px;
+/* Inline 输入框 - 责任人 */
+.subtask-inline-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border-subtle);
+  padding: 2px 4px;
+  font-size: 12px;
+  color: var(--primary);
+  width: 60px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.subtask-edit-date:focus,
-.subtask-edit-assignee:focus {
+.subtask-inline-input:hover {
   border-color: var(--primary);
 }
 
-/* Spacer 用于将按钮推向右侧 */
-.subtask-edit-spacer {
-  flex: 1;
+.subtask-inline-input:focus {
+  border-bottom: 1px solid var(--primary);
+  background: var(--bg-input, rgba(0, 0, 0, 0.02));
 }
 
+.subtask-inline-input::placeholder {
+  color: var(--text-subtle, #9ca3af);
+  font-style: italic;
+}
+
+/* Inline 日期选择器 */
+.subtask-inline-date {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border-subtle);
+  padding: 2px 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  width: 100px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.subtask-inline-date:hover {
+  border-color: var(--primary);
+}
+
+.subtask-inline-date:focus {
+  border-bottom: 1px solid var(--primary);
+}
+
+.subtask-inline-date.overdue {
+  color: var(--danger);
+}
+
+.subtask-overdue-tag {
+  background: var(--danger-soft, rgba(220, 38, 38, 0.1));
+  color: var(--danger);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.subtask-completed-info {
+  color: var(--text-subtle, #9ca3af);
+  font-size: 12px;
+}
+
+/* 操作按钮区域 */
+.subtask-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.subtask-item-inline:hover .subtask-actions-inline {
+  opacity: 1;
+}
+
+/* 保留旧的编辑样式兼容 - 可删除 */
+.subtask-edit-container,
+.subtask-edit-row-title,
+.subtask-edit-row-controls,
+.subtask-edit-input,
+.subtask-edit-label,
+.subtask-edit-label-text,
+.subtask-edit-date,
+.subtask-edit-assignee,
+.subtask-edit-spacer,
 .subtask-edit-save,
 .subtask-edit-cancel {
-  height: 32px;
-  padding: 0 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-/* 保存按钮 - 主色填充 */
-.subtask-edit-save {
-  background-color: var(--primary);
-  color: #fff;
-  border: none;
-}
-
-.subtask-edit-save:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-/* 取消按钮 - 透明背景边框 */
-.subtask-edit-cancel {
-  background-color: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-}
-
-.subtask-edit-cancel:hover {
-  background-color: var(--bg-hover);
-  border-color: var(--text-secondary);
-}
-
-.subtask-edit-save:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background-color: var(--text-secondary);
+  display: none;
 }

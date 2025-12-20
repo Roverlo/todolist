@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import type { Subtask } from '../../types';
@@ -26,45 +26,25 @@ interface SubtaskListProps {
     owners?: string[];  // 合并后的责任人建议列表
 }
 
-interface SortableSubtaskItemProps {
+interface InlineSubtaskItemProps {
     subtask: Subtask;
-    isEditing: boolean;
-    editTextareaRef: React.RefObject<HTMLTextAreaElement | null>;
-    editTitle: string;
-    setEditTitle: (v: string) => void;
-    editDueDate: string;
-    setEditDueDate: (v: string) => void;
-    editAssignee: string;
-    setEditAssignee: (v: string) => void;
     allAssignees: string[];
-    onSaveEdit: () => void;
-    onCancelEdit: () => void;
+    onUpdate: (updates: Partial<Subtask>) => void;
     onToggle: () => void;
-    onEdit: () => void;
     onDelete: () => void;
     isOverdue: (dueDate?: string) => boolean;
     index: number;
 }
 
-const SortableSubtaskItem = ({
+const InlineSubtaskItem = ({
     subtask: st,
-    isEditing,
-    editTextareaRef,
-    editTitle,
-    setEditTitle,
-    editDueDate,
-    setEditDueDate,
-    editAssignee,
-    setEditAssignee,
     allAssignees,
-    onSaveEdit,
-    onCancelEdit,
+    onUpdate,
     onToggle,
-    onEdit,
     onDelete,
     isOverdue,
     index,
-}: SortableSubtaskItemProps) => {
+}: InlineSubtaskItemProps) => {
     const {
         attributes,
         listeners,
@@ -74,156 +54,140 @@ const SortableSubtaskItem = ({
         isDragging,
     } = useSortable({ id: st.id });
 
+    const titleRef = useRef<HTMLSpanElement>(null);
+
     const style = {
         transform: CSS.Translate.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
     };
 
+    // 处理标题编辑
+    const handleTitleBlur = useCallback(() => {
+        if (titleRef.current) {
+            const newTitle = titleRef.current.innerText.trim();
+            if (newTitle && newTitle !== st.title) {
+                onUpdate({ title: newTitle });
+            } else if (!newTitle) {
+                // 如果清空了，恢复原标题
+                titleRef.current.innerText = st.title;
+            }
+        }
+    }, [st.title, onUpdate]);
+
+    // 处理标题回车
+    const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            titleRef.current?.blur();
+        }
+    }, []);
+
+    // 处理日期变更
+    const handleDueDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        onUpdate({ dueDate: e.target.value || undefined });
+    }, [onUpdate]);
+
+    // 处理责任人变更
+    const handleAssigneeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        onUpdate({ assignee: e.target.value || undefined });
+    }, [onUpdate]);
+
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className={`subtask-item ${st.completed ? 'completed' : ''} ${isDragging ? 'dragging' : ''}`}
+            className={`subtask-item subtask-item-inline ${st.completed ? 'completed' : ''} ${isDragging ? 'dragging' : ''}`}
         >
-            {isEditing ? (
-                // 编辑模式 - 两行布局
-                <div className='subtask-edit-container'>
-                    <div className='subtask-edit-row-title'>
-                        <textarea
-                            ref={editTextareaRef}
-                            rows={1}
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            className='subtask-edit-input'
-                            placeholder='子任务标题'
-                            autoFocus
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    onSaveEdit();
-                                }
-                                if (e.key === 'Escape') {
-                                    onCancelEdit();
-                                }
-                            }}
+            {/* 序号 */}
+            <span className='subtask-index'>{index + 1}.</span>
+
+            {/* 主内容区 */}
+            <div className='subtask-content-inline'>
+                {/* 可编辑标题 */}
+                <span
+                    ref={titleRef}
+                    className='subtask-title-editable'
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={handleTitleBlur}
+                    onKeyDown={handleTitleKeyDown}
+                >
+                    {st.title}
+                </span>
+
+                {/* Meta 信息行 - inline 编辑 */}
+                <div className='subtask-meta-inline'>
+                    <label className='subtask-meta-label'>
+                        <span className='subtask-meta-prefix'>责任人</span>
+                        <input
+                            type='text'
+                            value={st.assignee || ''}
+                            onChange={handleAssigneeChange}
+                            className='subtask-inline-input'
+                            placeholder='未指定'
+                            list={`subtask-assignee-${st.id}`}
                         />
-                    </div>
-                    <div className='subtask-edit-row-controls'>
-                        <label className='subtask-edit-label'>
-                            <span className='subtask-edit-label-text'>截止日期：</span>
-                            <input
-                                type='text'
-                                onFocus={(e) => (e.target.type = 'date')}
-                                onBlur={(e) => (e.target.type = e.target.value ? 'date' : 'text')}
-                                value={editDueDate}
-                                onChange={(e) => setEditDueDate(e.target.value)}
-                                className='subtask-edit-date'
-                                placeholder='选择日期'
-                            />
-                        </label>
-                        <label className='subtask-edit-label'>
-                            <span className='subtask-edit-label-text'>责任人：</span>
-                            <input
-                                type='text'
-                                value={editAssignee}
-                                onChange={(e) => setEditAssignee(e.target.value)}
-                                className='subtask-edit-assignee'
-                                placeholder='输入姓名'
-                                list={`subtask-assignee-options-${st.id}`}
-                            />
-                        </label>
-                        <datalist id={`subtask-assignee-options-${st.id}`}>
+                        <datalist id={`subtask-assignee-${st.id}`}>
                             {allAssignees.map((name) => (
                                 <option key={name} value={name} />
                             ))}
                         </datalist>
-                        <div className='subtask-edit-spacer' />
-                        <button
-                            type='button'
-                            className='subtask-edit-save'
-                            onClick={onSaveEdit}
-                            disabled={!editTitle.trim()}
-                        >
-                            保存
-                        </button>
-                        <button
-                            type='button'
-                            className='subtask-edit-cancel'
-                            onClick={onCancelEdit}
-                        >
-                            取消
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                // 显示模式
-                <>
+                    </label>
 
-                    <span className='subtask-index'>{index + 1}.</span>
-                    <div className='subtask-content' onDoubleClick={onEdit}>
-                        <span className='subtask-title'>{st.title}</span>
-                        {(st.assignee || st.dueDate || st.completedAt) && (
-                            <div className='subtask-meta'>
-                                {st.assignee && (
-                                    <span className='subtask-meta-item'>
-                                        责任人 {st.assignee}
-                                    </span>
-                                )}
-                                {st.dueDate && (
-                                    <span className={`subtask-meta-item ${!st.completed && isOverdue(st.dueDate) ? 'subtask-overdue' : ''}`}>
-                                        截止 {dayjs(st.dueDate).format('MM-DD')}
-                                        {!st.completed && isOverdue(st.dueDate) && ' (逾期)'}
-                                    </span>
-                                )}
-                                {st.completedAt && (
-                                    <span className='subtask-meta-item'>
-                                        ⏱ 完成于 {dayjs(st.completedAt).format('MM-DD HH:mm')}
-                                    </span>
-                                )}
-                            </div>
+                    <label className='subtask-meta-label'>
+                        <span className='subtask-meta-prefix'>截止</span>
+                        <input
+                            type='date'
+                            value={st.dueDate || ''}
+                            onChange={handleDueDateChange}
+                            className={`subtask-inline-date ${!st.completed && isOverdue(st.dueDate) ? 'overdue' : ''}`}
+                        />
+                        {!st.completed && isOverdue(st.dueDate) && (
+                            <span className='subtask-overdue-tag'>逾期</span>
                         )}
-                    </div>
-                    <div className='subtask-actions'>
-                        <label className='subtask-checkbox-wrapper' title='标记完成' style={{ marginRight: 4 }}>
-                            <input
-                                type='checkbox'
-                                checked={st.completed}
-                                onChange={onToggle}
-                                className='subtask-checkbox'
-                            />
-                            <span className='subtask-checkbox-custom' />
-                        </label>
+                    </label>
 
-                        <button
-                            type='button'
-                            className='subtask-edit-btn'
-                            onClick={onEdit}
-                            title='编辑'
-                        >
-                            ✎
-                        </button>
-                        {/* 拖拽手柄 */}
-                        <button
-                            type='button'
-                            className='subtask-drag-handle'
-                            {...attributes}
-                            {...listeners}
-                            title='拖拽排序'
-                        >
-                            ⋮⋮
-                        </button>
-                        <button
-                            type='button'
-                            className='subtask-delete'
-                            onClick={onDelete}
-                            title='删除'
-                        >
-                            ×
-                        </button>
-                    </div>
-                </>
-            )}
+                    {st.completedAt && (
+                        <span className='subtask-completed-info'>
+                            ⏱ 完成于 {dayjs(st.completedAt).format('MM-DD HH:mm')}
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className='subtask-actions-inline'>
+                <label className='subtask-checkbox-wrapper' title='标记完成'>
+                    <input
+                        type='checkbox'
+                        checked={st.completed}
+                        onChange={onToggle}
+                        className='subtask-checkbox'
+                    />
+                    <span className='subtask-checkbox-custom' />
+                </label>
+
+                {/* 拖拽手柄 */}
+                <button
+                    type='button'
+                    className='subtask-drag-handle'
+                    {...attributes}
+                    {...listeners}
+                    title='拖拽排序'
+                >
+                    ⋮⋮
+                </button>
+
+                <button
+                    type='button'
+                    className='subtask-delete'
+                    onClick={onDelete}
+                    title='删除'
+                >
+                    ×
+                </button>
+            </div>
         </div>
     );
 };
@@ -232,13 +196,8 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
     const [newTitle, setNewTitle] = useState('');
     const [newDueDate, setNewDueDate] = useState('');
     const [newAssignee, setNewAssignee] = useState('');
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editTitle, setEditTitle] = useState('');
-    const [editDueDate, setEditDueDate] = useState('');
-    const [editAssignee, setEditAssignee] = useState('');
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     const adjustHeight = (ref: React.RefObject<HTMLTextAreaElement | null>) => {
         const el = ref.current;
@@ -251,12 +210,6 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
     useEffect(() => {
         adjustHeight(textareaRef);
     }, [newTitle]);
-
-    useEffect(() => {
-        if (editingId) {
-            adjustHeight(editTextareaRef);
-        }
-    }, [editTitle, editingId]);
 
     const handleAdd = () => {
         if (!newTitle.trim()) return;
@@ -292,38 +245,13 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
         onChange(subtasks.filter((st) => st.id !== id));
     };
 
-    const handleEdit = (st: Subtask) => {
-        setEditingId(st.id);
-        setEditTitle(st.title);
-        setEditDueDate(st.dueDate || '');
-        setEditAssignee(st.assignee || '');
-    };
-
-    const handleSaveEdit = () => {
-        if (!editTitle.trim() || !editingId) return;
+    // 实时更新子任务
+    const handleUpdate = (id: string, updates: Partial<Subtask>) => {
         onChange(
             subtasks.map((st) =>
-                st.id === editingId
-                    ? {
-                        ...st,
-                        title: editTitle.trim(),
-                        dueDate: editDueDate || undefined,
-                        assignee: editAssignee || undefined,
-                    }
-                    : st
+                st.id === id ? { ...st, ...updates } : st
             )
         );
-        setEditingId(null);
-        setEditTitle('');
-        setEditDueDate('');
-        setEditAssignee('');
-    };
-
-    const handleCancelEdit = () => {
-        setEditingId(null);
-        setEditTitle('');
-        setEditDueDate('');
-        setEditAssignee('');
     };
 
     const completedCount = subtasks.filter((st) => st.completed).length;
@@ -343,7 +271,7 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // 8px 拖动距离才触发，避免误触
+                distance: 8,
             },
         })
     );
@@ -394,23 +322,13 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, owners = [] }: S
                 >
                     <div className='subtask-items'>
                         {subtasks.map((st, index) => (
-                            <SortableSubtaskItem
+                            <InlineSubtaskItem
                                 key={st.id}
                                 index={index}
                                 subtask={st}
-                                isEditing={editingId === st.id}
-                                editTextareaRef={editTextareaRef}
-                                editTitle={editTitle}
-                                setEditTitle={setEditTitle}
-                                editDueDate={editDueDate}
-                                setEditDueDate={setEditDueDate}
-                                editAssignee={editAssignee}
-                                setEditAssignee={setEditAssignee}
                                 allAssignees={allAssignees}
-                                onSaveEdit={handleSaveEdit}
-                                onCancelEdit={handleCancelEdit}
+                                onUpdate={(updates) => handleUpdate(st.id, updates)}
                                 onToggle={() => handleToggle(st.id)}
-                                onEdit={() => handleEdit(st)}
                                 onDelete={() => handleDelete(st.id)}
                                 isOverdue={isOverdue}
                             />
