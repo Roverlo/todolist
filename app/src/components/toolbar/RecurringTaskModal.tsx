@@ -89,20 +89,6 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
     return () => window.removeEventListener('keydown', handleEsc);
   }, [open, onClose]);
 
-  // 监听子任务变化，自动同步责任人到模板
-  useEffect(() => {
-    if (!open || !tpl) return;
-    const timer = setTimeout(() => {
-      const currentSubtasks = subtasks || [];
-      if (currentSubtasks.length === 0) return;
-      const merged = mergeOwners(tpl.owners, currentSubtasks);
-      if (merged !== (tpl.owners ?? '')) {
-        setTpl({ ...tpl, owners: merged });
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [subtasks, open]);
-
   if (!open || !tpl) return null;
 
   const updateDefaults = (key: 'nextStep' | 'notes', value: string) => {
@@ -146,13 +132,15 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
       dates.push(target.format('YYYY-MM-DD'));
     }
     dates.forEach((dateStr) => {
+      // 在生成任务时合并子任务责任人
+      const finalOwners = subtasks.length > 0 ? mergeOwners(tpl.owners, subtasks) : tpl.owners;
       addTask({
         projectId: tpl.projectId,
         title: tpl.title,
         status: tpl.status,
         priority: tpl.priority ?? 'medium',
         dueDate: dateStr,
-        owners: tpl.owners,
+        owners: finalOwners,
         nextStep: tpl.defaults?.nextStep,
         notes: tpl.defaults?.notes,
         subtasks: subtasks.length > 0 ? subtasks : undefined,

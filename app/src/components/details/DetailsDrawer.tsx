@@ -122,20 +122,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     }, 1000);
   }, [task, title, projectId, status, priority, dueDate, owners, notes, nextStep, progress, subtasks, updateTask]);
 
-  // 监听子任务变化，自动同步责任人到主任务
-  useEffect(() => {
-    // 使用 mergeOwners 合并责任人
-    if (!subtasks) return;
 
-    // 延迟执行以避免在输入时频繁更新
-    const timer = setTimeout(() => {
-      const merged = mergeOwners(owners, subtasks);
-      if (merged !== owners) {
-        setOwners(merged);
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [subtasks]); // 不依赖 owners，防止循环
 
   // 监听字段变化自动保存 - 必须在 early return 之前定义
   useEffect(() => {
@@ -173,14 +160,19 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
 
   const handleSubtasksChange = (newSubtasks: Subtask[]) => {
     setSubtasks(newSubtasks);
+    // 合并子任务责任人到主任务
+    const mergedOwners = mergeOwners(owners, newSubtasks);
+    if (mergedOwners !== owners) {
+      setOwners(mergedOwners);
+    }
     // 实时保存子任务更改
-    updateTask(task.id, { subtasks: newSubtasks });
+    updateTask(task.id, { subtasks: newSubtasks, owners: mergedOwners });
 
     // 子任务联动：当所有子任务都完成时，自动将主任务标记为已完成
     const allCompleted = newSubtasks.length > 0 && newSubtasks.every(s => s.completed);
     if (allCompleted && status !== 'done') {
       setStatus('done');
-      updateTask(task.id, { status: 'done', subtasks: newSubtasks });
+      updateTask(task.id, { status: 'done', subtasks: newSubtasks, owners: mergedOwners });
     }
   };
 
