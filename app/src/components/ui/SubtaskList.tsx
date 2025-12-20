@@ -138,22 +138,21 @@ const SortableSubtaskItem = ({
                                 <option key={name} value={name} />
                             ))}
                         </datalist>
+                        <div className='subtask-edit-spacer' />
                         <button
                             type='button'
                             className='subtask-edit-save'
                             onClick={onSaveEdit}
                             disabled={!editTitle.trim()}
-                            title='保存'
                         >
-                            ✓
+                            保存
                         </button>
                         <button
                             type='button'
                             className='subtask-edit-cancel'
                             onClick={onCancelEdit}
-                            title='取消'
                         >
-                            ✕
+                            取消
                         </button>
                     </div>
                 </div>
