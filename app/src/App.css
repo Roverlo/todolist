@@ -4800,11 +4800,94 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 4px;
   flex-shrink: 0;
   opacity: 0.6;
   transition: opacity 0.15s;
   padding: 0 4px;
+  width: 24px;
+  /* 统一容器宽度 */
+}
+
+/* 统一右侧按钮尺寸 */
+.subtask-actions-inline>* {
+  width: 20px;
+  height: 20px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+/* 复选框包裹层 */
+.subtask-checkbox-wrapper {
+  cursor: pointer;
+}
+
+.subtask-checkbox {
+  display: none;
+}
+
+/* 自定义复选框样式 */
+.subtask-checkbox-custom {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--text-subtle);
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.subtask-checkbox:checked+.subtask-checkbox-custom {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.subtask-checkbox:checked+.subtask-checkbox-custom::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 3px;
+  height: 7px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+/* 拖拽手柄特殊样式 */
+.subtask-drag-handle {
+  cursor: grab;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: -2px;
+  /* 让点更紧凑 */
+  color: var(--text-subtle);
+}
+
+.subtask-drag-handle:active {
+  cursor: grabbing;
+}
+
+.subtask-drag-handle:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-main);
+}
+
+/* 删除按钮特殊样式 */
+.subtask-delete:hover {
+  background-color: var(--danger-soft, rgba(220, 38, 38, 0.1));
+  color: var(--danger);
 }
 
 .subtask-item-inline:hover .subtask-actions-inline {
