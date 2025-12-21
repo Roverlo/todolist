@@ -137,8 +137,7 @@ export interface Filters {
   status?: Status | 'all';
   statuses?: Status[];
   projectId?: string;
-  onsiteOwner?: string;
-  lineOwner?: string;
+  owner?: string;  // 统一的责任人筛选（兼容 owners/onsiteOwner/lineOwner）
   dueRange?: DateRangeFilter;
   tags?: string[];
   priority?: Priority | 'all';

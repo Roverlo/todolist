@@ -131,10 +131,58 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
               type='text'
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder='请输入任务标题，建议 10~50 字，突出动词和对象'
-              maxLength={100}
-              style={{ fontSize: '15px', fontWeight: 600 }}
+              placeholder='任务标题（建议10-50字）'
             />
+          </div>
+
+          <div className='create-section' style={{ marginTop: 24 }}>
+            <div
+              className='create-section-title-row'
+              onClick={() => setIsSubtasksExpanded(!isSubtasksExpanded)}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className='create-section-title'>
+                  子任务
+                  <span style={{
+                    marginLeft: '6px',
+                    fontSize: '12px',
+                    transition: 'transform 0.2s ease',
+                    display: 'inline-block',
+                    transform: isSubtasksExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    opacity: 0.6
+                  }}>
+                    ▼
+                  </span>
+                </div>
+                {subtasks.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ width: '80px', height: '5px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                      <div style={{
+                        width: `${Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%`,
+                        height: '100%',
+                        background: '#10b981',
+                        transition: 'width 0.3s ease'
+                      }} />
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
+                      {Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className='create-section-hint'>拆分任务步骤，便于跟踪进度。</div>
+            </div>
+            {isSubtasksExpanded && (
+              <div className='create-field create-field-span-2' style={{ marginTop: 12 }}>
+                <SubtaskList
+                  subtasks={subtasks}
+                  onChange={setSubtasks}
+                  hideProgress={true}
+                  mainDueDate={dueDate}
+                />
+              </div>
+            )}
           </div>
 
           <section className='create-section'>
@@ -205,56 +253,6 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
           </section>
 
           <section className='create-section'>
-            <div
-              className='create-section-title-row'
-              onClick={() => setIsSubtasksExpanded(!isSubtasksExpanded)}
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className='create-section-title'>
-                  子任务
-                  <span style={{
-                    marginLeft: '6px',
-                    fontSize: '12px',
-                    transition: 'transform 0.2s ease',
-                    display: 'inline-block',
-                    transform: isSubtasksExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                    opacity: 0.6
-                  }}>
-                    ▼
-                  </span>
-                </div>
-                {subtasks.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ width: '80px', height: '5px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-                      <div style={{
-                        width: `${Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%`,
-                        height: '100%',
-                        background: '#10b981',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                    <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 500 }}>
-                      {Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)}%
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className='create-section-hint'>拆分任务步骤，便于跟踪进度。</div>
-            </div>
-            {isSubtasksExpanded && (
-              <div className='create-field create-field-span-2'>
-                <SubtaskList
-                  subtasks={subtasks}
-                  onChange={setSubtasks}
-                  hideProgress={true}
-                  mainDueDate={dueDate}
-                />
-              </div>
-            )}
-          </section>
-
-          <section className='create-section'>
             <div className='create-section-title-row'>
               <div className='create-section-title'>详情</div>
               <div className='create-section-hint'>简单说明要做什么、涉及哪些环境或人员。</div>
@@ -264,7 +262,7 @@ export const SingleTaskModal = ({ open, onClose }: SingleTaskModalProps) => {
                 className='create-field-textarea'
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder='例如：整理本月现场支持过程中遇到的典型问题，并输出一篇维护经验文档。'
+                placeholder='请输入任务详情...'
               />
             </div>
           </section>

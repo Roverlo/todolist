@@ -5,7 +5,7 @@ import type { Priority, ProgressEntry, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
 import { SubtaskList } from '../ui/SubtaskList';
 
-import { mergeOwners } from '../../utils/taskUtils';
+import { syncOwners } from '../../utils/taskUtils';
 
 interface DetailsDrawerProps {
   open: boolean;
@@ -159,20 +159,22 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
 
 
   const handleSubtasksChange = (newSubtasks: Subtask[]) => {
+    // 使用 syncOwners 进行智能同步：主任务责任人 = 当前责任人 - 已移除子任务责任人 + 新子任务责任人
+    const syncedOwners = syncOwners(owners, subtasks, newSubtasks);
+
     setSubtasks(newSubtasks);
-    // 合并子任务责任人到主任务
-    const mergedOwners = mergeOwners(owners, newSubtasks);
-    if (mergedOwners !== owners) {
-      setOwners(mergedOwners);
+
+    if (syncedOwners !== owners) {
+      setOwners(syncedOwners);
     }
     // 实时保存子任务更改
-    updateTask(task.id, { subtasks: newSubtasks, owners: mergedOwners });
+    updateTask(task.id, { subtasks: newSubtasks, owners: syncedOwners });
 
     // 子任务联动：当所有子任务都完成时，自动将主任务标记为已完成
     const allCompleted = newSubtasks.length > 0 && newSubtasks.every(s => s.completed);
     if (allCompleted && status !== 'done') {
       setStatus('done');
-      updateTask(task.id, { status: 'done', subtasks: newSubtasks, owners: mergedOwners });
+      updateTask(task.id, { status: 'done', subtasks: newSubtasks, owners: syncedOwners });
     }
   };
 

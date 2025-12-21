@@ -30,8 +30,7 @@ export const PrimaryToolbar = () => {
       statuses: [],
       status: 'all',
       priority: 'all',
-      onsiteOwner: undefined,
-      lineOwner: undefined,
+      owner: undefined,
       dueRange: undefined,
     });
   };
@@ -51,14 +50,12 @@ export const PrimaryToolbar = () => {
     { value: 'low', label: '低' },
   ];
 
-  const onsiteOwnerOptions = [
+  // 合并后的责任人选项
+  const ownerOptions = [
     { value: '', label: '全部' },
-    ...dictionary.onsiteOwners.map((o) => ({ value: o, label: o })),
-  ];
-
-  const lineOwnerOptions = [
-    { value: '', label: '全部' },
-    ...dictionary.lineOwners.map((o) => ({ value: o, label: o })),
+    ...[...new Set([...dictionary.onsiteOwners, ...dictionary.lineOwners])]
+      .sort()
+      .map((o) => ({ value: o, label: o })),
   ];
 
   return (
@@ -118,19 +115,11 @@ export const PrimaryToolbar = () => {
           />
         </div>
         <div className='filter-item'>
-          <span className='filter-label'>现场责任人</span>
+          <span className='filter-label'>责任人</span>
           <CustomSelect
-            value={filters.onsiteOwner ?? ''}
-            options={onsiteOwnerOptions}
-            onChange={(val) => setFilters({ onsiteOwner: val || undefined })}
-          />
-        </div>
-        <div className='filter-item'>
-          <span className='filter-label'>产线责任人</span>
-          <CustomSelect
-            value={filters.lineOwner ?? ''}
-            options={lineOwnerOptions}
-            onChange={(val) => setFilters({ lineOwner: val || undefined })}
+            value={filters.owner ?? ''}
+            options={ownerOptions}
+            onChange={(val) => setFilters({ owner: val || undefined })}
           />
         </div>
         <div className='filter-item'>

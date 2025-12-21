@@ -202,8 +202,18 @@ const rebuildDictionary = (state: Draft<AppStore>) => {
   state.tasks.forEach(task => {
     if (task.projectId === trashId) return;
 
+    // 扫描旧字段（兼容）
     if (task.onsiteOwner?.trim()) onsite.add(task.onsiteOwner.trim());
     if (task.lineOwner?.trim()) line.add(task.lineOwner.trim());
+
+    // 扫描新的 owners 字段（以 / 分隔的责任人列表）
+    if (task.owners?.trim()) {
+      task.owners.split('/').forEach(name => {
+        const trimmed = name.trim();
+        if (trimmed) onsite.add(trimmed); // 统一添加到 onsite 集合
+      });
+    }
+
     (task.tags ?? []).forEach(t => {
       if (t.trim()) tags.add(t.trim());
     });

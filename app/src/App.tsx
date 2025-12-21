@@ -166,46 +166,48 @@ function App() {
   }, [drawerOpen]);
 
   // 启动时检查到期任务并发送系统通知
+  // 启动时检查到期任务并发送系统通知
   useEffect(() => {
-    if (!reminderShown && allTasks.length > 0) {
-      // 1. 显示应用内提醒 Modal
-      const timer = setTimeout(() => {
-        setReminderOpen(true);
-        setReminderShown(true);
-      }, 500);
+    const checkStartup = async () => {
+      if (!reminderShown && allTasks.length > 0) {
+        // 1. 显示应用内提醒 Modal
+        const timer = setTimeout(() => {
+          setReminderOpen(true);
+          setReminderShown(true);
+        }, 500);
 
-      // 2. 发送系统通知
-      const checkAndNotify = async () => {
-        let permissionGranted = await isPermissionGranted();
-        if (!permissionGranted) {
-          const permission = await requestPermission();
-          permissionGranted = permission === 'granted';
-        }
+        // 2. 发送系统通知 (仅在 Tauri 环境)
+        const today = dayjs();
+        const dueTasks = allTasks.filter(t => {
+          if (t.status === 'done' || !t.dueDate) return false;
+          const due = dayjs(t.dueDate);
+          return due.isBefore(today, 'day') || due.isSame(today, 'day');
+        });
 
-        if (permissionGranted) {
-          const today = dayjs();
-          const dueTasks = allTasks.filter(t => {
-            if (t.status === 'done' || !t.dueDate) return false;
-            const due = dayjs(t.dueDate);
-            // 逾期或今天到期
-            return due.isBefore(today, 'day') || due.isSame(today, 'day');
-          });
+        if (dueTasks.length > 0 && typeof window !== 'undefined' && '__TAURI__' in window) {
+          try {
+            let permissionGranted = await isPermissionGranted();
+            if (!permissionGranted) {
+              const permission = await requestPermission();
+              permissionGranted = permission === 'granted';
+            }
 
-          if (dueTasks.length > 0) {
-            // 避免一次性发送太多通知，只发送汇总或前几条
-            const count = dueTasks.length;
-            const title = `📅 ${count} 个任务待处理`;
-            const body = dueTasks.slice(0, 3).map(t => `• ${t.title}`).join('\n') + (count > 3 ? `\n...等 ${count} 个任务` : '');
-
-            sendNotification({ title, body });
+            if (permissionGranted) {
+              const count = dueTasks.length;
+              const title = `📅 ${count} 个任务待处理`;
+              const body = dueTasks.slice(0, 3).map(t => `• ${t.title}`).join('\n') + (count > 3 ? `\n...等 ${count} 个任务` : '');
+              sendNotification({ title, body });
+            }
+          } catch (error) {
+            console.error('Tauri notification error:', error);
           }
         }
-      };
 
-      checkAndNotify();
+        return () => clearTimeout(timer);
+      }
+    };
 
-      return () => clearTimeout(timer);
-    }
+    checkStartup();
   }, [allTasks, reminderShown]);
 
   return (

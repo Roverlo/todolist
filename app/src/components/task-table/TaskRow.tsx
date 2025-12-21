@@ -360,8 +360,18 @@ export const TaskRow = memo(({
           ) : (
             <>
               {/* 编辑/复制/删除按钮 */}
-              <div className='action-row'>
-                <button className={`btn-xs ${task.isPinned ? 'btn-xs-active' : 'btn-xs-outline'}`} type='button' onClick={(e) => { e.stopPropagation(); onTogglePin?.(task.id); }} aria-label={task.isPinned ? '取消置顶' : '置顶任务'}>
+              {/* 编辑/复制/删除按钮 */}
+              <div className='action-row' style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className={`btn-xs ${task.isPinned ? 'btn-xs-primary' : 'btn-xs-outline'}`}
+                  type='button'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.nativeEvent.stopImmediatePropagation();
+                    onTogglePin?.(task.id);
+                  }}
+                  aria-label={task.isPinned ? '取消置顶' : '置顶任务'}
+                >
                   {task.isPinned ? '已置顶' : '置顶'}
                 </button>
                 <button className='btn-xs btn-xs-outline' type='button' onClick={handleEdit} aria-label={`编辑任务: ${task.title}`}>编辑</button>

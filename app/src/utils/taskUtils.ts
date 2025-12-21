@@ -171,8 +171,14 @@ export const filterTasks = (
     }
     if (filters.priority && filters.priority !== 'all' && task.priority !== filters.priority)
       return false;
-    if (filters.onsiteOwner && task.onsiteOwner !== filters.onsiteOwner) return false;
-    if (filters.lineOwner && task.lineOwner !== filters.lineOwner) return false;
+    // 责任人筛选：匹配 owners、onsiteOwner 或 lineOwner
+    if (filters.owner) {
+      const ownerMatch =
+        task.owners?.toLowerCase().includes(filters.owner.toLowerCase()) ||
+        task.onsiteOwner?.toLowerCase() === filters.owner.toLowerCase() ||
+        task.lineOwner?.toLowerCase() === filters.owner.toLowerCase();
+      if (!ownerMatch) return false;
+    }
     if (filters.tags && filters.tags.length) {
       const tagSet = new Set(task.tags ?? []);
       const hasAll = filters.tags.every((tag) => tagSet.has(tag));
@@ -385,6 +391,53 @@ export const mergeOwners = (currentOwners: string | undefined, subtasks: Task['s
     }
   });
   return Array.from(set).join('/');
+};
+
+/**
+ * 智能同步责任人：当子任务变更时，自动移除那些只存在于旧子任务中且不再存在于新子任务中的责任人，
+ * 并添加新子任务的责任人。
+ */
+export const syncOwners = (
+  currentOwners: string | undefined,
+  oldSubtasks: Task['subtasks'],
+  newSubtasks: Task['subtasks']
+): string => {
+  const currentSet = new Set(
+    currentOwners ? currentOwners.split('/').map((s) => s.trim()).filter(Boolean) : []
+  );
+
+  const oldSet = new Set<string>();
+  oldSubtasks?.forEach((st) => {
+    if (st.assignee) {
+      st.assignee.split('/').forEach((s) => {
+        const trimmed = s.trim();
+        if (trimmed) oldSet.add(trimmed);
+      });
+    }
+  });
+
+  const newSet = new Set<string>();
+  newSubtasks?.forEach((st) => {
+    if (st.assignee) {
+      st.assignee.split('/').forEach((s) => {
+        const trimmed = s.trim();
+        if (trimmed) newSet.add(trimmed);
+      });
+    }
+  });
+
+  // 找出被移除的责任人 (在旧集合中有，但在新集合中没有)
+  const removedOwners = [...oldSet].filter((o) => !newSet.has(o));
+
+  // 从当前责任人中移除这些名字
+  // 注意：这可能会误删手动输入的主任务责任人（如果名字相同）。
+  // 但为了满足"同步"需求，这是一个必要的权衡。
+  removedOwners.forEach((o) => currentSet.delete(o));
+
+  // 添加新的责任人
+  newSet.forEach((o) => currentSet.add(o));
+
+  return Array.from(currentSet).join('/');
 };
 
 /**
