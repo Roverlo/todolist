@@ -90,6 +90,7 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
         lines.push(`- **优先级**: ${priority} ${task.priority ?? 'medium'}`);
         lines.push(`- **创建时间**: ${dayjs(task.createdAt).format('YYYY-MM-DD')}`);
         if (task.dueDate) lines.push(`- **截止日期**: ${task.dueDate}`);
+        if (task.owners) lines.push(`- **责任人**: ${task.owners}`);
         if (task.onsiteOwner) lines.push(`- **现场负责人**: ${task.onsiteOwner}`);
         if (task.lineOwner) lines.push(`- **产线负责人**: ${task.lineOwner}`);
         if (task.notes) {
@@ -99,6 +100,17 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
         if (task.nextStep) {
           lines.push('- **下一步计划**:');
           lines.push(`  > ${task.nextStep.replace(/\n/g, '\n  > ')}`);
+        }
+        // 导出子任务
+        if (task.subtasks && task.subtasks.length > 0) {
+          lines.push('- **子任务**:');
+          for (const sub of task.subtasks) {
+            const checkMark = sub.completed ? '✅' : '⬜';
+            let subLine = `  - ${checkMark} ${sub.title}`;
+            if (sub.assignee) subLine += ` (@${sub.assignee})`;
+            if (sub.dueDate) subLine += ` [截止: ${sub.dueDate}]`;
+            lines.push(subLine);
+          }
         }
         lines.push('');
       }

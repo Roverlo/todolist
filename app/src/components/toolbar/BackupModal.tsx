@@ -12,13 +12,18 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
 
-    const { projects, tasks, settings, recurringTemplates, sortSchemes, dictionary } = useAppStoreShallow((state) => ({
+    const { projects, tasks, settings, recurringTemplates, sortSchemes, dictionary, filters, groupBy, sortRules, savedFilters, columnConfig } = useAppStoreShallow((state) => ({
         projects: state.projects,
         tasks: state.tasks,
         settings: state.settings,
         recurringTemplates: state.recurringTemplates,
         sortSchemes: state.sortSchemes,
         dictionary: state.dictionary,
+        filters: state.filters,
+        groupBy: state.groupBy,
+        sortRules: state.sortRules,
+        savedFilters: state.savedFilters,
+        columnConfig: state.columnConfig,
     }));
 
     const handleExport = async () => {
@@ -31,7 +36,7 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
             if (!filePath) return;
 
             const backupData = {
-                version: '1.0',
+                version: '1.1',
                 exportedAt: new Date().toISOString(),
                 data: {
                     projects,
@@ -40,6 +45,11 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
                     recurringTemplates,
                     sortSchemes,
                     dictionary,
+                    filters,
+                    groupBy,
+                    sortRules,
+                    savedFilters,
+                    columnConfig,
                 }
             };
 
@@ -76,6 +86,12 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
                 recurringTemplates: backupData.data.recurringTemplates || [],
                 sortSchemes: backupData.data.sortSchemes || [],
                 dictionary: backupData.data.dictionary || { onsiteOwners: [], lineOwners: [], tags: [], autoAppend: true },
+                // 恢复筛选和视图配置（如果备份中包含）
+                ...(backupData.data.filters && { filters: backupData.data.filters }),
+                ...(backupData.data.groupBy !== undefined && { groupBy: backupData.data.groupBy }),
+                ...(backupData.data.sortRules && { sortRules: backupData.data.sortRules }),
+                ...(backupData.data.savedFilters && { savedFilters: backupData.data.savedFilters }),
+                ...(backupData.data.columnConfig && { columnConfig: backupData.data.columnConfig }),
             });
 
             setStatus('success');

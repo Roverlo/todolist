@@ -6,6 +6,7 @@ const CSV_COLUMNS = [
   'title',
   'status',
   'priority',
+  'owners',
   'notes',
   'latestProgress',
   'nextStep',
@@ -21,6 +22,7 @@ const CSV_HEADERS_CN: Record<(typeof CSV_COLUMNS)[number], string> = {
   title: '标题',
   status: '状态',
   priority: '优先级',
+  owners: '责任人',
   notes: '详情',
   latestProgress: '最新进展',
   nextStep: '下一步',
@@ -73,6 +75,8 @@ const getFieldValue = (
       return task.onsiteOwner ?? '';
     case 'lineOwner':
       return task.lineOwner ?? '';
+    case 'owners':
+      return task.owners ?? '';
     case 'latestProgress': {
       const last = task.progress?.[task.progress.length - 1];
       return last?.note ?? '';
