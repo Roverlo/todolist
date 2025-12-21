@@ -13,8 +13,6 @@ const CSV_COLUMNS = [
   'dueDate',
   'createdAt',
   'updatedAt',
-  'onsiteOwner',
-  'lineOwner',
 ] as const;
 
 const CSV_HEADERS_CN: Record<(typeof CSV_COLUMNS)[number], string> = {
@@ -29,8 +27,6 @@ const CSV_HEADERS_CN: Record<(typeof CSV_COLUMNS)[number], string> = {
   dueDate: '截止日期',
   createdAt: '创建日期',
   updatedAt: '更新日期',
-  onsiteOwner: '现场负责人',
-  lineOwner: '产线负责人',
 };
 
 export const exportTasksToCsv = (
@@ -71,12 +67,9 @@ const getFieldValue = (
       return dayjs(task.createdAt).format('YYYY-MM-DD');
     case 'updatedAt':
       return dayjs(task.updatedAt).format('YYYY-MM-DD');
-    case 'onsiteOwner':
-      return task.onsiteOwner ?? '';
-    case 'lineOwner':
-      return task.lineOwner ?? '';
     case 'owners':
-      return task.owners ?? '';
+      // 优先 owners，回退到 onsiteOwner/lineOwner
+      return task.owners ?? task.onsiteOwner ?? task.lineOwner ?? '';
     case 'latestProgress': {
       const last = task.progress?.[task.progress.length - 1];
       return last?.note ?? '';

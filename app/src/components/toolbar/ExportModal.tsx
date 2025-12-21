@@ -90,9 +90,11 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
         lines.push(`- **优先级**: ${priority} ${task.priority ?? 'medium'}`);
         lines.push(`- **创建时间**: ${dayjs(task.createdAt).format('YYYY-MM-DD')}`);
         if (task.dueDate) lines.push(`- **截止日期**: ${task.dueDate}`);
-        if (task.owners) lines.push(`- **责任人**: ${task.owners}`);
-        if (task.onsiteOwner) lines.push(`- **现场负责人**: ${task.onsiteOwner}`);
-        if (task.lineOwner) lines.push(`- **产线负责人**: ${task.lineOwner}`);
+
+        // 责任人回退逻辑
+        const displayOwners = task.owners ?? task.onsiteOwner ?? task.lineOwner;
+        if (displayOwners) lines.push(`- **责任人**: ${displayOwners}`);
+
         if (task.notes) {
           lines.push('- **详情**:');
           lines.push(`  > ${task.notes.replace(/\n/g, '\n  > ')}`);
