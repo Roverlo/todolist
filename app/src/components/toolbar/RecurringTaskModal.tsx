@@ -29,6 +29,7 @@ const statusOptions: { value: Status; label: string }[] = [
 ];
 
 const frequencyOptions = [
+  { value: 'daily', label: '每日' },
   { value: 'weekly', label: '每周' },
   { value: 'monthly', label: '每月' },
 ];
@@ -95,15 +96,15 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
     setTpl({ ...tpl, defaults: { ...(tpl.defaults ?? {}), [key]: value } });
   };
 
-  const switchFrequency = (type: 'weekly' | 'monthly') => {
+  const switchFrequency = (type: 'daily' | 'weekly' | 'monthly') => {
     if (!tpl) return;
-    setTpl({
-      ...tpl,
-      schedule:
-        type === 'weekly'
-          ? { type: 'weekly', daysOfWeek: tpl.schedule.type === 'weekly' ? tpl.schedule.daysOfWeek ?? [1] : [1] }
-          : { type: 'monthly', dayOfMonth: tpl.schedule.type === 'monthly' ? tpl.schedule.dayOfMonth ?? 1 : 1 },
-    });
+    if (type === 'daily') {
+      setTpl({ ...tpl, schedule: { type: 'daily' } });
+    } else if (type === 'weekly') {
+      setTpl({ ...tpl, schedule: { type: 'weekly', daysOfWeek: tpl.schedule.type === 'weekly' ? tpl.schedule.daysOfWeek ?? [1] : [1] } });
+    } else {
+      setTpl({ ...tpl, schedule: { type: 'monthly', dayOfMonth: tpl.schedule.type === 'monthly' ? tpl.schedule.dayOfMonth ?? 1 : 1 } });
+    }
   };
 
   const generateCurrentPeriod = () => {
@@ -115,12 +116,16 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
     const startOfWeek = now.subtract((now.day() + 6) % 7, 'day');
     const startOfMonth = now.startOf('month');
     const endOfMonth = now.endOf('month');
-    const dates: string[] = [];
-    if (tpl.schedule.type === 'weekly') {
+    let dateStr = '';
+
+    if (tpl.schedule.type === 'daily') {
+      // 每日任务：截止日期就是今天
+      dateStr = now.format('YYYY-MM-DD');
+    } else if (tpl.schedule.type === 'weekly') {
       const weekday = (tpl.schedule.daysOfWeek ?? [1])[0];
       let target = startOfWeek.add((weekday + 7) % 7, 'day');
       if (target.isBefore(now.startOf('day'))) target = target.add(7, 'day');
-      dates.push(target.format('YYYY-MM-DD'));
+      dateStr = target.format('YYYY-MM-DD');
     } else {
       const dom = tpl.schedule.dayOfMonth ?? 1;
       let target = startOfMonth.date(Math.min(dom, endOfMonth.date()));
@@ -129,30 +134,29 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
         const nextEnd = nextStart.endOf('month');
         target = nextStart.date(Math.min(dom, nextEnd.date()));
       }
-      dates.push(target.format('YYYY-MM-DD'));
+      dateStr = target.format('YYYY-MM-DD');
     }
-    dates.forEach((dateStr) => {
-      // 在生成任务时合并子任务责任人
-      const finalOwners = subtasks.length > 0 ? mergeOwners(tpl.owners, subtasks) : tpl.owners;
-      addTask({
-        projectId: tpl.projectId,
-        title: tpl.title,
-        status: tpl.status,
-        priority: tpl.priority ?? 'medium',
-        dueDate: dateStr,
-        owners: finalOwners,
-        nextStep: tpl.defaults?.nextStep,
-        notes: tpl.defaults?.notes,
-        subtasks: subtasks.length > 0 ? subtasks : undefined,
-        extras: {
-          recurring: JSON.stringify({
-            type: tpl.schedule.type,
-            dueWeekday: tpl.schedule.type === 'weekly' ? (tpl.schedule.daysOfWeek ?? [1])[0] : undefined,
-            dueDom: tpl.schedule.type === 'monthly' ? tpl.schedule.dayOfMonth ?? 1 : undefined,
-            autoRenew,
-          }),
-        },
-      });
+
+    // 在生成任务时合并子任务责任人
+    const finalOwners = subtasks.length > 0 ? mergeOwners(tpl.owners, subtasks) : tpl.owners;
+    addTask({
+      projectId: tpl.projectId,
+      title: tpl.title,
+      status: tpl.status,
+      priority: tpl.priority ?? 'medium',
+      dueDate: dateStr,
+      owners: finalOwners,
+      nextStep: tpl.defaults?.nextStep,
+      notes: tpl.defaults?.notes,
+      subtasks: subtasks.length > 0 ? subtasks : undefined,
+      extras: {
+        recurring: JSON.stringify({
+          type: tpl.schedule.type,
+          dueWeekday: tpl.schedule.type === 'weekly' ? (tpl.schedule.daysOfWeek ?? [1])[0] : undefined,
+          dueDom: tpl.schedule.type === 'monthly' ? tpl.schedule.dayOfMonth ?? 1 : undefined,
+          autoRenew,
+        }),
+      },
     });
     setFilters({ projectId: tpl.projectId, statuses: [], status: 'all' });
     onClose();
@@ -244,32 +248,34 @@ export const RecurringTaskModal = ({ open, onClose }: RecurringTaskModalProps) =
                 <CustomSelect
                   value={tpl.schedule.type}
                   options={frequencyOptions}
-                  onChange={(val) => switchFrequency(val as 'weekly' | 'monthly')}
+                  onChange={(val) => switchFrequency(val as 'daily' | 'weekly' | 'monthly')}
                 />
               </div>
-              <div className='create-field'>
-                <label className='create-field-label'>截止日期</label>
-                {tpl.schedule.type === 'weekly' ? (
-                  <CustomSelect
-                    value={String((tpl.schedule.daysOfWeek ?? [1])[0])}
-                    options={WEEK_OPTIONS}
-                    onChange={(val) =>
-                      setTpl({ ...tpl, schedule: { type: 'weekly', daysOfWeek: [Number(val)] } })
-                    }
-                  />
-                ) : (
-                  <CustomSelect
-                    value={String(tpl.schedule.dayOfMonth ?? 1)}
-                    options={MONTH_OPTIONS}
-                    onChange={(val) =>
-                      setTpl({
-                        ...tpl,
-                        schedule: { type: 'monthly', dayOfMonth: Number(val) },
-                      })
-                    }
-                  />
-                )}
-              </div>
+              {tpl.schedule.type !== 'daily' && (
+                <div className='create-field'>
+                  <label className='create-field-label'>截止日期</label>
+                  {tpl.schedule.type === 'weekly' ? (
+                    <CustomSelect
+                      value={String((tpl.schedule.daysOfWeek ?? [1])[0])}
+                      options={WEEK_OPTIONS}
+                      onChange={(val) =>
+                        setTpl({ ...tpl, schedule: { type: 'weekly', daysOfWeek: [Number(val)] } })
+                      }
+                    />
+                  ) : (
+                    <CustomSelect
+                      value={String(tpl.schedule.dayOfMonth ?? 1)}
+                      options={MONTH_OPTIONS}
+                      onChange={(val) =>
+                        setTpl({
+                          ...tpl,
+                          schedule: { type: 'monthly', dayOfMonth: Number(val) },
+                        })
+                      }
+                    />
+                  )}
+                </div>
+              )}
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13, color: 'var(--text-main)' }}>
               <input

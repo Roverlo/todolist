@@ -10,6 +10,8 @@ import { useAppStore } from './state/appStore';
 import { SingleTaskModal } from './components/toolbar/SingleTaskModal';
 import { RecurringTaskModal } from './components/toolbar/RecurringTaskModal';
 import { ExportModal } from './components/toolbar/ExportModal';
+import { ImportModal } from './components/toolbar/ImportModal';
+import { SettingsDropdown } from './components/toolbar/SettingsDropdown';
 import { SettingsModal } from './components/toolbar/SettingsModal';
 import { ThemeModal } from './components/toolbar/ThemeModal';
 import { FontSizeModal } from './components/toolbar/FontSizeModal';
@@ -37,6 +39,9 @@ function App() {
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderShown, setReminderShown] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
@@ -70,6 +75,18 @@ function App() {
     const trashId = projects.find((p) => p.name === '回收站')?.id;
     return trashId && filters.projectId === trashId;
   }, [projects, filters.projectId]);
+
+  // 用于 StatsCard 的任务列表：只按项目筛选，不含状态筛选，这样点击筛选不会影响统计数字
+  const projectTasks = useMemo(() => {
+    const trashId = projects.find((p) => p.name === '回收站')?.id;
+    return allTasks.filter((task) => {
+      // 排除回收站任务（除非当前选择的就是回收站）
+      if (task.projectId === trashId && filters.projectId !== trashId) return false;
+      // 如果选择了具体项目，只显示该项目的任务
+      if (filters.projectId && task.projectId !== filters.projectId) return false;
+      return true;
+    });
+  }, [allTasks, projects, filters.projectId]);
 
   const metrics = useMemo(() => {
     const doing = tasks.filter((t) => t.status === 'doing').length;
@@ -211,8 +228,12 @@ function App() {
   }, [allTasks, reminderShown]);
 
   return (
-    <div className={`app theme-${colorScheme}`}>
-      <ProjectSidebar onProjectSelected={handleProjectSelected} />
+    <div className={`app theme-${colorScheme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <ProjectSidebar
+        onProjectSelected={handleProjectSelected}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
       <main className='main'>
         <div className='main-header'>
           <div className='main-title-block'>
@@ -383,52 +404,23 @@ function App() {
                   onClick={() => {
                     const el = document.getElementById('filters-panel');
                     if (el) {
-                      if (el.style.display === 'none') {
-                        el.style.display = 'flex';
-                      } else {
-                        el.style.display = 'none';
-                      }
+                      const isOpen = el.style.display !== 'none';
+                      el.style.display = isOpen ? 'none' : 'flex';
+                      setFilterPanelOpen(!isOpen);
                     }
                   }}
                   aria-label='展开/收起筛选'
                   title='展开/收起筛选'
                 >
-                  🔍 筛选
+                  🔍 筛选 {filterPanelOpen ? '▲' : '▼'}
                 </button>
-                <button
-                  className='btn btn-light'
-                  onClick={() => setExportOpen(true)}
-                  aria-label='导出当前筛选'
-                >
-                  导出
-                </button>
-                <button
-                  className='btn btn-light'
-                  onClick={() => setThemeOpen(true)}
-                  aria-label='切换主题'
-                  title='切换主题'
-                  style={{ marginLeft: 4 }}
-                >
-                  主题
-                </button>
-                <button
-                  className='btn btn-light'
-                  onClick={() => setFontSizeOpen(true)}
-                  aria-label='字体大小'
-                  title='字体大小'
-                  style={{ marginLeft: 4 }}
-                >
-                  字号
-                </button>
-                <button
-                  className='btn btn-light'
-                  onClick={() => setBackupOpen(true)}
-                  aria-label='备份恢复'
-                  title='备份恢复'
-                  style={{ marginLeft: 4 }}
-                >
-                  备份
-                </button>
+                <SettingsDropdown
+                  onImport={() => setImportOpen(true)}
+                  onExport={() => setExportOpen(true)}
+                  onTheme={() => setThemeOpen(true)}
+                  onFontSize={() => setFontSizeOpen(true)}
+                  onBackup={() => setBackupOpen(true)}
+                />
 
               </>
             )}
@@ -439,7 +431,18 @@ function App() {
 
         {/* 统计仪表盘 */}
         {!isTrashView && (
-          <StatsCard tasks={allTasks} projectMap={allProjectMap as any} />
+          <StatsCard
+            tasks={projectTasks}
+            projectMap={projectMap as any}
+            activeFilter={filters.status}
+            onFilterByStatus={(status: 'doing' | 'done' | 'paused' | 'all' | 'overdue' | 'dueToday') => {
+              if (status === 'all') {
+                setFilters({ statuses: [], status: 'all' });
+              } else if (status === 'doing' || status === 'paused' || status === 'done') {
+                setFilters({ statuses: [status], status: status });
+              }
+            }}
+          />
         )}
 
         <section className='content'>
@@ -475,6 +478,7 @@ function App() {
         projectMap={projectMap as any}
         currentProjectId={filters.projectId}
       />
+      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <ThemeModal open={themeOpen} onClose={() => setThemeOpen(false)} />
       <FontSizeModal open={fontSizeOpen} onClose={() => setFontSizeOpen(false)} />

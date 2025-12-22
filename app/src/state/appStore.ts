@@ -508,42 +508,31 @@ export const useAppStore = create<AppStore>()(
           task.updatedAt = Date.now();
           registerFromTask(state, task);
           const recurringRaw = (task.extras?.recurring ?? '') as string;
-          let recurring: { type: 'weekly' | 'monthly'; dueWeekday?: number; dueDom?: number; day?: number; dueStrategy?: 'sameDay' | 'endOfWeek' | 'endOfMonth' | 'none'; autoRenew?: boolean } | null = null;
+          let recurring: { type: 'daily' | 'weekly' | 'monthly'; dueWeekday?: number; dueDom?: number; day?: number; dueStrategy?: 'sameDay' | 'endOfWeek' | 'endOfMonth' | 'none'; autoRenew?: boolean } | null = null;
           try { recurring = recurringRaw ? JSON.parse(recurringRaw) : null; } catch { recurring = null; }
           if (recurring?.autoRenew && prevStatus !== 'done' && (updates.status as any) === 'done') {
             const now = dayjs();
-            if (recurring.type === 'weekly') {
+            let due = '';
+            let visibleFrom = '';
+
+            if (recurring.type === 'daily') {
+              // 每日任务：下一天的截止日期
+              due = now.add(1, 'day').format('YYYY-MM-DD');
+              visibleFrom = due; // 到明天才显示
+            } else if (recurring.type === 'weekly') {
               const nextWeekStart = now.add(1, 'week').subtract((now.day() + 6) % 7, 'day');
               const d = (recurring.dueWeekday ?? recurring.day ?? 5);
-              const due = nextWeekStart.add(((d + 7) % 7), 'day').format('YYYY-MM-DD');
-              const newTask: Task = {
-                id: nanoid(12),
-                projectId: task.projectId,
-                title: task.title,
-                status: 'doing' as any,
-                priority: task.priority,
-                dueDate: due,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-                onsiteOwner: task.onsiteOwner,
-                lineOwner: task.lineOwner,
-                nextStep: task.nextStep,
-                tags: task.tags ?? [],
-                notes: task.notes,
-                attachments: [],
-                dependencies: [],
-                history: [],
-                progress: [],
-                subtasks: task.subtasks?.map(st => ({ ...st, id: nanoid(8), createdAt: Date.now(), completed: false })) ?? [],
-                extras: { recurring: recurringRaw },
-              };
-              state.tasks.push(newTask);
+              due = nextWeekStart.add(((d + 7) % 7), 'day').format('YYYY-MM-DD');
+              visibleFrom = nextWeekStart.format('YYYY-MM-DD'); // 下周一开始显示
             } else if (recurring.type === 'monthly') {
               const nextMonthStart = now.startOf('month').add(1, 'month');
               const endOfNextMonth = nextMonthStart.endOf('month');
               const dom = Math.max(1, Math.min(31, (recurring.dueDom ?? recurring.day ?? 15)));
-              const target = nextMonthStart.date(Math.min(dom, endOfNextMonth.date())).format('YYYY-MM-DD');
-              const due = target;
+              due = nextMonthStart.date(Math.min(dom, endOfNextMonth.date())).format('YYYY-MM-DD');
+              visibleFrom = nextMonthStart.format('YYYY-MM-DD'); // 下个月1号开始显示
+            }
+
+            if (due) {
               const newTask: Task = {
                 id: nanoid(12),
                 projectId: task.projectId,
@@ -555,6 +544,7 @@ export const useAppStore = create<AppStore>()(
                 updatedAt: Date.now(),
                 onsiteOwner: task.onsiteOwner,
                 lineOwner: task.lineOwner,
+                owners: task.owners,
                 nextStep: task.nextStep,
                 tags: task.tags ?? [],
                 notes: task.notes,
@@ -563,7 +553,7 @@ export const useAppStore = create<AppStore>()(
                 history: [],
                 progress: [],
                 subtasks: task.subtasks?.map(st => ({ ...st, id: nanoid(8), createdAt: Date.now(), completed: false })) ?? [],
-                extras: { recurring: recurringRaw },
+                extras: { recurring: recurringRaw, visibleFrom },
               };
               state.tasks.push(newTask);
             }

@@ -256,10 +256,15 @@ body {
 
 .app {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   height: 100vh;
   max-width: 1440px;
   margin: 0 auto;
+}
+
+/* 侧边栏折叠时的布局调整 */
+.app.sidebar-collapsed {
+  grid-template-columns: 48px minmax(0, 1fr);
 }
 
 /* Sidebar */
@@ -272,7 +277,52 @@ body {
   flex-direction: column;
   gap: 18px;
   overflow-y: auto;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  width: 260px;
+  transition: background-color 0.3s ease, border-color 0.3s ease, width 0.2s ease;
+  position: relative;
+}
+
+/* 侧边栏折叠按钮 */
+.sidebar-collapse-btn {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+/* 侧边栏折叠状态 */
+.sidebar.collapsed {
+  width: 48px !important;
+  min-width: 48px !important;
+  padding: 10px 6px;
+}
+
+.sidebar.collapsed .sidebar-collapse-btn {
+  position: static;
+  margin: 0 auto;
+}
+
+/* 当侧边栏折叠时，app 的 main 需要调整 */
+.app.sidebar-collapsed .main {
+  margin-left: 0;
 }
 
 .brand {
@@ -2052,23 +2102,27 @@ body {
 }
 
 .btn-icon {
-  border: none;
-  background: transparent;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface, #f9fafb);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #9ca3af;
-  transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+  color: var(--text-secondary, #6b7280);
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-icon:hover {
-  background: #f3f4f6;
-  color: #4b5563;
-  transform: translateY(-1px);
+  background: var(--danger-soft, #fee2e2);
+  border-color: var(--danger, #ef4444);
+  color: var(--danger, #ef4444);
+  transform: scale(1.05);
 }
 
 .task-editor-body {
@@ -2294,23 +2348,27 @@ body {
 }
 
 .btn-icon {
-  border: none;
-  background: transparent;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface, #f9fafb);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #9ca3af;
-  transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+  color: var(--text-secondary, #6b7280);
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-icon:hover {
-  background: #f3f4f6;
-  color: #4b5563;
-  transform: translateY(-1px);
+  background: var(--danger-soft, #fee2e2);
+  border-color: var(--danger, #ef4444);
+  color: var(--danger, #ef4444);
+  transform: scale(1.05);
 }
 
 .dialog-body {
@@ -2517,23 +2575,27 @@ body {
 }
 
 .create-btn-icon {
-  border: none;
-  background: transparent;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface, #f9fafb);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #9ca3af;
-  transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+  color: var(--text-secondary, #6b7280);
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .create-btn-icon:hover {
-  background: #f3f4f6;
-  color: #4b5563;
-  transform: translateY(-1px);
+  background: var(--danger-soft, #fee2e2);
+  border-color: var(--danger, #ef4444);
+  color: var(--danger, #ef4444);
+  transform: scale(1.05);
 }
 
 .create-dialog-body {
@@ -3365,6 +3427,22 @@ body {
   border-color: var(--primary, #2563eb);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   transform: translateY(-1px);
+}
+
+.stats-item-clickable {
+  cursor: pointer;
+}
+
+.stats-item-clickable:hover {
+  background: var(--primary-soft, #eff6ff);
+  border-color: var(--primary, #2563eb);
+}
+
+/* 激活状态样式 */
+.stats-item.active {
+  background: var(--primary-soft, #eff6ff);
+  border-color: var(--primary, #2563eb);
+  box-shadow: 0 0 0 2px var(--primary-soft, #dbeafe);
 }
 
 .stats-value {
@@ -5094,3 +5172,237 @@ body {
   justify-content: space-between !important;
   padding: 18px 24px;
 }
+
+/* 设置下拉菜单 */
+.settings-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.settings-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  min-width: 160px;
+  padding: 8px 0;
+  z-index: 100;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.settings-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.settings-dropdown-item:hover {
+  background: var(--hover-bg);
+}
+
+.settings-dropdown-icon {
+  width: 18px;
+  text-align: center;
+}
+
+.settings-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+/* 恢复确认对话框样式 */
+.restore-preview {
+  background: var(--bg, #f9fafb);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.restore-preview-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main, #374151);
+  margin-bottom: 12px;
+}
+
+.restore-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.restore-preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--surface, #ffffff);
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle, #f3f4f6);
+}
+
+.restore-preview-label {
+  font-size: 12px;
+  color: var(--text-subtle, #6b7280);
+}
+
+.restore-preview-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main, #374151);
+}
+
+.restore-warning {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.restore-warning-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.restore-warning-content {
+  flex: 1;
+}
+
+.restore-warning-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #dc2626;
+  margin-bottom: 6px;
+}
+
+.restore-warning-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #b91c1c;
+  line-height: 1.6;
+}
+
+.restore-warning-list li {
+  margin-bottom: 2px;
+}
+
+.restore-warning-list strong {
+  color: #991b1b;
+}
+
+.restore-auto-backup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.restore-auto-backup-icon {
+  font-size: 16px;
+}
+
+.restore-auto-backup-text {
+  font-size: 13px;
+  color: #166534;
+  font-weight: 500;
+}
+
+.restore-confirm-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.restore-confirm-checkbox:hover {
+  border-color: var(--primary, #3b82f6);
+}
+
+.restore-confirm-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  cursor: pointer;
+  accent-color: var(--primary, #3b82f6);
+}
+
+.restore-confirm-checkbox span {
+  font-size: 13px;
+  color: var(--text-main, #374151);
+  line-height: 1.5;
+}
+
+/* 危险按钮样式 */
+.btn-danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-danger:disabled {
+  background: #fca5a5;
+  border-color: #fca5a5;
+  cursor: not-allowed;
+}
+/* Header Layout Fixes for Inline Dashboard */
+.main-header { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; gap: 16px; }
+.main-title-block { display: flex; align-items: center; gap: 16px; min-width: fit-content; }
+.main-title { display: flex; align-items: baseline; gap: 8px; font-size: 18px; font-weight: 700; color: var(--text-main); white-space: nowrap; }
+.search-box { flex: 1; max-width: 480px; position: relative; display: flex; align-items: center; }
+
+.toolbar { flex-shrink: 0; }
+.inline-stats-container { flex-shrink: 0; }
+
+.inline-stats-container { flex: 0 0 auto !important; margin-right: 16px; min-width: max-content; }
+.toolbar { flex: 0 0 auto !important; min-width: max-content; }
+.search-box { flex: 1 1 300px !important; min-width: 200px; }

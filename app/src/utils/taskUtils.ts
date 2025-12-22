@@ -152,7 +152,14 @@ export const filterTasks = (
   projectMap: Record<string, Project>,
 ) => {
   const terms = parsed.textTerms.filter(Boolean);
+  const today = dayjs().startOf('day');
   return tasks.filter((task) => {
+    // 检查 visibleFrom：如果任务设置了延迟显示日期且当前日期早于该日期，则不显示
+    if (task.extras?.visibleFrom) {
+      const visibleFrom = dayjs(task.extras.visibleFrom).startOf('day');
+      if (today.isBefore(visibleFrom)) return false;
+    }
+
     // 在汇总视图（projectId 为 undefined）时，排除回收站任务
     if (!filters.projectId) {
       const project = projectMap[task.projectId];

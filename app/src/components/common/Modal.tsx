@@ -18,8 +18,8 @@ export const Modal = ({ open, title, onClose, width = 520, children, footer }: M
       <div className="modal-panel" style={{ width }}>
         <header className="modal-header">
           <h3>{title}</h3>
-          <button type="button" onClick={onClose} aria-label="关闭">
-            ×
+          <button type="button" className="create-btn-icon" onClick={onClose} aria-label="关闭">
+            ✕
           </button>
         </header>
         <div className="modal-body">{children}</div>

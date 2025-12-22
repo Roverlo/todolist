@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import type { Task, Project } from '../../types';
+import type { Task, Project, Status } from '../../types';
 
 interface StatsCardProps {
     tasks: Task[];
     projectMap: Record<string, Project>;
+    activeFilter?: Status | 'all';
+    onFilterByStatus?: (status: Status | 'all' | 'overdue' | 'dueToday') => void;
 }
 
-export const StatsCard = ({ tasks, projectMap }: StatsCardProps) => {
+export const StatsCard = ({ tasks, projectMap, activeFilter, onFilterByStatus }: StatsCardProps) => {
     const [collapsed, setCollapsed] = useState(false);
 
     const stats = useMemo(() => {
@@ -41,6 +43,16 @@ export const StatsCard = ({ tasks, projectMap }: StatsCardProps) => {
 
         return { total, doing, paused, done, dueToday, overdue, completionRate };
     }, [tasks, projectMap]);
+
+    const handleClick = (type: 'all' | Status | 'overdue' | 'dueToday') => {
+        onFilterByStatus?.(type);
+    };
+
+    // 判断是否激活某个筛选
+    const isActive = (type: 'all' | Status) => {
+        if (type === 'all') return !activeFilter || activeFilter === 'all';
+        return activeFilter === type;
+    };
 
     return (
         <div className={`stats-card ${collapsed ? 'collapsed' : ''}`}>
@@ -84,19 +96,35 @@ export const StatsCard = ({ tasks, projectMap }: StatsCardProps) => {
             {!collapsed && (
                 <div className='stats-content'>
                     <div className='stats-grid'>
-                        <div className='stats-item'>
+                        <div
+                            className={`stats-item stats-item-clickable ${isActive('all') ? 'active' : ''}`}
+                            onClick={() => handleClick('all')}
+                            title='点击显示全部任务'
+                        >
                             <div className='stats-value'>{stats.total}</div>
                             <div className='stats-label'>总任务</div>
                         </div>
-                        <div className='stats-item'>
+                        <div
+                            className={`stats-item stats-item-clickable ${isActive('doing') ? 'active' : ''}`}
+                            onClick={() => handleClick('doing')}
+                            title='点击筛选进行中任务'
+                        >
                             <div className='stats-value doing'>{stats.doing}</div>
                             <div className='stats-label'>进行中</div>
                         </div>
-                        <div className='stats-item'>
+                        <div
+                            className={`stats-item stats-item-clickable ${isActive('paused') ? 'active' : ''}`}
+                            onClick={() => handleClick('paused')}
+                            title='点击筛选挂起任务'
+                        >
                             <div className='stats-value paused'>{stats.paused}</div>
                             <div className='stats-label'>挂起</div>
                         </div>
-                        <div className='stats-item'>
+                        <div
+                            className={`stats-item stats-item-clickable ${isActive('done') ? 'active' : ''}`}
+                            onClick={() => handleClick('done')}
+                            title='点击筛选已完成任务'
+                        >
                             <div className='stats-value done'>{stats.done}</div>
                             <div className='stats-label'>已完成</div>
                         </div>

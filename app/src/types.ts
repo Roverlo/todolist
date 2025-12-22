@@ -109,7 +109,7 @@ export interface RecurringTemplate {
   status: Status;
   priority?: Priority;
   schedule: {
-    type: 'weekly' | 'monthly';
+    type: 'daily' | 'weekly' | 'monthly';
     daysOfWeek?: number[];
     dayOfMonth?: number;
     flexible?: boolean;

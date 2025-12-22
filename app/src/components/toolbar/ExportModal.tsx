@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { exportTasksToCsv, triggerDownload, saveCsvWithTauri } from '../../utils/csv';
+import { useAppStore } from '../../state/appStore';
+import { BACKUP_VERSION, calculateChecksum } from '../../utils/backupUtils';
 import type { Task } from '../../types';
 
 interface Props {
@@ -13,7 +15,7 @@ interface Props {
 }
 
 type ExportScope = 'current' | 'all' | 'dateRange';
-type ExportFormat = 'csv' | 'markdown';
+type ExportFormat = 'csv' | 'markdown' | 'json';
 
 export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, currentProjectId: _currentProjectId }: Props) => {
   const defaultName = `tasks-${dayjs().format('YYYYMMDD-HHmmss')}`;
@@ -22,6 +24,11 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
   const [format, setFormat] = useState<ExportFormat>('csv');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [includeRecurring, setIncludeRecurring] = useState(true);
+
+  // 获取周期任务模板和项目列表
+  const recurringTemplates = useAppStore((state) => state.recurringTemplates);
+  const projects = useAppStore((state) => state.projects);
 
   const pickDir = async () => {
     try {
@@ -121,6 +128,36 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
     return lines.join('\n');
   };
 
+  // 导出为 JSON 格式（包含完整数据结构）
+  const exportToJson = (tasksToExport: Task[]): string => {
+    // 获取相关项目
+    const projectIds = new Set(tasksToExport.map(t => t.projectId));
+    const relatedProjects = projects.filter(p => projectIds.has(p.id) && p.name !== '回收站');
+
+    // 获取相关的周期任务模板（如果启用）
+    const relatedRecurring = includeRecurring
+      ? recurringTemplates.filter(rt => projectIds.has(rt.projectId))
+      : [];
+
+    const data = {
+      projects: relatedProjects,
+      tasks: tasksToExport,
+      recurringTemplates: relatedRecurring,
+    };
+
+    const dataString = JSON.stringify(data);
+    const checksum = calculateChecksum(dataString);
+
+    const exportData = {
+      version: BACKUP_VERSION,
+      exportedAt: new Date().toISOString(),
+      checksum,
+      data,
+    };
+
+    return JSON.stringify(exportData, null, 2);
+  };
+
   const handleConfirm = async () => {
     const tasksToExport = getTasksToExport();
 
@@ -129,11 +166,30 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
       return;
     }
 
-    const ext = format === 'csv' ? 'csv' : 'md';
+    // 确定文件扩展名和内容
+    let ext: string;
+    let content: string;
+    let mimeType: string;
+
+    switch (format) {
+      case 'json':
+        ext = 'json';
+        content = exportToJson(tasksToExport);
+        mimeType = 'application/json;charset=utf-8';
+        break;
+      case 'markdown':
+        ext = 'md';
+        content = exportToMarkdown(tasksToExport);
+        mimeType = 'text/markdown;charset=utf-8';
+        break;
+      case 'csv':
+      default:
+        ext = 'csv';
+        content = exportTasksToCsv(tasksToExport, projectMap);
+        mimeType = 'text/csv;charset=utf-8';
+    }
+
     const filename = `${defaultName}.${ext}`;
-    const content = format === 'csv'
-      ? exportTasksToCsv(tasksToExport, projectMap)
-      : exportToMarkdown(tasksToExport);
 
     if (dir) {
       try {
@@ -166,11 +222,10 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
       // savedPath 为 null 表示出错，继续使用浏览器下载
     }
 
-    // Markdown 格式或 CSV 出错时的备用下载
+    // 其他格式或 CSV 出错时的备用下载
     try {
       const { save: tauriSave } = await import('@tauri-apps/plugin-dialog');
       const { writeTextFile } = await import('@tauri-apps/plugin-fs');
-      const ext = format === 'csv' ? 'csv' : 'md';
       const path = await tauriSave({
         defaultPath: filename,
         filters: [{ name: format.toUpperCase(), extensions: [ext] }]
@@ -185,7 +240,7 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
       onClose();
     } catch {
       // Tauri 对话框失败，使用浏览器下载
-      triggerDownload(filename, content, format === 'csv' ? 'text/csv;charset=utf-8' : 'text/markdown;charset=utf-8');
+      triggerDownload(filename, content, mimeType);
       alert(`已导出 ${tasksToExport.length} 条任务到: ${filename}`);
       onClose();
     }
@@ -276,6 +331,19 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
                   <input
                     type='radio'
                     name='exportFormat'
+                    value='json'
+                    checked={format === 'json'}
+                    onChange={() => setFormat('json')}
+                  />
+                  <span className='format-label'>
+                    <strong>JSON</strong>
+                    <small>支持导入，含周期任务</small>
+                  </span>
+                </label>
+                <label className='export-format-option'>
+                  <input
+                    type='radio'
+                    name='exportFormat'
                     value='csv'
                     checked={format === 'csv'}
                     onChange={() => setFormat('csv')}
@@ -300,6 +368,23 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
                 </label>
               </div>
             </div>
+
+            {/* JSON 格式时显示周期任务选项 */}
+            {format === 'json' && (
+              <div className='create-field create-field-span-2'>
+                <label className='export-format-option' style={{ marginTop: 8 }}>
+                  <input
+                    type='checkbox'
+                    checked={includeRecurring}
+                    onChange={(e) => setIncludeRecurring(e.target.checked)}
+                  />
+                  <span className='format-label'>
+                    <strong>包含周期任务模板</strong>
+                    <small>导出相关项目的周期任务设置</small>
+                  </span>
+                </label>
+              </div>
+            )}
 
             {/* 目标文件夹 */}
             <div className='create-field create-field-span-2'>
@@ -331,6 +416,6 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
           </div>
         </footer>
       </div>
-    </div>
+    </div >
   );
 };
