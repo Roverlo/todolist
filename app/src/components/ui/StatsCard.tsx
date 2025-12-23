@@ -1,16 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import dayjs from 'dayjs';
 import type { Task, Project, Status } from '../../types';
 
 interface StatsCardProps {
     tasks: Task[];
     projectMap: Record<string, Project>;
-    activeFilter?: Status | 'all';
+    activeFilter?: Status | 'all' | 'overdue' | 'dueToday';
     onFilterByStatus?: (status: Status | 'all' | 'overdue' | 'dueToday') => void;
 }
 
 export const StatsCard = ({ tasks, projectMap, activeFilter, onFilterByStatus }: StatsCardProps) => {
-    const [collapsed, setCollapsed] = useState(false);
 
     const stats = useMemo(() => {
         const today = dayjs().startOf('day');
@@ -49,121 +48,90 @@ export const StatsCard = ({ tasks, projectMap, activeFilter, onFilterByStatus }:
     };
 
     // 判断是否激活某个筛选
-    const isActive = (type: 'all' | Status) => {
+    const isActive = (type: 'all' | Status | 'overdue' | 'dueToday') => {
         if (type === 'all') return !activeFilter || activeFilter === 'all';
         return activeFilter === type;
     };
 
+    // Dashboard Bar variant
     return (
-        <div className={`stats-card ${collapsed ? 'collapsed' : ''}`}>
-            <div className='stats-header'>
-                <div className='stats-header-left'>
-                    <span className='stats-icon'>📊</span>
-                    <span className='stats-title-text'>任务概览</span>
-                    {collapsed && (
-                        <div className='stats-summary-row'>
-                            <span className='stats-summary-item'>
-                                <span className='label'>进行中</span>
-                                <span className='value doing'>{stats.doing}</span>
-                            </span>
-                            <span className='stats-summary-divider'>/</span>
-                            <span className='stats-summary-item'>
-                                <span className='label'>逾期</span>
-                                <span className={`value ${stats.overdue > 0 ? 'danger' : ''}`}>{stats.overdue}</span>
-                            </span>
-                            <span className='stats-summary-divider'>/</span>
-                            <span className='stats-summary-item'>
-                                <span className='label'>挂起</span>
-                                <span className='value paused'>{stats.paused}</span>
-                            </span>
-                            <span className='stats-summary-divider'>/</span>
-                            <span className='stats-summary-item'>
-                                <span className='label'>完成率</span>
-                                <span className='value'>{stats.completionRate}%</span>
-                            </span>
-                        </div>
-                    )}
-                </div>
-                <button
-                    className='stats-toggle-btn'
-                    onClick={() => setCollapsed(!collapsed)}
-                    title={collapsed ? '展开详情' : '收起详情'}
+        <div className='dashboard-bar'>
+            <div className='dashboard-stats-group'>
+                <div
+                    className={`dash-stat-item dash-pill ${isActive('all') ? 'active' : ''}`}
+                    onClick={() => handleClick('all')}
+                    title="全部任务"
                 >
-                    {collapsed ? '▼' : '▲'}
-                </button>
+                    <span className='dash-label'>总任务</span>
+                    <span className='dash-value'>{stats.total}</span>
+                </div>
+
+                {/* <div className='dash-divider' /> */}
+
+                <div
+                    className={`dash-stat-item dash-pill ${isActive('doing') ? 'active' : ''}`}
+                    onClick={() => handleClick('doing')}
+                    title="进行中"
+                >
+                    <span className='dash-dot doing'></span>
+                    <span className='dash-label'>进行中</span>
+                    <span className='dash-value'>{stats.doing}</span>
+                </div>
+
+                <div
+                    className={`dash-stat-item dash-pill ${isActive('paused') ? 'active' : ''}`}
+                    onClick={() => handleClick('paused')}
+                    title="挂起"
+                >
+                    <span className='dash-dot paused'></span>
+                    <span className='dash-label'>挂起</span>
+                    <span className='dash-value'>{stats.paused}</span>
+                </div>
+
+                <div
+                    className={`dash-stat-item dash-pill ${isActive('done') ? 'active' : ''}`}
+                    onClick={() => handleClick('done')}
+                    title="已完成"
+                >
+                    <span className='dash-dot done'></span>
+                    <span className='dash-label'>已完成</span>
+                    <span className='dash-value'>{stats.done}</span>
+                </div>
             </div>
 
-            {!collapsed && (
-                <div className='stats-content'>
-                    <div className='stats-grid'>
-                        <div
-                            className={`stats-item stats-item-clickable ${isActive('all') ? 'active' : ''}`}
-                            onClick={() => handleClick('all')}
-                            title='点击显示全部任务'
-                        >
-                            <div className='stats-value'>{stats.total}</div>
-                            <div className='stats-label'>总任务</div>
-                        </div>
-                        <div
-                            className={`stats-item stats-item-clickable ${isActive('doing') ? 'active' : ''}`}
-                            onClick={() => handleClick('doing')}
-                            title='点击筛选进行中任务'
-                        >
-                            <div className='stats-value doing'>{stats.doing}</div>
-                            <div className='stats-label'>进行中</div>
-                        </div>
-                        <div
-                            className={`stats-item stats-item-clickable ${isActive('paused') ? 'active' : ''}`}
-                            onClick={() => handleClick('paused')}
-                            title='点击筛选挂起任务'
-                        >
-                            <div className='stats-value paused'>{stats.paused}</div>
-                            <div className='stats-label'>挂起</div>
-                        </div>
-                        <div
-                            className={`stats-item stats-item-clickable ${isActive('done') ? 'active' : ''}`}
-                            onClick={() => handleClick('done')}
-                            title='点击筛选已完成任务'
-                        >
-                            <div className='stats-value done'>{stats.done}</div>
-                            <div className='stats-label'>已完成</div>
-                        </div>
+            <div className='dash-right-group'>
+                {stats.overdue > 0 && (
+                    <div
+                        className={`dash-alert overdue ${isActive('overdue') ? 'active' : ''}`}
+                        title="点击筛选逾期任务"
+                        onClick={() => handleClick('overdue')}
+                    >
+                        <span className='alert-icon'>⚠️</span>
+                        <span>{stats.overdue} 逾期</span>
                     </div>
-
-                    <div className='stats-footer'>
-                        <div className='stats-alerts'>
-                            {stats.overdue > 0 && (
-                                <div className='stats-alert overdue'>
-                                    <span className='alert-icon'>⚠️</span>
-                                    <span>{stats.overdue} 项已逾期</span>
-                                </div>
-                            )}
-                            {stats.dueToday > 0 && (
-                                <div className='stats-alert today'>
-                                    <span className='alert-icon'>📅</span>
-                                    <span>{stats.dueToday} 项今日到期</span>
-                                </div>
-                            )}
-                            {stats.overdue === 0 && stats.dueToday === 0 && (
-                                <div className='stats-alert ok'>
-                                    <span className='alert-icon'>✅</span>
-                                    <span>暂无紧急任务</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className='stats-progress-wrapper'>
-                            <div className='stats-progress-bar'>
-                                <div
-                                    className='stats-progress-fill'
-                                    style={{ width: `${stats.completionRate}%` }}
-                                />
-                            </div>
-                            <span className='stats-progress-text'>{stats.completionRate}% 完成</span>
-                        </div>
+                )}
+                {stats.dueToday > 0 && (
+                    <div
+                        className={`dash-alert today ${isActive('dueToday') ? 'active' : ''}`}
+                        title="点击筛选今日到期"
+                        onClick={() => handleClick('dueToday')}
+                    >
+                        <span className='alert-icon'>📅</span>
+                        <span>{stats.dueToday} 今日</span>
                     </div>
+                )}
+
+                <div className='dash-progress-wrapper' title={`完成率 ${stats.completionRate}%`}>
+                    <span className='dash-label' style={{ marginRight: 6 }}>完成率</span>
+                    <div className='dash-progress-track'>
+                        <div
+                            className='dash-progress-fill'
+                            style={{ width: `${stats.completionRate}%` }}
+                        />
+                    </div>
+                    <span className='dash-progress-text'>{stats.completionRate}%</span>
                 </div>
-            )}
+            </div>
         </div>
     );
 };

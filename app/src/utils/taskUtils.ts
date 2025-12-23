@@ -173,8 +173,16 @@ export const filterTasks = (
     }
     if (filters.statuses && filters.statuses.length) {
       if (!filters.statuses.includes(task.status)) return false;
-    } else if (filters.status && filters.status !== 'all' && task.status !== filters.status) {
-      return false;
+    } else if (filters.status && filters.status !== 'all') {
+      if (filters.status === 'overdue') {
+        if (task.status === 'done' || !task.dueDate) return false;
+        if (!dayjs(task.dueDate).startOf('day').isBefore(today)) return false;
+      } else if (filters.status === 'dueToday') {
+        if (task.status === 'done' || !task.dueDate) return false;
+        if (!dayjs(task.dueDate).startOf('day').isSame(today)) return false;
+      } else if (task.status !== filters.status) {
+        return false;
+      }
     }
     if (filters.priority && filters.priority !== 'all' && task.priority !== filters.priority)
       return false;

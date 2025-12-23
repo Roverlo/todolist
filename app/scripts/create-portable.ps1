@@ -49,6 +49,16 @@ foreach ($file in $requiredFiles) {
 Write-Host "Copying executable..." -ForegroundColor Yellow
 Copy-Item $exePath $outputPath -Force
 
+# Copy required DLLs
+foreach ($file in $requiredFiles) {
+    $filePath = Join-Path $targetDir $file
+    if (Test-Path $filePath) {
+        $dllDest = Join-Path $portableDir $file
+        Copy-Item $filePath $dllDest -Force
+        Write-Host "Included dependency: $file" -ForegroundColor Gray
+    }
+}
+
 # Get file info
 $fileInfo = Get-Item $outputPath
 $fileSizeMB = [math]::Round($fileInfo.Length / 1MB, 2)

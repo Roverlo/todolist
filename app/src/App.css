@@ -3429,6 +3429,26 @@ body {
   transform: translateY(-1px);
 }
 
+.dash-pill {
+  padding: 4px 12px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.dash-pill:hover {
+  background-color: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.dash-pill.active {
+  background-color: #e0e7ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+  font-weight: 600;
+}
+
 .stats-item-clickable {
   cursor: pointer;
 }
@@ -5394,15 +5414,350 @@ body {
   border-color: #fca5a5;
   cursor: not-allowed;
 }
+
 /* Header Layout Fixes for Inline Dashboard */
-.main-header { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; gap: 16px; }
-.main-title-block { display: flex; align-items: center; gap: 16px; min-width: fit-content; }
-.main-title { display: flex; align-items: baseline; gap: 8px; font-size: 18px; font-weight: 700; color: var(--text-main); white-space: nowrap; }
-.search-box { flex: 1; max-width: 480px; position: relative; display: flex; align-items: center; }
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  gap: 16px;
+}
 
-.toolbar { flex-shrink: 0; }
-.inline-stats-container { flex-shrink: 0; }
+.main-title-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: fit-content;
+}
 
-.inline-stats-container { flex: 0 0 auto !important; margin-right: 16px; min-width: max-content; }
-.toolbar { flex: 0 0 auto !important; min-width: max-content; }
-.search-box { flex: 1 1 300px !important; min-width: 200px; }
+.main-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.search-box {
+  flex: 1;
+  max-width: 480px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toolbar {
+  flex-shrink: 0;
+}
+
+.inline-stats-container {
+  flex-shrink: 0;
+}
+
+.inline-stats-container {
+  flex: 0 0 auto !important;
+  margin-right: 16px;
+  min-width: max-content;
+}
+
+.toolbar {
+  flex: 0 0 auto !important;
+  min-width: max-content;
+}
+
+.search-box {
+  flex: 1 1 300px !important;
+  min-width: 200px;
+}
+
+/* ==========================================================================
+   COMMAND CENTER LAYOUT - PREMIUM STYLES
+   ========================================================================== */
+
+/* --- Row 2: Dashboard Bar --- */
+.dashboard-row {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  padding: 0 24px;
+  margin-bottom: 0;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  /* Slim height */
+  width: 100%;
+}
+
+.dashboard-stats-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dash-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle, #f1f5f9);
+  margin: 0 12px;
+}
+
+.dash-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.dash-stat-item:hover {
+  background: var(--bg);
+  color: var(--text-main);
+}
+
+.dash-stat-item.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.dash-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-subtle);
+}
+
+.dash-dot.doing {
+  background: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.dash-dot.paused {
+  background: #f59e0b;
+}
+
+.dash-dot.done {
+  background: #10b981;
+}
+
+.dash-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dash-value {
+  font-size: 14px;
+  font-weight: 700;
+  font-feature-settings: "tnum";
+}
+
+.dash-right-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Dashboard Alerts */
+.dash-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.dash-alert:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dash-alert.active {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.dash-alert.overdue {
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fee2e2;
+}
+
+.dash-alert.today {
+  background: #fffbeb;
+  color: #f59e0b;
+  border: 1px solid #fef3c7;
+}
+
+.alert-icon {
+  font-size: 12px;
+}
+
+/* Dashboard Progress */
+.dash-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.dash-progress-track {
+  width: 80px;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.dash-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, #60a5fa 100%);
+  border-radius: 99px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dash-progress-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* --- Row 1: Main Header Polish --- */
+.main-header {
+  height: 56px;
+  /* Reduced height for tighter feel */
+  padding: 0 20px;
+  gap: 16px;
+  background: var(--surface);
+}
+
+/* Ensure Search Box is centered and sleek */
+.search-box {
+  flex: 1;
+  max-width: 420px;
+  /* Slightly narrower */
+  margin: 0 auto;
+}
+
+.search-input {
+  height: 34px;
+  /* Compact height */
+  background: var(--bg);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: all 0.2s;
+  padding-left: 36px;
+}
+
+.search-input:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+}
+
+.search-input:focus {
+  background: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+
+.search-icon {
+  left: 10px;
+  font-size: 14px;
+}
+
+/* Title Area */
+/* Title Area */
+.main-title-block {
+  min-width: auto;
+  /* Allow shrinking if needed */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  /* Critical for center line alignment */
+  gap: 8px;
+  white-space: nowrap;
+  height: 32px;
+  /* Explicit container height */
+}
+
+.main-title {
+  font-size: 18px;
+  /* Reduced from 20px */
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: normal;
+  /* Reset line-height */
+  display: flex;
+  align-items: center;
+  height: 100%;
+  /* Match container */
+}
+
+/* Ensure sort dropdown is cleaner - CHIP STYLE */
+.sort-dropdown-trigger {
+  padding: 0 10px;
+  /* Horizontal padding only, height handles vertical */
+  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--text-subtle);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  /* Center text vertically */
+  justify-content: center;
+  gap: 4px;
+  height: 24px;
+  /* Fixed height, slightly smaller than container but centered */
+  margin-top: 1px;
+  /* Micro-adjustment if visual weight is off */
+}
+
+.sort-dropdown-trigger:hover {
+  background: var(--surface);
+  color: var(--primary);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Toolbar Area */
+.toolbar {
+  min-width: 200px;
+  justify-content: flex-end;
+}

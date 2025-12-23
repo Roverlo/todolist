@@ -134,7 +134,7 @@ export interface DateRangeFilter {
 
 export interface Filters {
   search: string;
-  status?: Status | 'all';
+  status?: Status | 'all' | 'overdue' | 'dueToday';
   statuses?: Status[];
   projectId?: string;
   owner?: string;  // 统一的责任人筛选（兼容 owners/onsiteOwner/lineOwner）

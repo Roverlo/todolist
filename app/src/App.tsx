@@ -88,10 +88,8 @@ function App() {
     });
   }, [allTasks, projects, filters.projectId]);
 
-  const metrics = useMemo(() => {
-    const doing = tasks.filter((t) => t.status === 'doing').length;
-    return { total: tasks.length, doing };
-  }, [tasks]);
+  // 统计数据
+
 
   const handleProjectSelected = useCallback(() => {
     setDrawerOpen(false);
@@ -239,7 +237,6 @@ function App() {
           <div className='main-title-block'>
             <div className='main-title'>
               <span>任务看板</span>
-              <span className='chip'>共 {metrics.total || 0} 条</span>
             </div>
             <div className='sort-dropdown-container'>
               <button
@@ -334,6 +331,7 @@ function App() {
             </div>
           </div>
 
+          {/* 搜索框 */}
           {/* 搜索框 */}
           <div className='search-box'>
             <span className='search-icon'>🔍</span>
@@ -431,18 +429,22 @@ function App() {
 
         {/* 统计仪表盘 */}
         {!isTrashView && (
-          <StatsCard
-            tasks={projectTasks}
-            projectMap={projectMap as any}
-            activeFilter={filters.status}
-            onFilterByStatus={(status: 'doing' | 'done' | 'paused' | 'all' | 'overdue' | 'dueToday') => {
-              if (status === 'all') {
-                setFilters({ statuses: [], status: 'all' });
-              } else if (status === 'doing' || status === 'paused' || status === 'done') {
-                setFilters({ statuses: [status], status: status });
-              }
-            }}
-          />
+          <div className='dashboard-row'>
+            <StatsCard
+              tasks={projectTasks}
+              projectMap={projectMap as any}
+              activeFilter={filters.status}
+              onFilterByStatus={(status: 'doing' | 'done' | 'paused' | 'all' | 'overdue' | 'dueToday') => {
+                if (status === 'all') {
+                  setFilters({ statuses: [], status: 'all' });
+                } else if (status === 'doing' || status === 'paused' || status === 'done') {
+                  setFilters({ statuses: [status], status: status });
+                } else {
+                  setFilters({ statuses: [], status: status });
+                }
+              }}
+            />
+          </div>
         )}
 
         <section className='content'>

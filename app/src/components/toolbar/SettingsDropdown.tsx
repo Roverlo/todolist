@@ -89,7 +89,7 @@ export const SettingsDropdown = ({
                         onClick={() => handleItemClick(onBackup)}
                     >
                         <span className='settings-dropdown-icon'>💾</span>
-                        <span>备份恢复</span>
+                        <span>备份与恢复</span>
                     </button>
                 </div>
             )}
