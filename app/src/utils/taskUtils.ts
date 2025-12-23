@@ -46,6 +46,13 @@ export const parseSearchInput = (input: string): ParsedSearch => {
   const tokens: DslToken[] = [];
   const textTerms: string[] = [];
 
+  // Valid DSL keys whitelist
+  const validKeys = new Set([
+    'project', 'status', 'priority',
+    'owner', 'owners', 'tag', 'tags',
+    'due', 'duedate', 'created'
+  ]);
+
   const matches = input.match(/"[^"]+"|\S+/g) ?? [];
   matches.forEach((segment) => {
     let term = segment;
@@ -53,12 +60,22 @@ export const parseSearchInput = (input: string): ParsedSearch => {
     if (quoted) {
       term = segment.slice(1, -1);
     }
+
+    // Check for colon
     const colonIndex = term.indexOf(':');
     if (colonIndex === -1) {
       textTerms.push(term.toLowerCase());
       return;
     }
-    const key = term.slice(0, colonIndex).trim();
+
+    const key = term.slice(0, colonIndex).trim().toLowerCase();
+
+    // If key is not a valid DSL key, treat as text term (e.g. "http://...")
+    if (!validKeys.has(key)) {
+      textTerms.push(term.toLowerCase());
+      return;
+    }
+
     let valuePart = term.slice(colonIndex + 1).trim();
     let comparator: Comparator = ':';
     const comparatorMatch = valuePart.match(/^(<=|>=|<|>)/);
@@ -68,7 +85,7 @@ export const parseSearchInput = (input: string): ParsedSearch => {
     }
     const value = valuePart.replace(/^"(.+)"$/, '$1');
     if (key) {
-      tokens.push({ key: key.toLowerCase(), comparator, value });
+      tokens.push({ key, comparator, value });
     }
   });
 
