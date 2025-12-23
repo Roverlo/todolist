@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
+import type { Task } from '../../types';
 import { useVisibleTasks } from '../../hooks/useVisibleTasks';
 import { useAppStoreShallow } from '../../state/appStore';
 import { TaskRow } from './TaskRow';
@@ -100,6 +101,10 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
 
   const handleQuickStatusChange = useCallback((taskId: string, newStatus: 'doing' | 'done' | 'paused') => {
     updateTask(taskId, { status: newStatus });
+  }, [updateTask]);
+
+  const handleQuickPriorityChange = useCallback((taskId: string, newPriority: Task['priority']) => {
+    updateTask(taskId, { priority: newPriority });
   }, [updateTask]);
 
   const handleTogglePin = useCallback((taskId: string) => {
@@ -233,6 +238,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
                     onRestoreTask={handleRestoreTask}
                     onHardDeleteTask={handleHardDeleteTask}
                     onQuickStatusChange={handleQuickStatusChange}
+                    onQuickPriorityChange={handleQuickPriorityChange}
                     onTogglePin={handleTogglePin}
                     onCopyTask={handleCopyTask}
                     trashRetentionDays={settings.trashRetentionDays ?? 60}
@@ -249,6 +255,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
           )}
         </tbody>
       </table>
+
 
       <DeleteChoiceDialog
         open={!!deleteCandidateId}

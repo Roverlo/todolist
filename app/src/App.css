@@ -5761,3 +5761,22 @@ body {
   min-width: 200px;
   justify-content: flex-end;
 }
+
+/* Priority Interactive Badge */
+.tag-priority-btn {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  font-family: inherit;
+}
+
+.tag-priority-btn:hover:not(:disabled) {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tag-priority-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}

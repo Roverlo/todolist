@@ -184,11 +184,13 @@ function App() {
   // 启动时检查到期任务并发送系统通知
   useEffect(() => {
     const checkStartup = async () => {
-      if (!reminderShown && allTasks.length > 0) {
+      const hasShown = sessionStorage.getItem('sessionReminderShown');
+      if (!reminderShown && !hasShown && allTasks.length > 0) {
         // 1. 显示应用内提醒 Modal
         const timer = setTimeout(() => {
           setReminderOpen(true);
           setReminderShown(true);
+          sessionStorage.setItem('sessionReminderShown', 'true');
         }, 500);
 
         // 2. 发送系统通知 (仅在 Tauri 环境)

@@ -12,6 +12,7 @@ interface TaskRowProps {
   onRestoreTask?: (taskId: string) => void;
   onHardDeleteTask?: (taskId: string) => void;
   onQuickStatusChange?: (taskId: string, newStatus: Task['status']) => void;
+  onQuickPriorityChange?: (taskId: string, newPriority: Task['priority']) => void;
   onTogglePin?: (taskId: string) => void;
   onCopyTask?: (taskId: string) => void;
   trashRetentionDays?: number;
@@ -123,6 +124,7 @@ export const TaskRow = memo(({
   onRestoreTask,
   onHardDeleteTask,
   onQuickStatusChange,
+  onQuickPriorityChange,
   onTogglePin,
   onCopyTask,
   trashRetentionDays = 30,
@@ -137,21 +139,27 @@ export const TaskRow = memo(({
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const statusMenuRef = useRef<HTMLDivElement>(null);
 
+  const [showPriorityMenu, setShowPriorityMenu] = useState(false);
+  const priorityMenuRef = useRef<HTMLDivElement>(null);
+
   // 点击外部关闭菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (statusMenuRef.current && !statusMenuRef.current.contains(event.target as Node)) {
         setShowStatusMenu(false);
       }
+      if (priorityMenuRef.current && !priorityMenuRef.current.contains(event.target as Node)) {
+        setShowPriorityMenu(false);
+      }
     };
 
-    if (showStatusMenu) {
+    if (showStatusMenu || showPriorityMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showStatusMenu]);
+  }, [showStatusMenu, showPriorityMenu]);
 
 
 
@@ -181,10 +189,24 @@ export const TaskRow = memo(({
     setShowStatusMenu(false); // 关闭菜单
   };
 
+  const handleQuickPriority = (e: React.MouseEvent, targetPriority: Task['priority']) => {
+    e.stopPropagation();
+    onQuickPriorityChange?.(task.id, targetPriority);
+    setShowPriorityMenu(false);
+  };
+
   const toggleStatusMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isTrash) return;
     setShowStatusMenu(!showStatusMenu);
+    setShowPriorityMenu(false); // 互斥
+  };
+
+  const togglePriorityMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isTrash) return;
+    setShowPriorityMenu(!showPriorityMenu);
+    setShowStatusMenu(false); // 互斥
   };
 
   const priorityClass = {
@@ -298,19 +320,39 @@ export const TaskRow = memo(({
                 </div>
               )}
 
-              <span
-                className={`tag-pill ${task.priority === 'high'
+              <button
+                type="button"
+                onClick={togglePriorityMenu}
+                className={`tag-pill tag-priority-btn ${task.priority === 'high'
                   ? 'tag-priority-high'
                   : task.priority === 'low'
                     ? 'tag-priority-low'
                     : 'tag-priority-medium'
                   }`}
+                title={isTrash ? '' : '点击切换优先级'}
+                disabled={isTrash}
               >
                 {priorityLabel[task.priority ?? 'medium']}
-              </span>
+              </button>
+
+              {/* 优先级切换菜单 */}
+              {showPriorityMenu && (
+                <div className="status-menu-popover" ref={priorityMenuRef} style={{ left: '60px' }}>
+                  <div className="status-menu-item priority-high" style={{ color: '#ef4444' }} onClick={(e) => handleQuickPriority(e, 'high')}>
+                    🔴 高优
+                  </div>
+                  <div className="status-menu-item priority-medium" style={{ color: '#f59e0b' }} onClick={(e) => handleQuickPriority(e, 'medium')}>
+                    🟠 中优
+                  </div>
+                  <div className="status-menu-item priority-low" style={{ color: '#10b981' }} onClick={(e) => handleQuickPriority(e, 'low')}>
+                    🟢 低优
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
+
       </td>
       <td className='col-text'>
         <div className='field-label'>详情</div>

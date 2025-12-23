@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStoreShallow } from '../../state/appStore';
-import type { Priority, Status } from '../../types';
+import type { Priority } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
 
 export const PrimaryToolbar = () => {
@@ -12,18 +12,8 @@ export const PrimaryToolbar = () => {
 
   const [dueFrom, setDueFrom] = useState(filters.dueRange?.from ?? '');
   const [dueTo, setDueTo] = useState(filters.dueRange?.to ?? '');
-  const [stage, setStage] = useState(filters.status ?? 'all');
-
-  const toggleStatus = (status: Status) => {
-    const set = new Set(filters.statuses ?? []);
-    if (set.has(status)) set.delete(status);
-    else set.add(status);
-    const next = Array.from(set);
-    setFilters({ statuses: next, status: next.length ? 'all' : filters.status });
-  };
 
   const resetFilters = () => {
-    setStage('all');
     setDueFrom('');
     setDueTo('');
     setFilters({
@@ -34,14 +24,6 @@ export const PrimaryToolbar = () => {
       dueRange: undefined,
     });
   };
-
-  // Options preparation
-  const stageOptions = [
-    { value: 'all', label: '全部' },
-    { value: 'doing', label: '进行中' },
-    { value: 'paused', label: '挂起' },
-    { value: 'done', label: '已完成' },
-  ];
 
   const priorityOptions = [
     { value: 'all', label: '全部' },
@@ -64,44 +46,12 @@ export const PrimaryToolbar = () => {
         <div className='section-title' style={{ marginBottom: 0 }}>
           筛选
         </div>
-        <div className='status-toggle-group'>
-          {(['doing', 'paused', 'done'] as Status[]).map((status) => {
-            const selected = !!(filters.statuses ?? []).includes(status);
-            const label = status === 'doing' ? '进行中' : status === 'paused' ? '挂起' : '已完成';
-            return (
-              <button
-                key={status}
-                className={`status-toggle ${selected ? 'status-toggle-active' : ''}`}
-                onClick={() => toggleStatus(status)}
-                type='button'
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
         <button className='btn btn-ghost' type='button' onClick={resetFilters}>
           清空筛选
         </button>
       </div>
 
       <div className='filters-row-bottom'>
-        <div className='filter-item'>
-          <span className='filter-label'>当前阶段</span>
-          <CustomSelect
-            value={stage}
-            options={stageOptions}
-            onChange={(val) => {
-              const value = val as Status | 'all';
-              setStage(value);
-              if (value === 'all') {
-                setFilters({ status: 'all' });
-              } else {
-                setFilters({ status: value, statuses: [value] });
-              }
-            }}
-          />
-        </div>
         <div className='filter-item'>
           <span className='filter-label'>优先级</span>
           <CustomSelect
