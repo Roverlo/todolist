@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StateStorage } from 'zustand/middleware';
+import { invoke } from '@tauri-apps/api/core';
 import { produce } from 'immer';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
@@ -311,11 +313,8 @@ const withHistory = (set: any, updater: (state: Draft<AppStore>) => void) => {
   );
 };
 
-const noopStorage = {
-  getItem: () => null,
-  setItem: () => { },
-  removeItem: () => { },
-};
+// noopStorage removed
+
 
 export const useAppStore = create<AppStore>()(
   persist(
@@ -1041,14 +1040,52 @@ export const useAppStore = create<AppStore>()(
       name: 'project-todo-app',
       version: 10,
       storage: createJSONStorage(() => {
-        if (typeof window === 'undefined') {
-          return noopStorage;
-        }
-        try {
-          return window.localStorage;
-        } catch {
-          return noopStorage;
-        }
+        const portableStorage: StateStorage = {
+          getItem: async (name: string): Promise<string | null> => {
+            if (typeof window === 'undefined') return null;
+            try {
+              // 优先尝试读取本地文件 (Portable Mode)
+              const data = await invoke<string>('load_data');
+              if (data) return data;
+
+              // 如果文件不存在，回退读取 localStorage (迁移旧数据)
+              const local = window.localStorage.getItem(name);
+              if (local) {
+                // 自动迁移：读取到系统数据后，立即保存一份到本地文件，确保即时便携
+                try {
+                  await invoke('save_data', { data: local });
+                } catch (e) {
+                  console.warn('Failed to auto-migrate data to file', e);
+                }
+              }
+              return local;
+            } catch (e) {
+              console.warn('Failed to load portable data, falling back to localStorage', e);
+              return window.localStorage.getItem(name);
+            }
+          },
+          setItem: async (name: string, value: string): Promise<void> => {
+            if (typeof window === 'undefined') return;
+
+            // 1. 写入本地文件 (Portable)
+            try {
+              await invoke('save_data', { data: value });
+            } catch (e) {
+              console.error('Failed to save portable data', e);
+            }
+
+            // 2. 写入系统 localStorage (Backup/Legacy)
+            try {
+              window.localStorage.setItem(name, value);
+            } catch (e) {
+              console.error('Failed to save local backup', e);
+            }
+          },
+          removeItem: async (_name: string): Promise<void> => {
+            // Not implemented for file storage
+          },
+        };
+        return portableStorage;
       }),
       migrate: (persisted, version) => {
         const state = persisted as AppData;

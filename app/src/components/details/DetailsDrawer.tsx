@@ -113,14 +113,14 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
         owners: owners || undefined,
         notes,
         nextStep,
-        progress,
-        subtasks,
+        // 注意：不保存 progress 和 subtasks，它们有独立的即时保存逻辑
+        // 这样可以避免闭包捕获的旧值覆盖新添加的进展或子任务
       });
       setSaveStatus('saved');
       // 3秒后重置状态
       setTimeout(() => setSaveStatus('idle'), 3000);
     }, 1000);
-  }, [task, title, projectId, status, priority, dueDate, owners, notes, nextStep, progress, subtasks, updateTask]);
+  }, [task, title, projectId, status, priority, dueDate, owners, notes, nextStep, updateTask]);
 
 
 
