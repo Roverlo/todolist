@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subtask UI Design Concepts - Iteration 4</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .concept-container {
+            width: 100%;
+            max-width: 800px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- Option B4: Weighted Focus & Strict Status --- */
+        .b4-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0;
+            /* Clear padding, use inner containers */
+            background: #fff;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: visible;
+            /* For dropdown */
+        }
+
+        .b4-item:hover {
+            border-color: #b0c4de;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .b4-main-content {
+            padding: 16px 20px 8px 20px;
+            /* More padding top */
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .b4-index {
+            color: #1976d2;
+            /* Primary color */
+            font-weight: 600;
+            font-size: 16px;
+            padding-top: 2px;
+            /* Visual alignment with input text */
+            flex-shrink: 0;
+            width: 24px;
+        }
+
+        .b4-input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .b4-input {
+            width: 100%;
+            border: 1px solid transparent;
+            /* Invisible border by default */
+            border-radius: 6px;
+            padding: 4px 8px;
+            /* Slight padding for hover effect */
+            font-size: 16px;
+            /* Larger font for emphasis */
+            line-height: 1.5;
+            color: #333;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            background: transparent;
+            transition: all 0.2s;
+            margin-left: -8px;
+            /* Offset the padding to align text visually if needed */
+        }
+
+        .b4-input:hover,
+        .b4-input:focus {
+            background: #f8f9fa;
+            border-color: #e0e0e0;
+        }
+
+        .b4-input:focus {
+            background: #fff;
+            border-color: #1976d2;
+            box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+        }
+
+        .b4-footer {
+            padding: 8px 20px 16px 56px;
+            /* Left padding aligns with text (20px + 24px index + 12px gap) */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .b4-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: #888;
+            /* Lighter color for de-emphasis */
+        }
+
+        .tag-b4 {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .tag-b4-icon {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .b4-right-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Status Pills */
+        .status-pill-b4 {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-doing {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-done {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-suspended {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        /* Actions */
+        .b4-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #f9f9f9;
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            opacity: 0.6;
+            /* De-emphasized by default */
+            transition: opacity 0.2s;
+        }
+
+        .b4-item:hover .b4-actions {
+            opacity: 1;
+            /* Fully visible on hover */
+        }
+
+        .btn-icon {
+            border: none;
+            background: transparent;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .btn-icon:hover {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-delete:hover {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .b4-divider {
+            width: 1px;
+            height: 14px;
+            background: #ddd;
+            margin: 0 2px;
+        }
+
+        /* Dropdown Mock for Status */
+        .status-dropdown-mock {
+            position: absolute;
+            bottom: 40px;
+            /* Above the pill */
+            right: 120px;
+            /* Align near status pill */
+            background: #fff;
+            border: 1px solid #eee;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            width: 100px;
+            z-index: 10;
+            display: none;
+            /* Hidden by default */
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .show-mock .status-dropdown-mock {
+            display: flex;
+        }
+
+        .mock-option {
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mock-option:hover {
+            background: #f5f5f5;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .dot-doing {
+            background: #1976d2;
+        }
+
+        .dot-done {
+            background: #2e7d32;
+        }
+
+        .dot-suspended {
+            background: #ef6c00;
+        }
+
+        .helper-text {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="concept-container">
+        <h2>Concept B4: 重点突出 & 状态明确</h2>
+        <p class="helper-text">1. 输入框增加权重（字号加大、位置核心）<br>2. 信息区弱化（浅色、小号）<br>3. 状态栏仅保留：进行中、已完成、挂起</p>
+
+        <!-- Use Case 1: In Progress -->
+        <div class="b4-item">
+            <div class="b4-main-content">
+                <div class="b4-index">1.</div>
+                <div class="b4-input-wrapper">
+                    <textarea class="b4-input" rows="1" style="resize:none">编写前端详细设计文档，确认组件交互规范</textarea>
+                </div>
+            </div>
+            <div class="b4-footer">
+                <div class="b4-meta">
+                    <div class="tag-b4">
+                        <span class="tag-b4-icon">📅</span> 2023-12-31
+                    </div>
+                    <div class="tag-b4">
+                        <span class="tag-b4-icon">👤</span> 张三
+                    </div>
+                </div>
+
+                <div class="b4-right-group">
+                    <div class="status-pill-b4 status-doing">
+                        <span>●</span> 进行中
+                    </div>
+
+                    <div class="b4-actions">
+                        <button class="btn-icon" title="Up">↑</button>
+                        <button class="btn-icon" title="Down">↓</button>
+                        <div class="b4-divider"></div>
+                        <button class="btn-icon" title="Drag">⋮⋮</button>
+                        <div class="b4-divider"></div>
+                        <button class="btn-icon btn-delete" title="Delete">×</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+
+        <!-- Use Case 2: Dropdown Demo -->
+        <div class="b4-item show-mock">
+            <div class="status-dropdown-mock">
+                <div class="mock-option"><span class="dot dot-doing"></span> 进行中</div>
+                <div class="mock-option"><span class="dot dot-done"></span> 已完成</div>
+                <div class="mock-option"><span class="dot dot-suspended"></span> 挂起</div>
+            </div>
+
+            <div class="b4-main-content">
+                <div class="b4-index">2.</div>
+                <div class="b4-input-wrapper">
+                    <textarea class="b4-input" rows="1" style="resize:none">梳理后端接口协议，确认字段定义</textarea>
+                </div>
+            </div>
+            <div class="b4-footer">
+                <div class="b4-meta">
+                    <div class="tag-b4">
+                        <span class="tag-b4-icon">📅</span> 2024-01-05
+                    </div>
+                    <div class="tag-b4">
+                        <span class="tag-b4-icon">👤</span> 李四
+                    </div>
+                </div>
+
+                <div class="b4-right-group">
+                    <div class="status-pill-b4 status-doing" style="opacity: 0.8">
+                        <span>●</span> 进行中 ▾
+                    </div>
+
+                    <div class="b4-actions">
+                        <button class="btn-icon" title="Up">↑</button>
+                        <button class="btn-icon" title="Down">↓</button>
+                        <div class="b4-divider"></div>
+                        <button class="btn-icon" title="Drag">⋮⋮</button>
+                        <div class="b4-divider"></div>
+                        <button class="btn-icon btn-delete" title="Delete">×</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>
