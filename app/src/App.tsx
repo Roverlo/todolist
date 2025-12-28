@@ -249,8 +249,10 @@ function App() {
   }, [drawerOpen]);
 
   // 启动时检查到期任务并发送系统通知
-  // 启动时检查到期任务并发送系统通知
   useEffect(() => {
+    // 等待数据加载完成
+    if (!isHydrated) return;
+
     const checkStartup = async () => {
       const hasShown = sessionStorage.getItem('sessionReminderShown');
 
@@ -307,7 +309,7 @@ function App() {
     };
 
     checkStartup();
-  }, [allTasks, reminderShown, settings.dueReminderEnabled, settings.dueReminderSnoozeUntil]);
+  }, [isHydrated, allTasks, reminderShown, settings.dueReminderEnabled, settings.dueReminderSnoozeUntil]);
 
   return (
     <div className={`app theme-${colorScheme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>

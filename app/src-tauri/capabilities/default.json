@@ -26,6 +26,15 @@
         "$DOWNLOAD/**"
       ]
     },
-    "process:default"
+    "process:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://update.xiaohulp.sbs/*"
+        }
+      ]
+    },
+    "shell:allow-open"
   ]
 }

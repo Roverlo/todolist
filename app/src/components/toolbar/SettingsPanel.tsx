@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAppStoreShallow } from '../../state/appStore';
+import { checkForUpdate, CURRENT_VERSION } from '../../utils/updateChecker';
+import type { UpdateInfo } from '../../utils/updateChecker';
+import { UpdateModal } from './UpdateModal';
+import { VersionListModal } from './VersionListModal';
 
 interface SettingsPanelProps {
     open: boolean;
@@ -29,6 +33,34 @@ export const SettingsPanel = ({
     }));
 
     const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+
+    // 版本更新检测状态
+    const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'latest' | 'available' | 'error'>('idle');
+    const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+    const [updateError, setUpdateError] = useState<string | null>(null);
+    const [showUpdateModal, setShowUpdateModal] = useState(false);
+    const [showVersionList, setShowVersionList] = useState(false);
+
+    // 检查更新
+    const handleCheckUpdate = async () => {
+        setUpdateStatus('checking');
+        setUpdateError(null);
+
+        const result = await checkForUpdate(CURRENT_VERSION);
+
+        if (result.error) {
+            setUpdateStatus('error');
+            setUpdateError(result.error);
+        } else if (result.hasUpdate && result.updateInfo) {
+            setUpdateStatus('available');
+            setUpdateInfo(result.updateInfo);
+            setShowUpdateModal(true);
+        } else {
+            setUpdateStatus('latest');
+            // 3秒后恢复idle状态
+            setTimeout(() => setUpdateStatus('idle'), 3000);
+        }
+    };
 
     // Handle Esc key
     useEffect(() => {
@@ -763,10 +795,90 @@ export const SettingsPanel = ({
                                         fontFamily: 'monospace',
                                         marginBottom: 8,
                                     }}>
-                                        20251228_0218
+                                        {CURRENT_VERSION}
                                     </div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-subtle)' }}>
-                                        更新于 2025.12.28
+                                    <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginBottom: 12 }}>
+                                        更新于 2025.12.28 18:16
+                                    </div>
+                                    {/* 检查更新按钮 */}
+                                    <button
+                                        onClick={handleCheckUpdate}
+                                        disabled={updateStatus === 'checking'}
+                                        style={{
+                                            padding: '8px 16px',
+                                            border: 'none',
+                                            borderRadius: 8,
+                                            background: updateStatus === 'checking' ? 'var(--border)' : 'var(--primary)',
+                                            color: 'white',
+                                            fontSize: 13,
+                                            fontWeight: 500,
+                                            cursor: updateStatus === 'checking' ? 'not-allowed' : 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                        }}
+                                    >
+                                        {updateStatus === 'checking' ? (
+                                            <>
+                                                <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
+                                                <span>检查中...</span>
+                                            </>
+                                        ) : updateStatus === 'latest' ? (
+                                            <>
+                                                <span>✅</span>
+                                                <span>已是最新</span>
+                                            </>
+                                        ) : updateStatus === 'error' ? (
+                                            <>
+                                                <span>❌</span>
+                                                <span>检查失败</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>🔄</span>
+                                                <span>检查更新</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    {updateStatus === 'error' && updateError && (
+                                        <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 6 }}>
+                                            {updateError}
+                                        </div>
+                                    )}
+                                    {/* 查看所有版本按钮 */}
+                                    <button
+                                        onClick={() => setShowVersionList(true)}
+                                        style={{
+                                            marginTop: 8,
+                                            padding: '6px 12px',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 6,
+                                            background: 'transparent',
+                                            color: 'var(--text-subtle)',
+                                            fontSize: 12,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                        }}
+                                    >
+                                        <span>📃</span>
+                                        <span>查看所有版本</span>
+                                    </button>
+                                    {/* 便携版说明 */}
+                                    <div
+                                        style={{
+                                            marginTop: 12,
+                                            padding: '8px 10px',
+                                            background: 'rgba(59, 130, 246, 0.06)',
+                                            borderRadius: 6,
+                                            border: '1px dashed rgba(59, 130, 246, 0.2)',
+                                        }}
+                                    >
+                                        <div style={{ fontSize: 10, color: 'var(--text-subtle)', lineHeight: 1.5 }}>
+                                            💡 本软件为<b>便携版</b>，无需安装，下载新版本后替换当前 exe 即可更新，数据自动保留。
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -828,6 +940,20 @@ export const SettingsPanel = ({
                         </div>
                     )}
                 </div>
+
+                {showUpdateModal && updateInfo && (
+                    <UpdateModal
+                        open={showUpdateModal}
+                        onClose={() => setShowUpdateModal(false)}
+                        updateInfo={updateInfo}
+                    />
+                )}
+
+                {/* 版本列表弹窗 */}
+                <VersionListModal
+                    open={showVersionList}
+                    onClose={() => setShowVersionList(false)}
+                />
             </div>
         </div>
     );
