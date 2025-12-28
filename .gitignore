@@ -1,0 +1,19 @@
+# 打包输出目录
+portable/
+
+# 大型二进制文件
+*.7z
+*.zip
+*.rar
+*.tar.gz
+*.exe
+*.dll
+*.msi
+
+# WebView2 运行时
+webview2/
+
+# 构建产物
+app/dist/
+app/src-tauri/target/
+app/node_modules/
