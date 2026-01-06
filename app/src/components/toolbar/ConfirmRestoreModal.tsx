@@ -90,6 +90,12 @@ export const ConfirmRestoreModal = ({
                                         {preview.taskCount} 条
                                     </span>
                                 </div>
+                                <div className='restore-preview-item'>
+                                    <span className='restore-preview-label'>笔记数量</span>
+                                    <span className='restore-preview-value'>
+                                        {preview.noteCount ?? 0} 条
+                                    </span>
+                                </div>
                                 {preview.hasRecurringTemplates && (
                                     <div className='restore-preview-item'>
                                         <span className='restore-preview-label'>周期任务</span>

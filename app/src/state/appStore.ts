@@ -7,20 +7,25 @@ import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
 import { useShallow } from 'zustand/react/shallow';
 import type {
+  Project,
+  SortRule,
   AppData,
   AppDataSnapshot,
-  ColumnConfig,
   Filters,
   GroupBy,
-  Project,
-  SavedFilter,
-  Settings,
-  SortRule,
-  Task,
+  ColumnConfig,
   ColumnTemplate,
   RecurringTemplate,
+  Task,
+  Attachment,
+  ProgressEntry,
+  Settings,
+  AISettings,
+  SavedFilter,
+  Note,
+  NoteTag,
+  AIProviderProfile
 } from '../types';
-import type { Attachment, ProgressEntry } from '../types';
 
 const CORE_COLUMNS = [
   'project',
@@ -80,6 +85,18 @@ const defaultSettings: Settings = {
     interval: 60,
     retentionCount: 24,
     dailyBackup: true,
+  },
+  ai: {
+    providers: [
+      {
+        id: 'deepseek-default',
+        type: 'deepseek',
+        name: 'DeepSeek V3',
+        model: 'deepseek-chat',
+        apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
+      }
+    ],
+    activeProviderId: 'deepseek-default',
   },
 };
 
@@ -176,6 +193,16 @@ const initialData: AppData = {
     { id: nanoid(8), name: 'Default Sort', rules: DEFAULT_SORT },
   ],
   recurringTemplates: [],
+  notes: [],
+  tags: [
+    { id: 'all', name: '全部', icon: '📌', count: 0, isSystem: true },
+    { id: 'work', name: '工作', icon: '💼', count: 0, isSystem: false },
+    { id: 'life', name: '生活', icon: '🏠', count: 0, isSystem: false },
+    { id: 'idea', name: '灵感', icon: '💡', count: 0, isSystem: false },
+  ],
+  noteSearchText: '',
+  activeNoteTagId: 'all',
+  noteTreeExpandedState: {},
 };
 
 const deepClone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -247,6 +274,8 @@ export interface AppStore extends AppData {
   addTask: (task: { projectId: string; title: string } & Partial<Task>) => Task;
   updateTask: (id: string, updates: Partial<Task>, batchId?: string) => void;
   deleteTask: (id: string) => void;
+  updateSettings: (settings: Partial<Settings>) => void;
+
   moveToUncategorized: (id: string) => void;
   restoreTask: (id: string) => void;
   purgeTrash: () => void;
@@ -279,6 +308,33 @@ export interface AppStore extends AppData {
   deleteRecurringTemplate: (id: string) => void;
   materializeRecurringTasks: () => void;
   migrateLegacyRecurringTasks: () => void;
+  // Note Actions
+  addNote: (note: { title?: string; content: string; tags?: string[] }) => Note;
+  updateNote: (id: string, updates: Partial<Note>) => void;
+  deleteNote: (id: string) => void;
+  toggleNotePin: (id: string) => void;
+
+  // Note Tag Actions
+  addNoteTag: (tag: Omit<NoteTag, 'id' | 'count'>) => NoteTag;
+  updateNoteTag: (id: string, updates: Partial<NoteTag>) => void;
+  deleteNoteTag: (id: string) => void;
+  refreshNoteTagCounts: () => void;
+
+  // Note UI Actions
+  setNoteSearchText: (text: string) => void;
+  setActiveNoteTag: (tagId: string | null) => void;
+  toggleNoteTreeNode: (nodeId: string) => void;
+  setNoteTreeNodeExpanded: (nodeId: string, expanded: boolean) => void;
+
+  // AI Settings Actions
+  addAIProvider: (provider: Omit<AIProviderProfile, 'id'>) => AIProviderProfile;
+  updateAIProvider: (id: string, updates: Partial<AIProviderProfile>) => void;
+  deleteAIProvider: (id: string) => void;
+  setAIActiveProvider: (id: string | undefined) => void;
+  updateAISettings: (settings: Partial<AISettings>) => void;
+
+  restoreData: (backupData: AppData) => void;
+
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 }
@@ -295,6 +351,12 @@ const pickSnapshot = (state: Draft<AppStore>): AppDataSnapshot => ({
   settings: state.settings,
   sortSchemes: state.sortSchemes,
   recurringTemplates: state.recurringTemplates,
+  notes: state.notes,
+  tags: state.tags,
+  // UI state is persisted in snapshot for undo/redo consistency
+  noteSearchText: state.noteSearchText,
+  activeNoteTagId: state.activeNoteTagId,
+  noteTreeExpandedState: state.noteTreeExpandedState,
 });
 
 const withHistory = (set: any, updater: (state: Draft<AppStore>) => void) => {
@@ -588,6 +650,12 @@ export const useAppStore = create<AppStore>()(
           rebuildDictionary(state);
         });
       },
+      updateSettings: (newSettings) => {
+        set(produce((state: AppStore) => {
+          state.settings = { ...state.settings, ...newSettings };
+        }));
+      },
+
       moveToUncategorized: (id) => {
         withHistory(set, (state) => {
           const task = state.tasks.find((t) => t.id === id);
@@ -1135,6 +1203,187 @@ export const useAppStore = create<AppStore>()(
           });
         });
       },
+      restoreData: (backupData: AppData) => {
+        set((state) => ({
+          ...state,
+          ...backupData,
+          tags: backupData.tags || state.tags,
+          noteSearchText: '',
+          activeNoteTagId: 'all',
+          noteTreeExpandedState: {},
+        }));
+      },
+
+      // ==================== Note CRUD ====================
+      addNote: (noteInput: { title?: string; content: string; tags?: string[] }) => {
+        const now = Date.now();
+        const newNote: Note = {
+          id: nanoid(12),
+          title: noteInput.title?.trim() || '',
+          content: noteInput.content,
+          tags: noteInput.tags || [],
+          createdAt: now,
+          updatedAt: now,
+          isPinned: false,
+        };
+
+        set(produce((state: AppStore) => {
+          state.notes.unshift(newNote);
+        }));
+        get().refreshNoteTagCounts();
+        return newNote;
+      },
+
+      updateNote: (id: string, updates: Partial<Note>) => {
+        set(produce((state: AppStore) => {
+          const note = state.notes.find(n => n.id === id);
+          if (!note) return;
+          Object.assign(note, updates);
+          note.updatedAt = Date.now();
+        }));
+        get().refreshNoteTagCounts();
+      },
+
+      deleteNote: (id: string) => {
+        set(produce((state: AppStore) => {
+          state.notes = state.notes.filter(n => n.id !== id);
+        }));
+        get().refreshNoteTagCounts();
+      },
+
+      toggleNotePin: (id: string) => {
+        set(produce((state: AppStore) => {
+          const note = state.notes.find(n => n.id === id);
+          if (note) {
+            note.isPinned = !note.isPinned;
+            note.updatedAt = Date.now();
+          }
+        }));
+      },
+
+      // ==================== Note Tag Actions ====================
+      addNoteTag: (tagInput: Omit<NoteTag, 'id' | 'count'>) => {
+        const newTag: NoteTag = {
+          id: nanoid(10),
+          ...tagInput,
+          count: 0,
+        };
+        set(produce((state: AppStore) => {
+          state.tags.push(newTag);
+        }));
+        return newTag;
+      },
+
+      updateNoteTag: (id: string, updates: Partial<NoteTag>) => {
+        set(produce((state: AppStore) => {
+          const tag = state.tags.find(t => t.id === id);
+          if (tag && !tag.isSystem) {
+            Object.assign(tag, updates);
+          }
+        }));
+      },
+
+      deleteNoteTag: (id: string) => {
+        set(produce((state: AppStore) => {
+          const tag = state.tags.find(t => t.id === id);
+          if (tag && !tag.isSystem) {
+            state.notes.forEach(note => {
+              if (note.tags) {
+                note.tags = note.tags.filter(t => t !== tag.name);
+              }
+            });
+            state.tags = state.tags.filter(t => t.id !== id);
+            if (state.activeNoteTagId === id) {
+              state.activeNoteTagId = 'all';
+            }
+          }
+        }));
+      },
+
+      refreshNoteTagCounts: () => {
+        set(produce((state: AppStore) => {
+          state.tags.forEach(tag => {
+            if (tag.id === 'all') {
+              tag.count = state.notes.length;
+            } else {
+              tag.count = state.notes.filter(n =>
+                n.tags?.includes(tag.name)
+              ).length;
+            }
+          });
+        }));
+      },
+
+      // ==================== Note UI Actions ====================
+      setNoteSearchText: (text: string) => set({ noteSearchText: text }),
+      setActiveNoteTag: (tagId: string | null) => set({ activeNoteTagId: tagId }),
+      toggleNoteTreeNode: (nodeId: string) => {
+        set(produce((state: AppStore) => {
+          if (!state.noteTreeExpandedState) state.noteTreeExpandedState = {};
+          state.noteTreeExpandedState[nodeId] = !state.noteTreeExpandedState[nodeId];
+        }));
+      },
+      setNoteTreeNodeExpanded: (nodeId: string, expanded: boolean) => {
+        set(produce((state: AppStore) => {
+          if (!state.noteTreeExpandedState) state.noteTreeExpandedState = {};
+          state.noteTreeExpandedState[nodeId] = expanded;
+        }));
+      },
+
+      // ==================== AI Settings Actions ====================
+      addAIProvider: (providerInput: Omit<AIProviderProfile, 'id'>) => {
+        const newProvider: AIProviderProfile = {
+          id: nanoid(10),
+          ...providerInput,
+        };
+        set(produce((state: AppStore) => {
+          if (!state.settings.ai) {
+            state.settings.ai = { providers: [], activeProviderId: undefined };
+          }
+          state.settings.ai.providers.push(newProvider);
+          if (state.settings.ai.providers.length === 1) {
+            state.settings.ai.activeProviderId = newProvider.id;
+          }
+        }));
+        return newProvider;
+      },
+
+      updateAIProvider: (id: string, updates: Partial<AIProviderProfile>) => {
+        set(produce((state: AppStore) => {
+          const provider = state.settings.ai?.providers.find(p => p.id === id);
+          if (provider) {
+            Object.assign(provider, updates);
+          }
+        }));
+      },
+
+      deleteAIProvider: (id: string) => {
+        set(produce((state: AppStore) => {
+          if (!state.settings.ai) return;
+          state.settings.ai.providers = state.settings.ai.providers.filter(p => p.id !== id);
+          if (state.settings.ai.activeProviderId === id) {
+            state.settings.ai.activeProviderId = state.settings.ai.providers[0]?.id;
+          }
+        }));
+      },
+
+      setAIActiveProvider: (id: string | undefined) => {
+        set(produce((state: AppStore) => {
+          if (state.settings.ai) {
+            state.settings.ai.activeProviderId = id;
+          }
+        }));
+      },
+
+      updateAISettings: (settings: Partial<AISettings>) => {
+        set(produce((state: AppStore) => {
+          if (!state.settings.ai) {
+            state.settings.ai = { providers: [], activeProviderId: undefined };
+          }
+          Object.assign(state.settings.ai, settings);
+        }));
+      },
+
       setHasHydrated: (val) => {
         set({ _hasHydrated: val } as Partial<AppStore>);
       },
@@ -1320,6 +1569,11 @@ export const useAppStore = create<AppStore>()(
         settings: state.settings,
         sortSchemes: state.sortSchemes,
         recurringTemplates: state.recurringTemplates,
+        notes: state.notes,
+        tags: state.tags,
+        noteSearchText: state.noteSearchText,
+        activeNoteTagId: state.activeNoteTagId,
+        noteTreeExpandedState: state.noteTreeExpandedState,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

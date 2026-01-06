@@ -1,4 +1,4 @@
-import type { AppData, Project, Task, RecurringTemplate, Settings, Dictionary, SortScheme, Filters, GroupBy, SortRule, SavedFilter, ColumnConfig } from '../types';
+import type { AppData, Project, Task, RecurringTemplate, Settings, Dictionary, SortScheme, Filters, GroupBy, SortRule, SavedFilter, ColumnConfig, Note } from '../types';
 
 // 统一版本号
 export const BACKUP_VERSION = '1.2';
@@ -20,6 +20,7 @@ export interface BackupFile {
         sortRules?: SortRule[];
         savedFilters?: SavedFilter[];
         columnConfig?: ColumnConfig;
+        notes?: Note[];
     };
 }
 
@@ -36,6 +37,7 @@ export interface ValidationResult {
         hasSettings: boolean;
         hasRecurringTemplates: boolean;
         recurringTemplateCount: number;
+        noteCount: number;
     };
 }
 
@@ -107,6 +109,7 @@ export const validateBackupFile = (content: string): ValidationResult => {
             hasSettings: !!parsed.data.settings && Object.keys(parsed.data.settings).length > 0,
             hasRecurringTemplates: !!parsed.data.recurringTemplates && parsed.data.recurringTemplates.length > 0,
             recurringTemplateCount: parsed.data.recurringTemplates?.length ?? 0,
+            noteCount: parsed.data.notes?.length ?? 0,
         };
 
         return {
@@ -139,6 +142,7 @@ export const createBackupData = (appData: Partial<AppData>): BackupFile => {
         sortRules: appData.sortRules,
         savedFilters: appData.savedFilters,
         columnConfig: appData.columnConfig,
+        notes: appData.notes ?? [],
     };
 
     const dataString = JSON.stringify(data);

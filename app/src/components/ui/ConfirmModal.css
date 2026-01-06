@@ -1,0 +1,118 @@
+.confirm-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.15s ease-out;
+}
+
+.confirm-modal-content {
+    background: #fff;
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90vw;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    animation: scaleIn 0.15s ease-out;
+}
+
+.confirm-modal-header {
+    padding: 20px 24px 10px;
+}
+
+.confirm-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.confirm-modal-icon {
+    font-size: 20px;
+}
+
+.confirm-modal-body {
+    padding: 0 24px 24px;
+    color: #4b5563;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.confirm-modal-footer {
+    padding: 16px 24px;
+    background: #f9fafb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.confirm-modal-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.confirm-modal-btn.cancel {
+    background: #fff;
+    border-color: #d1d5db;
+    color: #374151;
+}
+
+.confirm-modal-btn.cancel:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.confirm-modal-btn.confirm.primary {
+    background: var(--primary, #ec4899);
+    color: white;
+}
+
+.confirm-modal-btn.confirm.primary:hover {
+    filter: brightness(1.1);
+}
+
+.confirm-modal-btn.confirm.danger {
+    background: #ef4444;
+    color: white;
+}
+
+.confirm-modal-btn.confirm.danger:hover {
+    background: #dc2626;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

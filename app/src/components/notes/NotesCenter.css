@@ -1,0 +1,1684 @@
+﻿/* ==================== NotesCenter 样式 - v2.0 重构版 ==================== */
+
+/* 根容器 */
+.notes-center-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg);
+  font-family: inherit;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* ==================== 顶部标题栏 - 优化版 (44px) ==================== */
+
+.notes-center-header {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--primary);
+  box-shadow: var(--shadow-card);
+  flex-shrink: 0;
+}
+
+.notes-center-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+
+.notes-center-title svg {
+  opacity: 0.95;
+}
+
+.notes-center-title-text {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.notes-center-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 胶囊按钮适配 */
+.notes-center-header .btn {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 13px;
+  padding: 0 12px;
+  /* Fixed height for uniformity */
+  height: 32px;
+  /* Flex layout for centering content */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.notes-center-header .btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.notes-center-header .btn.active {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ==================== 主内容区 ==================== */
+
+.notes-center-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 左侧边栏 (280px) */
+.notes-center-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 中间编辑区 */
+.notes-center-editor {
+  flex: 1;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 右侧 AI 面板 (320px) */
+.notes-center-ai-panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ==================== NotesSidebar 样式 ==================== */
+
+.notes-sidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-sidebar-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* 之前的新建按钮区域已移除，释放空间 */
+
+/* ==================== NotesSearch 样式 ==================== */
+
+.notes-search {
+  padding: 8px 12px;
+  /* 移除底部边框，与 Toolbar 融为一体 */
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+}
+
+.notes-search svg {
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+.notes-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.notes-search input::placeholder {
+  color: var(--text-subtle);
+}
+
+.notes-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notes-search-clear:hover {
+  background: var(--hover-bg);
+  color: var(--text-main);
+}
+
+/* ==================== NotesToolbar 样式 ==================== */
+
+.notes-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.notes-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.notes-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0 8px;
+}
+
+.notes-toolbar-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-main);
+}
+
+.notes-toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 胶囊按钮 - 写今天 (增强版) */
+.notes-toolbar-btn.primary {
+  flex: 1;
+  width: auto;
+  padding: 0 16px;
+  border-radius: 20px;
+  /* 使用渐变背景 */
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: white;
+  border: none;
+  font-weight: 700;
+  gap: 8px;
+  font-size: 14px;
+  /* 增加字体大小 */
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+  /* 增加阴影 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notes-toolbar-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.4);
+}
+
+.notes-toolbar-btn.primary:active {
+  transform: translateY(0);
+}
+
+/* ==================== NotesCalendar 样式 - 超紧凑 (160px) ==================== */
+
+.notes-sidebar-calendar-container {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notes-calendar {
+  width: 100%;
+}
+
+.notes-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.notes-calendar-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notes-calendar-nav-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-main);
+}
+
+.notes-calendar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.notes-calendar-today-btn {
+  width: 100%;
+  padding: 3px;
+  margin-bottom: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notes-calendar-today-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.notes-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  margin-bottom: 1px;
+}
+
+.notes-calendar-weekday {
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  padding: 2px 0;
+}
+
+.notes-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+/* 超紧凑日期单元格 */
+.notes-calendar-day {
+  position: relative;
+  height: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 1px;
+}
+
+.notes-calendar-day-number {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.notes-calendar-day.other-month .notes-calendar-day-number {
+  color: var(--text-subtle);
+  opacity: 0.4;
+}
+
+.notes-calendar-day:hover {
+  background: var(--hover-bg);
+}
+
+.notes-calendar-day.today {
+  background: var(--primary);
+}
+
+.notes-calendar-day.today .notes-calendar-day-number {
+  color: white;
+  font-weight: 600;
+}
+
+.notes-calendar-day.selected {
+  background: var(--primary-soft);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+.notes-calendar-day.selected .notes-calendar-day-number {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.notes-calendar-day-dot {
+  position: absolute;
+  bottom: 2px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.notes-calendar-day.today .notes-calendar-day-dot,
+.notes-calendar-day.selected .notes-calendar-day-dot {
+  background: white;
+}
+
+.notes-calendar-clear-btn {
+  width: 100%;
+  padding: 4px;
+  margin-top: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notes-calendar-clear-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ==================== NotesTags 样式 ==================== */
+
+.notes-tags {
+  border-bottom: 1px solid var(--border);
+  padding: 8px;
+}
+
+.notes-tags-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.notes-tags-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.notes-tags-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notes-tags-add:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.notes-tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notes-tag-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  /* 更紧凑的 padding */
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  font-size: 11px;
+  /* 字体缩小到 11px */
+  transition: all 0.2s;
+  color: var(--text-main);
+}
+
+.notes-tag-item:hover {
+  background: var(--hover-bg);
+}
+
+.notes-tag-item.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.notes-tag-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.notes-tag-name {
+  flex: 1;
+}
+
+.notes-tag-count {
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+/* ==================== NotesTree 样式 ==================== */
+
+.notes-sidebar-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.notes-tree {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  /* 更紧凑的 padding */
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  /* 字体缩小到 12px */
+  color: var(--text-main);
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.tree-node:hover {
+  background: var(--hover-bg);
+}
+
+.tree-node.selected {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.tree-toggle {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+.tree-toggle-spacer {
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.tree-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.tree-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-tags {
+  display: flex;
+  gap: 4px;
+}
+
+.tree-tag {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.tree-count {
+  font-size: 11px;
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+/* .tree-children: 子节点通过 padding-left 实现缩进，在 TreeNode 组件的 style 中设置 */
+
+/* ==================== 底部功能区 ==================== */
+
+.notes-sidebar-footer {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.notes-footer-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-main);
+  transition: all 0.2s;
+}
+
+.notes-footer-item:hover {
+  background: var(--hover-bg);
+}
+
+.notes-footer-badge {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+/* ==================== NoteEditor 样式 ==================== */
+
+.note-editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 32px;
+}
+
+.note-editor-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-subtle);
+  gap: 20px;
+  padding: 40px;
+  text-align: center;
+}
+
+.note-editor-empty-icon {
+  width: 120px;
+  height: 120px;
+  color: var(--border);
+  opacity: 0.5;
+  margin-bottom: 20px;
+}
+
+.note-editor-empty h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.note-editor-empty p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+.note-editor-empty-btn {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);
+  transition: all 0.2s;
+}
+
+.note-editor-empty-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.3);
+  background: var(--primary-hover);
+}
+
+.note-editor-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-main);
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  padding: 8px 0;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+  transition: border-color 0.2s;
+}
+
+.note-editor-title:focus {
+  border-color: var(--primary);
+}
+
+.note-editor-title::placeholder {
+  color: var(--text-subtle);
+  opacity: 0.5;
+}
+
+.note-editor-content {
+  flex: 1;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-main);
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  padding: 0;
+}
+
+.note-editor-content::placeholder {
+  color: var(--text-subtle);
+  opacity: 0.5;
+}
+
+.note-editor-footer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.note-editor-meta {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.note-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ==================== AIAssistantPanel 样式 ==================== */
+
+.ai-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-panel-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.ai-panel-title svg {
+  color: var(--primary);
+}
+
+.ai-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.ai-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-subtle);
+  gap: 12px;
+}
+
+.ai-panel-generate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-soft);
+}
+
+.ai-panel-generate-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-float);
+}
+
+.ai-panel-generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* [REMOVED DUPLICATE AI SETTINGS STYLES] */
+
+/* ==================== ContextMenu 右键菜单样式 ==================== */
+
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+  animation: fadeIn 0.1s ease-out;
+}
+
+.context-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-main);
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.context-menu-item:hover:not(.disabled) {
+  background: var(--hover-bg);
+}
+
+.context-menu-item.danger {
+  color: var(--danger);
+}
+
+.context-menu-item.danger:hover:not(.disabled) {
+  background: var(--danger-soft);
+}
+
+.context-menu-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.context-menu-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--border);
+}
+
+/* ==================== NoteEditor 增强样式 ==================== */
+
+.note-editor-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.note-editor-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.note-editor-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.note-editor-status.saving {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.note-editor-status.saving svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.note-editor-status.saved {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.note-editor-status.unsaved {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.note-editor-created {
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+/* ==================== TagEditorModal 标签编辑器样式 ==================== */
+
+.tag-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.tag-editor-modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  width: 480px;
+  max-height: 70vh;
+  overflow: hidden;
+  box-shadow: var(--shadow-modal);
+  border: 1px solid var(--border);
+  animation: slideUp 0.2s ease-out;
+}
+
+.tag-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tag-editor-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.tag-editor-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-editor-close:hover {
+  background: var(--hover-bg);
+  color: var(--text-main);
+}
+
+.tag-editor-body {
+  padding: 20px;
+  max-height: calc(70vh - 70px);
+  overflow-y: auto;
+}
+
+.tag-editor-new {
+  margin-bottom: 24px;
+}
+
+.tag-editor-new h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tag-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tag-editor-icon-picker {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tag-editor-icon-selected {
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.tag-editor-icon-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-editor-icon-btn {
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-editor-icon-btn:hover {
+  background: var(--hover-bg);
+  transform: scale(1.1);
+}
+
+.tag-editor-icon-btn.active {
+  background: var(--primary-soft);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+.tag-editor-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.tag-editor-input-group input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--text-main);
+  background: var(--bg);
+  transition: all 0.2s;
+}
+
+.tag-editor-input-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.tag-editor-list h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tag-editor-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.tag-editor-item:hover {
+  background: var(--hover-bg);
+  border-color: var(--primary-soft);
+}
+
+.tag-editor-item-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.tag-editor-item-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.tag-editor-item-count {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.tag-editor-item-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.tag-editor-item-delete {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-editor-item-delete:hover {
+  background: var(--danger-soft);
+}
+
+/* ==================== NotesToolbar 快捷导航栏样式 ==================== */
+
+.notes-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.notes-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.notes-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-main);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  gap: 6px;
+}
+
+.notes-toolbar-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--primary-soft);
+  color: var(--primary);
+}
+
+.notes-toolbar-btn.primary {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: transparent;
+  width: 100%;
+  flex: 1;
+}
+
+.notes-toolbar-btn.primary:hover:not(:disabled) {
+  background: var(--primary);
+  color: white;
+}
+
+.notes-toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg);
+  color: var(--text-subtle);
+}
+
+.notes-toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* 树形结构视觉优化 */
+/* 树形结构视觉优化 */
+.notes-tree {
+  /* 移除粗暴的背景辅助线，改为纯净的树形列表 */
+  padding-bottom: 20px;
+}
+
+/* [REMOVED FINAL TRACES OF DUPLICATE AI SETTINGS STYLES] */
+
+/* ==================== AI Panel Styles ==================== */
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-subtle);
+  border-left: 1px solid var(--border);
+}
+
+.ai-panel-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ai-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.ai-panel-settings-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.ai-panel-settings-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-main);
+}
+
+.ai-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-panel-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-subtle);
+  text-align: center;
+  gap: 16px;
+}
+
+.ai-icon-bg {
+  width: 56px;
+  height: 56px;
+  background: var(--bg-surface);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+
+.ai-subtext {
+  font-size: 13px;
+  color: var(--text-subtle);
+  max-width: 240px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.ai-tip {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  margin-top: 10px;
+}
+
+.ai-panel-generate-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--primary), #8b5cf6);
+  /* Gradient for magic feel */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  margin-top: 16px;
+}
+
+.ai-panel-generate-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+
+.ai-panel-generate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--text-subtle);
+  box-shadow: none;
+}
+
+.ai-loading-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.ai-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ai-loading-tip {
+  font-size: 12px;
+  color: var(--text-subtle);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
+}
+
+.ai-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-results-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-tasks-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.ai-error-banner {
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #fecaca;
+  margin-bottom: 16px;
+}
+
+.ai-success-banner {
+  background: #ecfdf5;
+  color: #10b981;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #a7f3d0;
+  margin-bottom: 16px;
+}
+
+.ai-project-select {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  min-width: 120px;
+  cursor: pointer;
+  height: 32px;
+}
+
+.ai-project-select:hover {
+  border-color: var(--border-hover);
+}
+
+/* ==================== AI 加载进度条样式 ==================== */
+
+/* 阶段指示器 */
+.ai-stages-indicator {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding: 0 8px;
+  position: relative;
+  width: 100%;
+}
+
+.ai-stage-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 55px;
+  max-width: 70px;
+  position: relative;
+}
+
+/* 连接线 */
+.ai-stage-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: calc(50% + 28px);
+  width: 55px;
+  height: 2px;
+  background: #d1d5db;
+  z-index: 0;
+}
+
+.ai-stage-item.completed:not(:last-child)::after {
+  background: var(--primary);
+}
+
+/* 阶段图标 */
+.ai-stage-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 2px solid #d1d5db;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.ai-stage-item.active .ai-stage-icon {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  animation: pulse 1.5s infinite;
+}
+
+.ai-stage-item.completed .ai-stage-icon {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.ai-stage-icon svg {
+  color: #9ca3af;
+  transition: color 0.3s ease;
+}
+
+.ai-stage-item.active .ai-stage-icon svg {
+  color: var(--primary);
+}
+
+.ai-stage-item.completed .ai-stage-icon svg {
+  color: white;
+}
+
+.ai-stage-name {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.ai-stage-item.active .ai-stage-name {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 进度条容器 */
+.ai-progress-container {
+  margin: 16px 0 12px;
+  width: 100%;
+  position: relative;
+}
+
+/* 百分比显示在上方 */
+.ai-progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.ai-progress-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.ai-progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.ai-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #8b5cf6);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+/* 加载文本 */
+.ai-loading-text {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 12px 0 8px;
+  color: var(--text-main);
+}
+
+/* 时间信息 */
+.ai-time-info {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+
+.ai-elapsed {
+  color: var(--text-subtle);
+}
+
+.ai-estimated {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* 提示文字 */
+.ai-loading-tip {
+  font-size: 13px;
+  color: var(--text-subtle);
+  display: block;
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+/* 取消按钮 */
+.ai-cancel-btn {
+  margin-top: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(124, 58, 237, 0);
+  }
+}

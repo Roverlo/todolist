@@ -203,10 +203,11 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
                 ...(backupData.data.sortRules && { sortRules: backupData.data.sortRules }),
                 ...(backupData.data.savedFilters && { savedFilters: backupData.data.savedFilters }),
                 ...(backupData.data.columnConfig && { columnConfig: backupData.data.columnConfig }),
+                notes: backupData.data.notes || [],
             });
 
             setStatus('success');
-            let successMessage = `✅ 恢复成功！\n\n📊 已恢复：\n• ${pendingRestore.preview?.projectCount ?? 0} 个项目\n• ${pendingRestore.preview?.taskCount ?? 0} 条任务`;
+            let successMessage = `✅ 恢复成功！\n\n📊 已恢复：\n• ${pendingRestore.preview?.projectCount ?? 0} 个项目\n• ${pendingRestore.preview?.taskCount ?? 0} 条任务\n• ${pendingRestore.preview?.noteCount ?? 0} 条笔记`;
 
             if (autoBackupPath) {
                 successMessage += `\n\n💾 原数据已自动备份到：\n${autoBackupPath}`;
@@ -254,7 +255,7 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
                         <div className='create-dialog-title-block'>
                             <div className='create-dialog-title'>数据备份与恢复</div>
                             <div className='create-dialog-subtitle'>
-                                导出或导入您的任务数据（v{BACKUP_VERSION}）
+                                导出或导入您的数据（任务、笔记）v{BACKUP_VERSION}
                             </div>
                         </div>
                         <button

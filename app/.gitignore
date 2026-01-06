@@ -25,3 +25,6 @@ dist-ssr
 
 # WebView2 Fixed Runtime
 src-tauri/webview2/
+
+target/
+src-tauri/target/

@@ -30,6 +30,7 @@ import { StatsCard } from './components/ui/StatsCard';
 import { CloseConfirmModal } from './components/ui/CloseConfirmModal';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
+import { NotesCenter } from './components/notes';
 
 function App() {
   useAutoBackup(); // 启动自动备份 hook
@@ -55,6 +56,7 @@ function App() {
   const [cloudSyncOpen, setCloudSyncOpen] = useState(false);
   const [recurringManagerOpen, setRecurringManagerOpen] = useState(false);
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
+  const [notesCenterOpen, setNotesCenterOpen] = useState(false);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const settings = useAppStore((state) => state.settings);
   const undo = useAppStore((state) => state.undo);
@@ -499,6 +501,15 @@ function App() {
                 >
                   ⚙️ 设置
                 </button>
+                <button
+                  className='btn btn-light'
+                  onClick={() => setNotesCenterOpen(true)}
+                  aria-label='随记中心'
+                  title='随记中心 - 记录灵感，AI 生成任务'
+                  style={{ marginLeft: 4 }}
+                >
+                  📝 随记
+                </button>
 
               </>
             )}
@@ -610,6 +621,9 @@ function App() {
         onCloudSync={() => setCloudSyncOpen(true)}
         onRecurringTasks={() => setRecurringManagerOpen(true)}
       />
+      {notesCenterOpen && (
+        <NotesCenter onClose={() => setNotesCenterOpen(false)} />
+      )}
     </div>
   );
 }

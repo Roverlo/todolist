@@ -31,7 +31,10 @@
       "identifier": "http:default",
       "allow": [
         {
-          "url": "https://update.xiaohulp.sbs/*"
+          "url": "https://**"
+        },
+        {
+          "url": "http://**"
         }
       ]
     },

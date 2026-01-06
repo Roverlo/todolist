@@ -194,6 +194,7 @@ export interface Settings {
   // 到期提醒设置
   dueReminderEnabled?: boolean; // 是否启用到期提醒，默认 true
   dueReminderSnoozeUntil?: string; // 暂时不提醒，直到该时间（ISO 格式）
+  ai?: AISettings; // AI 设置
 }
 
 export interface AutoBackupConfig {
@@ -228,6 +229,88 @@ export interface AppData {
   settings: Settings;
   sortSchemes: SortScheme[];
   recurringTemplates: RecurringTemplate[];
+  notes: Note[];
+  tags: NoteTag[];           // 笔记标签系统
+  aiSettings?: AISettings;   // AI 设置
+  noteSearchText?: string;
+  activeNoteTagId?: string | null;
+  noteTreeExpandedState?: Record<string, boolean>;
 }
 
 export type AppDataSnapshot = Omit<AppData, never>;
+
+// ==================== Note Types ====================
+
+export interface Note {
+  id: string;
+  title: string;          // 可选标题，默认为空
+  content: string;        // 笔记内容
+  tags?: string[];        // 标签数组
+  createdAt: number;      // 创建时间戳
+  updatedAt: number;      // 更新时间戳
+  isPinned?: boolean;     // 是否置顶
+}
+
+export interface NoteTag {
+  id: string;
+  name: string;
+  icon: string;           // Emoji 图标
+  color?: string;         // 高亮颜色
+  count: number;          // 该标签的笔记数
+  isSystem: boolean;      // 是否为系统标签（如"全部"）
+}
+
+export type NoteTreeNodeType = 'root' | 'pinned-group' | 'year' | 'month' | 'note';
+
+export interface NoteTreeNode {
+  id: string;
+  type: NoteTreeNodeType;
+  label: string;
+  icon: string;
+  children?: NoteTreeNode[];
+  collapsed: boolean;
+  selected?: boolean;
+  count: number;
+  noteId?: string;        // 对应的笔记ID（type=note 时）
+  tags?: string[];        // 笔记标签（type=note 时）
+  date?: string;          // ISO date string (type=year/month)
+}
+
+// ==================== AI Types ====================
+
+export type AIProviderType = 'deepseek' | 'openai' | 'qwen' | 'custom' | 'gemini' | 'anthropic' | 'moonshot' | 'yi';
+
+export interface AIProviderProfile {
+  id: string;
+  type: AIProviderType;
+  name: string;           // 显示名称
+  apiKey?: string;        // API Key
+  apiEndpoint?: string;   // 自定义端点
+  model?: string;         // 模型名称
+}
+
+export interface AISettings {
+  activeProviderId?: string;
+  providers: AIProviderProfile[];
+}
+
+export interface AIGeneratedTask {
+  title: string;
+  notes?: string;         // 备注/描述
+  priority?: Priority;
+  dueDate?: string;       // YYYY-MM-DD
+  owner?: string;
+  nextStep?: string;            // 下一步计划
+  isRecurring?: boolean;        // 是否为周期任务
+  recurringHint?: string;       // 周期提示（如 "每周五"）
+  suggestedProject?: string;    // AI 推荐的项目名
+  projectId?: string;           // 用户选择的项目 ID
+  subtasks?: AIGeneratedSubtask[];
+  selected?: boolean;     // 用户选择状态
+}
+
+export interface AIGeneratedSubtask {
+  title: string;
+  dueDate?: string;
+  owner?: string;
+}
