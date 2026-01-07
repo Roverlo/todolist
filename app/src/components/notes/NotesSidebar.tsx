@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../../state/appStore';
 import dayjs from 'dayjs';
-import { Icon } from '../ui/Icon';
+
 import { NotesCalendar } from './NotesCalendar';
 import { NotesTags } from './NotesTags';
 import { NotesTree } from './NotesTree';
 import { NotesSearch } from './NotesSearch';
 import { NotesToolbar } from './NotesToolbar';
+import { Icon } from '../ui/Icon';
 import type { Note, NoteTreeNode } from '../../types';
 
 interface NotesSidebarProps {
@@ -23,13 +24,16 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
     const treeExpandedState = useAppStore((state) => state.noteTreeExpandedState) || {};
     const toggleTreeNode = useAppStore((state) => state.toggleNoteTreeNode);
     const setTreeNodeExpanded = useAppStore((state) => state.setNoteTreeNodeExpanded);
+    const noteViewMode = useAppStore((state) => state.noteViewMode);
+    const setNoteViewMode = useAppStore((state) => state.setNoteViewMode);
+    const deletedNotesCount = useAppStore((state) => state.notes.filter(n => n.deletedAt).length);
 
     const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
     const [currentMonth, setCurrentMonth] = useState(dayjs().startOf('month'));
 
     // 筛选笔记
     const filteredNotes = useMemo(() => {
-        let result = [...notes];
+        let result = notes.filter(n => !n.deletedAt);
 
         // 按日期筛选
         if (selectedDate) {
@@ -41,11 +45,16 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
 
         // 按标签筛选
         if (activeTagId && activeTagId !== 'all') {
-            const tag = tags.find(t => t.id === activeTagId);
-            if (tag) {
-                result = result.filter(note =>
-                    note.tags?.includes(tag.name)
-                );
+            if (activeTagId === 'uncategorized') {
+                // 未分类：没有任何标签的笔记
+                result = result.filter(note => !note.tags || note.tags.length === 0);
+            } else {
+                const tag = tags.find(t => t.id === activeTagId);
+                if (tag) {
+                    result = result.filter(note =>
+                        note.tags?.includes(tag.name)
+                    );
+                }
             }
         }
 
@@ -176,12 +185,18 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                 />
             </div>
 
+
             {/* 回收站 */}
             <div className="notes-sidebar-footer">
-                <button className="notes-footer-item">
+                <button
+                    className={`notes-footer-item ${noteViewMode === 'trash' ? 'active' : ''}`}
+                    onClick={() => setNoteViewMode('trash')}
+                >
                     <Icon name="trash" size={16} />
                     <span>回收站</span>
-                    <span className="notes-footer-badge">0</span>
+                    <span className="notes-footer-badge">
+                        {deletedNotesCount}
+                    </span>
                 </button>
             </div>
         </div>

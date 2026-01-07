@@ -282,7 +282,7 @@ body {
   padding: 12px 8px 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 8px;
   overflow-y: auto;
   width: 260px;
   transition: background-color 0.3s ease, border-color 0.3s ease, width 0.2s ease;
@@ -290,12 +290,8 @@ body {
 }
 
 /* 侧边栏折叠按钮 */
+/* 侧边栏折叠按钮 - Unified styles */
 .sidebar-collapse-btn {
-  position: absolute;
-  top: 10px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
   border: none;
   border-radius: 4px;
   background: var(--surface);
@@ -310,6 +306,166 @@ body {
   z-index: 10;
 }
 
+/* 新侧边栏头部区域 */
+
+/* Sidebar Utility Row (About + Collapse) */
+.sidebar-utility-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+  margin: 0 8px;
+  /* Compact margin - no extra vertical space */
+}
+
+/* 扩展状态下的折叠按钮 - Added Border */
+.sidebar-collapse-btn.expanded {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--text-subtle);
+  margin-left: auto;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  /* Visible border */
+}
+
+.custom-about-tooltip {
+  /* Portal positioning handled inline */
+  background: var(--surface);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  /* Stronger shadow */
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  min-width: 300px;
+  max-width: 400px;
+  /* Increased further */
+  white-space: normal !important;
+  word-break: break-all !important;
+  /* Force break any char */
+  overflow-wrap: break-word !important;
+  animation: fadeIn 0.15s ease-out;
+  line-height: 1.6;
+}
+
+.tooltip-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltip-label {
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+
+.tooltip-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 8px 0;
+  opacity: 0.5;
+}
+
+.tooltip-desc {
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-align: justify;
+}
+
+.tooltip-names {
+  font-weight: 500;
+  color: var(--text-main);
+  word-break: break-all;
+}
+
+.about-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-subtle);
+  cursor: pointer;
+  background-color: var(--surface);
+  /* Always visible */
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  /* Subtle border */
+  padding: 4px 10px;
+  /* More padding for pill shape */
+  border-radius: 999px;
+  /* Full capsule shape */
+  transition: all 0.2s;
+}
+
+.about-pill:hover {
+  background-color: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary-soft);
+}
+
+.about-text-label {
+  font-weight: 500;
+}
+
+.custom-about-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: var(--surface);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 100;
+  white-space: nowrap;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 扩展状态下的折叠按钮 */
+.sidebar-collapse-btn.expanded {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--text-subtle);
+  margin-left: auto;
+  /* Ensure it stays right if flex behavior changes */
+}
+
+.sidebar-collapse-btn.expanded:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+
+
+/* 折叠状态下的折叠按钮 */
+.sidebar-collapse-btn.collapsed-state {
+  width: 24px;
+  height: 24px;
+  margin: 0 auto;
+}
+
 .sidebar-collapse-btn:hover {
   background: var(--primary-soft);
   color: var(--primary);
@@ -317,15 +473,41 @@ body {
 
 /* 侧边栏折叠状态 */
 .sidebar.collapsed {
-  width: 48px !important;
-  min-width: 48px !important;
-  padding: 10px 6px;
+  width: 28px !important;
+  min-width: 28px !important;
+  padding: 8px 4px;
 }
 
-.sidebar.collapsed .sidebar-collapse-btn {
-  position: static;
-  margin: 0 auto;
+/* 收起状态下的展开按钮容器 */
+.sidebar-collapsed-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0;
 }
+
+/* 收起状态下的展开按钮 */
+.sidebar-collapse-btn.collapsed {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  background: transparent;
+  color: var(--text-subtle);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-collapse-btn.collapsed:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+
+
 
 /* 当侧边栏折叠时，app 的 main 需要调整 */
 .app.sidebar-collapsed .main {
@@ -528,12 +710,31 @@ body {
   font-size: 12px;
 }
 
+.project-create-row .input::placeholder {
+  font-size: 11px;
+  color: #c0c4cc;
+}
+
 .project-create-btn {
   height: 26px;
   padding: 0 10px;
   border-radius: 999px;
   font-size: 11px;
   min-width: 54px;
+  border: 1px solid var(--primary) !important;
+  color: var(--primary);
+  background: transparent;
+}
+
+.project-create-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: white;
+}
+
+.project-create-btn:disabled {
+  border-color: var(--border) !important;
+  color: var(--text-subtle);
+  cursor: not-allowed;
 }
 
 .input-row {
@@ -1311,15 +1512,16 @@ body {
 
 .filter-control {
   width: 100%;
-  height: 30px;
+  height: 36px;
   border-radius: 999px;
   border: 1px solid var(--border-subtle);
-  padding: 0 10px;
-  font-size: 12px;
+  padding: 0 12px;
+  font-size: 13px;
   outline: none;
   background: #f9fafb;
   color: var(--text-main);
   appearance: none;
+  transition: all 0.15s ease;
 }
 
 .filter-control:focus {
@@ -6195,4 +6397,147 @@ body {
 .tag-priority-btn:disabled {
   cursor: default;
   opacity: 0.7;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               Sidebar Adjustments                          */
+/* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+/*                               Sidebar Switcher (Segmented Control)         */
+/* -------------------------------------------------------------------------- */
+
+.sidebar-switcher {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  background-color: rgba(0, 0, 0, 0.04);
+  /* Track background */
+  border-radius: 12px;
+  margin-bottom: 2px;
+  /* Further reduced */
+  margin-top: 2px;
+  /* Minimized */
+  gap: 2px;
+  padding: 3px;
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+}
+
+.view-switch-item {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  /* Reduced from 40px */
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* -------------------- Inactive State -------------------- */
+.view-switch-item.inactive {
+  background-color: transparent;
+  color: var(--text-secondary);
+  /* Darker gray for readability */
+}
+
+.view-switch-item.inactive:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: var(--text-main);
+}
+
+.view-switch-item.inactive .task-icon-circle {
+  background-color: rgba(0, 0, 0, 0.06);
+  /* Light gray background */
+  color: var(--text-secondary);
+  /* Gray text */
+}
+
+/* -------------------- Active State (High Contrast) -------------------- */
+.view-switch-item.active {
+  background-color: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+}
+
+/* Optional: To make it pop more like a button */
+.view-switch-item.active {
+  background: var(--surface);
+  color: var(--primary);
+}
+
+/* Explicitly style the active icon circle */
+.view-switch-item.active .task-icon-circle {
+  background-color: var(--primary);
+  color: #ffffff;
+  /* Always white text on primary background */
+}
+
+/* Icons within Switcher */
+.view-switch-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.task-icon-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+/* Text Labels */
+.view-switch-label {
+  font-size: 14px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+/* Collapsed State Overrides */
+.sidebar-collapsed .sidebar-switcher {
+  background-color: transparent;
+  flex-direction: column;
+  padding: 0;
+  border: none;
+  gap: 12px;
+}
+
+.sidebar-collapsed .view-switch-item {
+  width: 40px;
+  /* Square when collapsed */
+  padding: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.sidebar-collapsed .view-switch-item.active {
+  background-color: var(--primary-soft);
+  color: var(--primary);
+}
+
+.sidebar-collapsed .view-switch-item.inactive:hover {
+  background-color: var(--hover-bg);
+}
+
+.sidebar-collapsed .view-switch-label {
+  display: none;
 }

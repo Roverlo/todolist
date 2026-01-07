@@ -8,7 +8,9 @@ Output:
 A JSON object containing an array of tasks with comprehensive information.
 
 Rules:
-1. **Language**: Always output in **Simplified Chinese (zh-CN)**, unless the note content is primarily in another language (e.g. English). Preserving specific English technical terms is allowed.
+1. **Language & Text Fidelity**: 
+   - Always output in **Simplified Chinese (zh-CN)**.
+   - **STRICTLY FORBIDDEN**: Do NOT change specific nouns or verbs. Do NOT perform "homophone correction" (e.g. do NOT change "郊游" to "交友"). Preserve the original text's meaning and wording as much as possible.
 
 2. **Task Identification**: Identify actionable items. Ignore general observations unless they imply a task.
 

@@ -46,15 +46,10 @@ Copy-Item $exePath $outputPath -Force
 
 # Create Changelog
 Write-Host "Creating changelog..." -ForegroundColor Yellow
-$changeLogContent = @"
-版本: $Version
-时间: $timestamp
-更新内容:
-- 【交互优化】重构笔记删除交互：替换原生弹窗为自定义粉色主题确认框，视觉风格更统一。
-- 【核心修复】修复笔记“先斩后奏”问题：只有在点击确认后才会执行删除操作，杜绝误删风险。
-- 【UI美化】统一全站弹窗设计语言，提升整体精致度。
-"@
-Set-Content -Path $logPath -Value $changeLogContent -Encoding UTF8
+# Create Changelog
+Write-Host "Creating changelog..." -ForegroundColor Yellow
+$changeLogScript = Join-Path $scriptDir "create-changelog.js"
+node $changeLogScript $logPath $Version $timestamp
 
 # Get file info
 $fileInfo = Get-Item $outputPath

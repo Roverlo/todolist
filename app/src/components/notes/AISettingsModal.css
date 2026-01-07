@@ -258,7 +258,7 @@
     flex-direction: column;
     gap: 6px;
     width: 100% !important;
-    max-width: none !important;
+    max-width: 650px !important;
     min-width: 0 !important;
     /* Ensure no flex shrink below content */
     flex-shrink: 0;
@@ -385,23 +385,22 @@
     margin: 0;
 }
 
-/* Footer - 独立于 form，固定在底部 */
+/* Footer - 单行布局 */
 .ai-settings-footer {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding: 20px 32px;
+    gap: 12px;
+    padding: 16px 32px;
     border-top: 1px solid #e5e7eb;
-    background: #ffffff;
+    background: #fafafa;
     flex-shrink: 0;
 }
 
 .ai-footer-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     width: 100%;
-    gap: 12px;
+    gap: 16px;
 }
 
 /* 测试区域优化 */
@@ -451,17 +450,22 @@
 }
 
 .ai-settings-footer .btn-danger-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: #ef4444;
     background: transparent;
-    border: none;
-    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 8px 12px;
     font-size: 13px;
     cursor: pointer;
-    margin-right: auto;
+    transition: all 0.2s;
 }
 
 .ai-settings-footer .btn-danger-ghost:hover {
-    text-decoration: underline;
+    background: #fef2f2;
+    border-color: #fecaca;
 }
 
 .ai-settings-footer .btn-test {
@@ -532,6 +536,9 @@
 .ai-settings-footer .btn-primary {
     margin-left: auto;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 /* Button Overrides */

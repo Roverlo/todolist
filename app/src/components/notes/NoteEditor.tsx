@@ -1,63 +1,107 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
 import type { Note } from '../../types';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import TextAlign from '@tiptap/extension-text-align';
+import Image from '@tiptap/extension-image';
+import Placeholder from '@tiptap/extension-placeholder';
+import { FontSize } from './extensions/FontSize';
+import { EditorToolbar } from './EditorToolbar';
+import { NoteTagSelector } from './NoteTagSelector';
+import './RichTextEditor.css';
 
 interface NoteEditorProps {
     note: Note | null;
-    onSave: (title: string, content: string) => void;
+    onSave: (title: string, content: string, tags?: string[]) => void;
     onCreate?: () => void;
 }
 
 export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
     const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
+    const [tags, setTags] = useState<string[]>([]);
     const [hasChanges, setHasChanges] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
     const [lastSaved, setLastSaved] = useState<number | null>(null);
+    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
-    // 同步 note 数据
+    useEffect(() => {
+        setPortalTarget(document.getElementById('editor-toolbar-portal'));
+    }, []);
+
+    const editor = useEditor({
+        extensions: [
+            StarterKit,
+            Underline,
+            TextStyle,
+            FontSize,
+            Color,
+            Highlight.configure({
+                multicolor: true,
+            }),
+            TextAlign.configure({
+                types: ['heading', 'paragraph'],
+            }),
+            Image,
+            Placeholder.configure({
+                placeholder: '在此记录你的想法...\n\n💡 提示：\n- 支持 Markdown 快捷键\n- Ctrl+S 快速保存',
+            }),
+        ],
+        content: '',
+        onUpdate: () => {
+            setHasChanges(true);
+            setSaveStatus('unsaved');
+        },
+    });
+
+    // Sync note data with state and editor
     useEffect(() => {
         if (note) {
-            // 如果只有本地有变更且是同一个笔记，保留本地内容？
-            // 简单起见，切换笔记时总是重置为 note 内容
-            // 但为了防止自动保存前的瞬间切换导致丢数据，理想情况下父组件切换时应强制保存
-            // 目前假设父组件切换前会触发 onBlur 或其他机制，或者依靠 debounced save
-
-            // 为了避免输入时被 note 更新打断，只有 ID 变化时才重置
-            // 但 note 对象引用变化可能太频繁，这里假设 note 只在切换或保存后更新
             setTitle(note.title || '');
-            setContent(note.content);
+            setTags(note.tags || []);
+            if (editor && note.id) {
+                editor.commands.setContent(note.content, { emitUpdate: false });
+            }
             setHasChanges(false);
             setSaveStatus('saved');
             setLastSaved(note.updatedAt);
         } else {
             setTitle('');
-            setContent('');
+            setTags([]);
+            editor?.commands.setContent('', { emitUpdate: false });
             setHasChanges(false);
             setSaveStatus('saved');
             setLastSaved(null);
         }
-    }, [note?.id]); // ⚠️ 关键：只在 ID 变化时重置，避免打字时重置
+    }, [note?.id, editor]); // Only when note ID changes
 
     const handleSave = useCallback(() => {
+        if (!editor) return;
+
         setSaveStatus('saving');
-        onSave(title, content);
+        const contentHtml = editor.getHTML();
+        onSave(title, contentHtml, tags);
         setHasChanges(false);
         setTimeout(() => {
             setSaveStatus('saved');
             setLastSaved(Date.now());
         }, 500);
-    }, [title, content, onSave]);
+    }, [title, tags, editor, onSave]);
 
-    // 自动保存（1秒无输入后 - 加快自动保存频率）
+    // Auto save (3s debounce)
     useEffect(() => {
-        if (hasChanges && note) { // 只有有变更且有 note 时才保存
+        if (hasChanges && note) {
             const timer = setTimeout(() => {
                 handleSave();
-            }, 1000);
+            }, 3000);
             return () => clearTimeout(timer);
         }
-    }, [hasChanges, content, title, handleSave, note]);
+    }, [hasChanges, title, handleSave, note]);
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setTitle(e.target.value);
@@ -65,13 +109,13 @@ export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
         setSaveStatus('unsaved');
     };
 
-    const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setContent(e.target.value);
+    const handleTagsChange = (newTags: string[]) => {
+        setTags(newTags);
         setHasChanges(true);
         setSaveStatus('unsaved');
     };
 
-    // 快捷键保存 (Ctrl+S)
+    // Keyboard shortcuts (Ctrl+S)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -85,7 +129,6 @@ export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [hasChanges, handleSave, note]);
 
-    // 格式化最后保存时间
     const formatLastSaved = () => {
         if (!lastSaved) return '';
         const seconds = Math.floor((Date.now() - lastSaved) / 1000);
@@ -112,8 +155,8 @@ export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
         );
     }
 
-    const wordCount = content.length;
-    const charCount = content.replace(/\s/g, '').length;
+    // Use usage of storage if available or text length
+    const charCount = editor?.storage.characterCount?.characters?.() ?? editor?.getText().length ?? 0;
 
     return (
         <div className="note-editor">
@@ -125,17 +168,34 @@ export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
                 onChange={handleTitleChange}
             />
 
-            <textarea
-                className="note-editor-content"
-                placeholder="在此记录你的想法...&#10;&#10;💡 提示：&#10;- 支持 Markdown 格式&#10;- Ctrl+S 快速保存&#10;- 停止输入1秒后自动保存"
-                value={content}
-                onChange={handleContentChange}
-            />
+            {/* Render Toolbar via Portal if target exists */}
+            {portalTarget && editor && createPortal(
+                <EditorToolbar editor={editor} />,
+                portalTarget
+            )}
+
+            <div
+                className="note-editor-content-wrapper"
+                onClick={(e) => {
+                    // Only focus if clicking the wrapper itself directly, not the editor content
+                    if (editor && e.target === e.currentTarget) {
+                        editor.commands.focus('end');
+                    }
+                }}
+            >
+                <EditorContent editor={editor} className="editor-content" />
+            </div>
 
             <div className="note-editor-footer">
                 <div className="note-editor-meta">
+                    {/* 标签选择器（胶囊样式） */}
+                    <NoteTagSelector
+                        selectedTags={tags}
+                        onChange={handleTagsChange}
+                    />
+
                     <span className="note-editor-count">
-                        字数: {wordCount} ({charCount}字符)
+                        字数: {charCount}
                     </span>
 
                     {saveStatus === 'saving' && (
@@ -176,16 +236,16 @@ export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
                     <button
                         className="btn btn-light"
                         onClick={() => {
-                            // 导出功能
-                            const blob = new Blob([`# ${title}\n\n${content}`], { type: 'text/markdown' });
+                            const html = editor?.getHTML() || '';
+                            const blob = new Blob([html], { type: 'text/html' });
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
-                            a.download = `${title || '未命名随记'}.md`;
+                            a.download = `${title || '未命名随记'}.html`;
                             a.click();
                             URL.revokeObjectURL(url);
                         }}
-                        title="导出为 Markdown"
+                        title="导出为 HTML"
                     >
                         <Icon name="save" size={16} />
                         <span>导出</span>

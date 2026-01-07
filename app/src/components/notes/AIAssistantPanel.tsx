@@ -2,12 +2,71 @@ import { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
 import { Icon, type IconName } from '../ui/Icon';
-import type { Note, AIGeneratedTask, Subtask } from '../../types';
+import type { Note, AIGeneratedTask, Subtask, RecurringTemplate } from '../../types';
 import { useAppStore } from '../../state/appStore';
 import { createAIProvider } from '../../services/ai';
 import { SYSTEM_PROMPT_TASK_EXTRACTION } from '../../services/ai/prompts';
 import { TaskPreviewCard } from './TaskPreviewCard';
 import { AISettingsModal } from './AISettingsModal';
+
+// 解析周期提示为 schedule 对象
+function parseRecurringHint(hint: string | undefined): RecurringTemplate['schedule'] | null {
+    if (!hint) return null;
+
+    const h = hint.toLowerCase().trim();
+
+    // 每日
+    if (h.includes('每日') || h.includes('每天') || h === 'daily') {
+        return { type: 'daily' };
+    }
+
+    // 每周 + 星期几
+    const weekdayMap: Record<string, number> = {
+        '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 0, '天': 0,
+        'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 0,
+        'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 0
+    };
+
+    // 匹配 "每周五"、"每周一"、"周五" 等
+    const weeklyMatch = h.match(/(?:每)?周([一二三四五六日天])/);
+    if (weeklyMatch) {
+        const day = weekdayMap[weeklyMatch[1]] ?? 1;
+        return { type: 'weekly', daysOfWeek: [day] };
+    }
+
+    // 英文 weekly 匹配
+    const weeklyEnMatch = h.match(/(?:every\s+)?(?:week(?:ly)?(?:\s+on)?\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)/i);
+    if (weeklyEnMatch) {
+        const day = weekdayMap[weeklyEnMatch[1].toLowerCase()] ?? 1;
+        return { type: 'weekly', daysOfWeek: [day] };
+    }
+
+    // 仅 "每周" 默认周一
+    if (h.includes('每周') || h === 'weekly' || h.includes('every week')) {
+        return { type: 'weekly', daysOfWeek: [1] };
+    }
+
+    // 每月 + 日期
+    const monthlyMatch = h.match(/(?:每)?月(\d{1,2})[日号]?/);
+    if (monthlyMatch) {
+        const day = Math.min(31, Math.max(1, parseInt(monthlyMatch[1], 10)));
+        return { type: 'monthly', dayOfMonth: day };
+    }
+
+    // 英文 monthly 匹配
+    const monthlyEnMatch = h.match(/(?:every\s+)?month(?:ly)?(?:\s+on(?:\s+the)?)?\s*(\d{1,2})(?:st|nd|rd|th)?/i);
+    if (monthlyEnMatch) {
+        const day = Math.min(31, Math.max(1, parseInt(monthlyEnMatch[1], 10)));
+        return { type: 'monthly', dayOfMonth: day };
+    }
+
+    // 仅 "每月" 默认1号
+    if (h.includes('每月') || h === 'monthly' || h.includes('every month')) {
+        return { type: 'monthly', dayOfMonth: 1 };
+    }
+
+    return null;
+}
 
 // AI 生成阶段配置
 const AI_STAGES = [
@@ -24,6 +83,7 @@ interface AIAssistantPanelProps {
 export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
     const aiSettings = useAppStore((state) => state.settings.ai);
     const addTask = useAppStore((state) => state.addTask);
+    const addRecurringTemplate = useAppStore((state) => state.addRecurringTemplate);
     const projects = useAppStore((state) => state.projects);
     const [loading, setLoading] = useState(false);
     const [tasks, setTasks] = useState<AIGeneratedTask[]>([]);
@@ -208,6 +268,7 @@ ${note.content}`;
         if (selectedTasks.length === 0) return;
 
         let count = 0;
+        let recurringCount = 0;
         const projectNames: string[] = [];
 
         selectedTasks.forEach(aiTask => {
@@ -228,29 +289,109 @@ ${note.content}`;
                 assignee: st.owner
             }));
 
-            addTask({
-                projectId: projectIdToUse,
-                title: aiTask.title,
-                notes: aiTask.notes,
-                nextStep: aiTask.nextStep,
-                priority: aiTask.priority || 'medium',
-                dueDate: aiTask.dueDate,
-                owners: aiTask.owner,
-                subtasks: subtasks.length > 0 ? subtasks : undefined,
-                extras: {
-                    sourceNoteId: note?.id || '',
-                    generatedByAI: 'true',
-                    isRecurring: aiTask.isRecurring ? 'true' : 'false',
-                    recurringHint: aiTask.recurringHint || ''
+            // 检查是否为周期任务，并解析周期规则
+            const schedule = aiTask.isRecurring ? parseRecurringHint(aiTask.recurringHint) : null;
+
+            if (schedule) {
+                // 创建周期任务模板
+                const templateId = nanoid(12);
+                const now = dayjs();
+
+                // 计算周期标识
+                let periodKey = '';
+                let dateStr = aiTask.dueDate || '';
+
+                if (schedule.type === 'daily') {
+                    periodKey = now.format('YYYY-MM-DD');
+                    if (!dateStr) dateStr = now.format('YYYY-MM-DD');
+                } else if (schedule.type === 'weekly') {
+                    const startOfWeek = now.subtract((now.day() + 6) % 7, 'day');
+                    periodKey = startOfWeek.format('YYYY-MM-DD');
+                    if (!dateStr) {
+                        const weekday = (schedule.daysOfWeek ?? [1])[0];
+                        let target = startOfWeek.add((weekday + 7) % 7, 'day');
+                        if (target.isBefore(now.startOf('day'))) target = target.add(7, 'day');
+                        dateStr = target.format('YYYY-MM-DD');
+                    }
+                } else if (schedule.type === 'monthly') {
+                    periodKey = now.format('YYYY-MM');
+                    if (!dateStr) {
+                        const dom = schedule.dayOfMonth ?? 1;
+                        const startOfMonth = now.startOf('month');
+                        const endOfMonth = now.endOf('month');
+                        let target = startOfMonth.date(Math.min(dom, endOfMonth.date()));
+                        if (target.isBefore(now.startOf('day'))) {
+                            const nextStart = startOfMonth.add(1, 'month');
+                            const nextEnd = nextStart.endOf('month');
+                            target = nextStart.date(Math.min(dom, nextEnd.date()));
+                        }
+                        dateStr = target.format('YYYY-MM-DD');
+                    }
                 }
-            });
+
+                // 保存周期任务模板
+                addRecurringTemplate({
+                    id: templateId,
+                    projectId: projectIdToUse,
+                    title: aiTask.title,
+                    status: 'doing',
+                    priority: aiTask.priority || 'medium',
+                    schedule: schedule,
+                    dueStrategy: 'sameDay',
+                    owners: aiTask.owner,
+                    defaults: {
+                        notes: aiTask.notes,
+                        nextStep: aiTask.nextStep
+                    },
+                    subtasks: subtasks.length > 0 ? subtasks : undefined,
+                    active: true
+                });
+
+                // 创建当前周期的任务实例（关联模板）
+                addTask({
+                    projectId: projectIdToUse,
+                    title: aiTask.title,
+                    notes: aiTask.notes,
+                    nextStep: aiTask.nextStep,
+                    priority: aiTask.priority || 'medium',
+                    dueDate: dateStr,
+                    owners: aiTask.owner,
+                    subtasks: subtasks.length > 0 ? subtasks.map(st => ({ ...st, id: nanoid(8), createdAt: Date.now(), completed: false })) : undefined,
+                    extras: {
+                        sourceNoteId: note?.id || '',
+                        generatedByAI: 'true',
+                        recurrenceId: templateId,
+                        periodKey
+                    }
+                });
+                recurringCount++;
+            } else {
+                // 普通任务（非周期）
+                addTask({
+                    projectId: projectIdToUse,
+                    title: aiTask.title,
+                    notes: aiTask.notes,
+                    nextStep: aiTask.nextStep,
+                    priority: aiTask.priority || 'medium',
+                    dueDate: aiTask.dueDate,
+                    owners: aiTask.owner,
+                    subtasks: subtasks.length > 0 ? subtasks : undefined,
+                    extras: {
+                        sourceNoteId: note?.id || '',
+                        generatedByAI: 'true'
+                    }
+                });
+            }
             count++;
         });
 
         const projectStr = projectNames.length > 1
             ? `${projectNames.length} 个项目`
             : `"${projectNames[0] || '项目'}"`;
-        setSuccessMsg(`已将 ${count} 个任务保存到 ${projectStr}`);
+        const msg = recurringCount > 0
+            ? `已将 ${count} 个任务保存到 ${projectStr}（含 ${recurringCount} 个周期任务模板）`
+            : `已将 ${count} 个任务保存到 ${projectStr}`;
+        setSuccessMsg(msg);
         setTasks([]);
 
         setTimeout(() => setSuccessMsg(null), 3000);
@@ -356,6 +497,16 @@ ${note.content}`;
                                 </span>
                             )}
                         </div>
+
+                        {/* 当前模型信息 */}
+                        {aiSettings?.activeProviderId && (
+                            <div className="ai-model-info">
+                                <span className="ai-model-label">当前模型：</span>
+                                <span className="ai-model-name">
+                                    {aiSettings.providers.find(p => p.id === aiSettings.activeProviderId)?.model || '未知'}
+                                </span>
+                            </div>
+                        )}
 
                         {/* 提示文字 */}
                         <span className="ai-loading-tip">

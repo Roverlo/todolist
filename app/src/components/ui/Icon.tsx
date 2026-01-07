@@ -35,7 +35,25 @@ export type IconName =
     | 'eye-off'
     | 'lock'
     | 'chevronsLeft'
-    | 'chevronsRight';
+    | 'chevronsLeft'
+    | 'chevronsRight'
+    | 'bold'
+    | 'italic'
+    | 'underline'
+    | 'strike'
+    | 'list-ul'
+    | 'list-ol'
+    | 'align-left'
+    | 'align-center'
+    | 'align-right'
+    | 'undo'
+    | 'redo'
+    | 'quote'
+    | 'code'
+    | 'palette'
+    | 'highlighter'
+    | 'eraser'
+    | 'arrow-left';
 
 interface IconProps {
     name: IconName;
@@ -105,6 +123,41 @@ const icons: Record<IconName, string> = {
     chevronsLeft: `<path stroke-linecap="round" stroke-linejoin="round" d="m18.75 4.5-7.5 7.5 7.5 7.5m-6-15L5.25 12l7.5 7.5" />`,
 
     chevronsRight: `<path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />`,
+
+    // Rich Text Editor Icons
+    bold: `<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3.75h4.75a3.25 3.25 0 0 1 3.25 3.25c0 1.636-1.206 2.99-2.763 3.192A3.25 3.25 0 0 1 14 13.5v3.25a3.25 3.25 0 0 1-3.25 3.25H6.75V3.75Z" />`,
+
+    italic: `<path stroke-linecap="round" stroke-linejoin="round" d="M5.25 20.25h6m-3-16.5h6M8.25 20.25l7.5-16.5" />`,
+
+    underline: `<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 3.75v7.5a6 6 0 0 1-12 0v-7.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5h15" />`,
+
+    strike: `<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5M12 17.25c-2.485 0-4.5-1.567-4.5-3.5a3.02 3.02 0 0 1 1-2.275M12 6.75c2.485 0 4.5 1.567 4.5 3.5a3.02 3.02 0 0 1-1 2.275" />`,
+
+    'list-ul': `<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12M8.25 17.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 17.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />`,
+
+    'list-ol': `<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 5.25h9.75M10.5 12h9.75M10.5 18.75h9.75M3.75 5.25h.008v.008H3.75V5.25Zm0 6.75h.008v.008H3.75V12Zm0 6.75h.008v.008H3.75v-.008Z" />`,
+
+    'align-left': `<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h10.5" />`,
+
+    'align-center': `<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M6.75 17.25h10.5" />`,
+
+    'align-right': `<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M9.75 17.25h10.5" />`,
+
+    undo: `<path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />`,
+
+    redo: `<path stroke-linecap="round" stroke-linejoin="round" d="m15 15 6-6m0 0-6-6m6 6H9a6 6 0 0 0 0 12h3" />`,
+
+    quote: `<path stroke-linecap="round" stroke-linejoin="round" d="M10.125 14.25h-2.25c-.621 0-1.125-.504-1.125-1.125v-2.25c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125Zm0 0v3.75m10.125-3.75h-2.25c-.621 0-1.125-.504-1.125-1.125v-2.25c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125Zm0 0v3.75m-9-3c-1.657 0-3-1.343-3-3s1.343-3 3-3m5.25 6c-1.657 0-3-1.343-3-3s1.343-3 3-3" />`,
+
+    code: `<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />`,
+
+    palette: `<path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a16.002 16.002 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />`,
+
+    highlighter: `<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />`,
+
+    eraser: `<path stroke-linecap="round" stroke-linejoin="round" d="M3 4h10M8 4v10M17 14l4 4m0-4l-4 4" />`, /* Replaced with 'Tx' style remove formatting icon */
+
+    'arrow-left': `<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />`,
 };
 
 export function Icon({ name, size = 24, className = '', style, onClick }: IconProps) {

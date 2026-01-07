@@ -195,6 +195,7 @@ export interface Settings {
   dueReminderEnabled?: boolean; // 是否启用到期提醒，默认 true
   dueReminderSnoozeUntil?: string; // 暂时不提醒，直到该时间（ISO 格式）
   ai?: AISettings; // AI 设置
+  defaultView?: 'last' | 'tasks' | 'notes'; // 默认启动视图
 }
 
 export interface AutoBackupConfig {
@@ -235,6 +236,9 @@ export interface AppData {
   noteSearchText?: string;
   activeNoteTagId?: string | null;
   noteTreeExpandedState?: Record<string, boolean>;
+  activeView?: 'tasks' | 'notes'; // 当前视图模式
+  noteViewMode?: 'tree' | 'trash'; // 笔记视图模式：树形列表或回收站
+  selectedNoteId?: string | null; // 全局选中的笔记 ID
 }
 
 export type AppDataSnapshot = Omit<AppData, never>;
@@ -249,6 +253,7 @@ export interface Note {
   createdAt: number;      // 创建时间戳
   updatedAt: number;      // 更新时间戳
   isPinned?: boolean;     // 是否置顶
+  deletedAt?: number;     // 删除时间戳（软删除）
 }
 
 export interface NoteTag {

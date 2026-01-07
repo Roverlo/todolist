@@ -16,8 +16,18 @@ export function AISettingsModal({ onClose }: AISettingsModalProps) {
 
     // Initial Default Providers
     // 注意：endpoint 必须包含完整路径（包含 /chat/completions），因为 aiService 会直接使用该地址
-    // 模型版本更新于 2026-01-05，请定期检查各厂商最新模型
+    // 模型版本更新于 2026-01-07，请定期检查各厂商最新模型
+    // 🎁 魔搭免费版：作者提供用于体验，全体用户共享每日500次调用
+    const _k = atob('bXMtMzRhNmU2ODAtZWMxNC00YmVlLTkyNjgtOGU3MmZlZjlhZmE3');
     const defaultProviders: AIProviderProfile[] = [
+        {
+            id: 'modelscope-free',
+            type: 'openai',
+            name: '🎁 作者免费提供 (全体共享每日500次)',
+            model: 'deepseek-ai/DeepSeek-V3.2',
+            apiEndpoint: 'https://api-inference.modelscope.cn/v1/chat/completions',
+            apiKey: _k
+        },
         {
             id: 'deepseek-default',
             type: 'deepseek',
@@ -290,24 +300,38 @@ export function AISettingsModal({ onClose }: AISettingsModalProps) {
                                 <div className="ai-form-group">
                                     <label>API Key <span className="required">*</span></label>
                                     <div className="ai-input-wrapper">
-                                        <input
-                                            type={showKey ? "text" : "password"}
-                                            value={apiKey}
-                                            onChange={(e) => {
-                                                setApiKey(e.target.value);
-                                                setTestStatus('idle');
-                                                setTestMessage('');
-                                            }}
-                                            placeholder="sk-..."
-                                            className="ai-input"
-                                        />
-                                        <button
-                                            className="ai-eye-btn"
-                                            onClick={() => setShowKey(!showKey)}
-                                            type="button"
-                                        >
-                                            <Icon name={showKey ? "eye-off" : "eye"} size={16} />
-                                        </button>
+                                        {activeProvider.id === 'modelscope-free' ? (
+                                            /* 内置配置：隐藏真实 API Key */
+                                            <input
+                                                type="text"
+                                                value="🔒 内置密钥 (已隐藏)"
+                                                disabled
+                                                className="ai-input ai-input-disabled"
+                                                style={{ cursor: 'not-allowed' }}
+                                            />
+                                        ) : (
+                                            /* 其他配置：正常显示和编辑 */
+                                            <>
+                                                <input
+                                                    type={showKey ? "text" : "password"}
+                                                    value={apiKey}
+                                                    onChange={(e) => {
+                                                        setApiKey(e.target.value);
+                                                        setTestStatus('idle');
+                                                        setTestMessage('');
+                                                    }}
+                                                    placeholder="sk-..."
+                                                    className="ai-input"
+                                                />
+                                                <button
+                                                    className="ai-eye-btn"
+                                                    onClick={() => setShowKey(!showKey)}
+                                                    type="button"
+                                                >
+                                                    <Icon name={showKey ? "eye-off" : "eye"} size={16} />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -346,8 +370,9 @@ export function AISettingsModal({ onClose }: AISettingsModalProps) {
                             </div>
 
                             <div className="ai-settings-footer">
-                                {/* 第一行：测试连接区域 */}
+                                {/* 单行布局：左侧测试 | 中间删除 | 右侧保存 */}
                                 <div className="ai-footer-row">
+                                    {/* 左侧：测试连接 + 结果 */}
                                     <div className="ai-test-area">
                                         <button
                                             className="btn btn-test"
@@ -355,7 +380,6 @@ export function AISettingsModal({ onClose }: AISettingsModalProps) {
                                             disabled={testStatus === 'testing'}
                                             type="button"
                                             data-status={testStatus}
-                                            style={{ width: 'auto', minWidth: '120px' }}
                                         >
                                             {testStatus === 'testing' ? (
                                                 <Icon name="refresh" size={14} className="spin" />
@@ -365,58 +389,47 @@ export function AISettingsModal({ onClose }: AISettingsModalProps) {
                                             <span>{testStatus === 'testing' ? '测试中...' : '测试连接'}</span>
                                         </button>
 
-                                        {/* 测试结果状态显示 */}
-                                        {(testStatus === 'success' || testStatus === 'error') && (
-                                            <div className="ai-test-result">
-                                                {testStatus === 'success' ? (
-                                                    <span className="ai-test-status-text success">
-                                                        <Icon name="check" size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'text-bottom' }} />
-                                                        连接成功
-                                                    </span>
-                                                ) : (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                                                        <span className="ai-test-status-text error">
-                                                            <Icon name="warning" size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'text-bottom' }} />
-                                                            连接失败
-                                                        </span>
-                                                        {testMessage && (
-                                                            <button
-                                                                className="ai-view-details-btn"
-                                                                onClick={() => {
-                                                                    setAlertContent(testMessage);
-                                                                    setAlertOpen(true);
-                                                                }}
-                                                                type="button"
-                                                            >
-                                                                查看详情
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
+                                        {/* 测试结果 */}
+                                        {testStatus === 'success' && (
+                                            <span className="ai-test-status-text success">
+                                                <Icon name="check" size={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'text-bottom' }} />
+                                                成功
+                                            </span>
+                                        )}
+                                        {testStatus === 'error' && (
+                                            <button
+                                                className="ai-test-error-btn"
+                                                onClick={() => {
+                                                    setAlertContent(testMessage);
+                                                    setAlertOpen(true);
+                                                }}
+                                                type="button"
+                                            >
+                                                <Icon name="warning" size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'text-bottom' }} />
+                                                失败 - 查看详情
+                                            </button>
                                         )}
                                     </div>
-                                </div>
 
-                                {/* 第二行：操作按钮 */}
-                                <div className="ai-footer-row">
-                                    {activeProvider.id.startsWith('custom-') ? (
+                                    {/* 中间：删除按钮（仅自定义接口显示） */}
+                                    {activeProvider.id.startsWith('custom-') && (
                                         <button
                                             className="btn btn-danger-ghost"
                                             onClick={() => handleDelete(activeProvider.id)}
                                             type="button"
                                         >
-                                            删除此配置
+                                            <Icon name="trash" size={14} />
+                                            删除
                                         </button>
-                                    ) : (
-                                        <div></div>
                                     )}
 
+                                    {/* 右侧：保存按钮 */}
                                     <button
                                         className="btn btn-primary"
                                         onClick={handleSave}
                                         type="button"
                                     >
+                                        <Icon name="check" size={14} />
                                         保存并选中
                                     </button>
                                 </div>

@@ -1,0 +1,295 @@
+/* RichTextEditor.css */
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #fff;
+    border-bottom: 1px solid #f3f4f6;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.editor-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.editor-toolbar-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.editor-toolbar-btn:hover:not(:disabled) {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.editor-toolbar-btn.is-active {
+    background-color: #eef2ff;
+    color: #4f46e5;
+}
+
+.editor-toolbar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.editor-toolbar-divider {
+    width: 1px;
+    height: 16px;
+    background-color: #e5e7eb;
+    margin: 0 4px;
+}
+
+.editor-toolbar-shim {
+    flex: 1;
+}
+
+/* TipTap Editor Styles */
+.ProseMirror {
+    outline: none;
+    padding: 16px;
+    min-height: 100%;
+    color: #374151;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.ProseMirror p {
+    margin: 0.5em 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+    padding: 0 1rem;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+    line-height: 1.1;
+}
+
+.ProseMirror code {
+    background-color: #f3f4f6;
+    color: #616161;
+    border-radius: 0.25em;
+    padding: 0.2em 0.4em;
+    font-size: 0.9em;
+}
+
+.ProseMirror pre {
+    background: #0d0d0d;
+    color: #fff;
+    font-family: 'JetBrainsMono', monospace;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+}
+
+.ProseMirror pre code {
+    color: inherit;
+    padding: 0;
+    background: none;
+    font-size: 0.8rem;
+}
+
+.ProseMirror blockquote {
+    border-left: 3px solid #e5e7eb;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 1rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.ProseMirror hr {
+    border: none;
+    border-top: 2px solid #f3f4f6;
+    margin: 2rem 0;
+}
+
+/* Placeholder */
+.ProseMirror p.is-editor-empty:first-child::before {
+    color: #9ca3af;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+}
+
+/* Note Editor Layout Adjustments */
+.note-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #fff;
+}
+
+.note-editor-content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    cursor: text;
+}
+
+.color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+    width: 28px;
+    height: 28px;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.color-picker-wrapper:hover {
+    background-color: #f3f4f6;
+}
+
+.color-picker-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    border: none;
+}
+
+.color-picker-icon {
+    pointer-events: none;
+    color: #6b7280;
+}
+
+/* Header Portal Styles */
+#editor-toolbar-portal {
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+#editor-toolbar-portal .editor-toolbar {
+    background: transparent;
+    border: none;
+    padding: 0 12px;
+    height: 100%;
+    flex-wrap: nowrap;
+    /* Prevent wrapping in header */
+    gap: 2px;
+}
+
+#editor-toolbar-portal .editor-toolbar-btn {
+    color: rgba(255, 255, 255, 0.9);
+    flex-shrink: 0;
+    /* Prevent squashing */
+}
+
+#editor-toolbar-portal .editor-toolbar-btn:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+#editor-toolbar-portal .editor-toolbar-btn.is-active {
+    background-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    font-weight: bold;
+}
+
+#editor-toolbar-portal .editor-toolbar-divider {
+    background-color: rgba(255, 255, 255, 0.3);
+    height: 16px;
+}
+
+#editor-toolbar-portal .color-picker-icon {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#editor-toolbar-portal .color-picker-wrapper:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Toolbar Select */
+.editor-toolbar-select-wrapper {
+    position: relative;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    margin-right: 2px;
+}
+
+.editor-toolbar-select {
+    height: 100%;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background-color: transparent;
+    color: #6b7280;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    /* Hide default arrow */
+    appearance: none;
+    text-align: center;
+    min-width: 60px;
+}
+
+.editor-toolbar-select:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+/* Add custom arrow for select if needed, or keep simple */
+
+/* Header Portal Styles for Select */
+#editor-toolbar-portal .editor-toolbar-select {
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#editor-toolbar-portal .editor-toolbar-select:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+#editor-toolbar-portal .editor-toolbar-select option {
+    color: #374151;
+    background-color: #fff;
+}
+
+/* Fix Italic for all fonts, including Chinese */
+.ProseMirror em,
+.ProseMirror i {
+    font-style: italic !important;
+    font-synthesis: style;
+    /* Force browser to synthesize italics if font lacks it */
+}
+
+/* Ensure editor allows synthesis */
+.ProseMirror {
+    font-synthesis: style;
+}
+
+/* Ensure empty p tags have height */
+.ProseMirror p:empty {
+    min-height: 1.6em;
+}

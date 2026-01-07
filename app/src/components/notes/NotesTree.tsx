@@ -4,6 +4,7 @@ import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { NoteExportModal } from './NoteExportModal';
+import { NoteTagPopup } from './NoteTagPopup';
 import { useAppStore } from '../../state/appStore';
 import type { NoteTreeNode, Note } from '../../types';
 
@@ -39,6 +40,12 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
     const toggleNotePin = useAppStore((state) => state.toggleNotePin);
     const notes = useAppStore((state) => state.notes);
 
+    const [tagPopup, setTagPopup] = useState<{
+        noteId: string;
+        x: number;
+        y: number;
+    } | null>(null);
+
     const handleContextMenu = (e: React.MouseEvent, node: NoteTreeNode) => {
         e.preventDefault();
         e.stopPropagation();
@@ -63,6 +70,22 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                     label: isPinned ? '取消置顶' : '置顶',
                     icon: 'pin',
                     onClick: () => toggleNotePin(node.noteId!),
+                },
+                {
+                    id: 'tags',
+                    label: '标签设置',
+                    icon: 'tag',
+                    onClick: () => {
+                        setContextMenu(null);
+                        // 使用最后的右键菜单位置
+                        if (contextMenu) {
+                            setTagPopup({
+                                noteId: node.noteId!,
+                                x: contextMenu.x,
+                                y: contextMenu.y,
+                            });
+                        }
+                    },
                 },
                 { id: 'div2', label: '', divider: true },
                 {
@@ -172,8 +195,8 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
 
             <ConfirmModal
                 open={!!deleteNode}
-                title="删除笔记"
-                message="确定要删除这条笔记吗？删除后将无法恢复。"
+                title="移至回收站"
+                message="确定要删除这条笔记吗？删除后将移至回收站，可随时恢复。"
                 confirmText="确认删除"
                 cancelText="取消"
                 isDanger={true}
@@ -192,6 +215,14 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                 notes={exportModal.notes}
                 defaultFileName={exportModal.fileName}
             />
+
+            {tagPopup && (
+                <NoteTagPopup
+                    noteId={tagPopup.noteId}
+                    position={{ x: tagPopup.x, y: tagPopup.y }}
+                    onClose={() => setTagPopup(null)}
+                />
+            )}
         </>
     );
 }

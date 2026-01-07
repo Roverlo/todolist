@@ -102,7 +102,7 @@ export class DeepSeekProvider implements AIProvider {
                 body: JSON.stringify({
                     model: this.model,
                     messages: messages,
-                    temperature: 0.3, // Lower temperature for structured output
+                    temperature: 0.1, // Low temperature for factual extraction
                     max_tokens: 4000,
                     response_format: { type: 'json_object' }, // DeepSeek 支持此参数
                 }),
@@ -215,6 +215,7 @@ export class AnthropicProvider implements AIProvider {
                         { role: 'user', content: userPrompt }
                     ],
                     max_tokens: 4000,
+                    temperature: 0.1
                 }),
             });
 

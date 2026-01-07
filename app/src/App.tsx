@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import dayjs from 'dayjs';
 import './App.css';
-import { ProjectSidebar } from './components/sidebar/ProjectSidebar';
+import { AppSidebar } from './components/sidebar/AppSidebar';
+import { NotesMain } from './components/notes/NotesMain';
 import { PrimaryToolbar } from './components/toolbar/PrimaryToolbar';
 import { TaskTable } from './components/task-table/TaskTable';
 import { DetailsDrawer } from './components/details/DetailsDrawer';
@@ -30,7 +31,6 @@ import { StatsCard } from './components/ui/StatsCard';
 import { CloseConfirmModal } from './components/ui/CloseConfirmModal';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
-import { NotesCenter } from './components/notes';
 
 function App() {
   useAutoBackup(); // 启动自动备份 hook
@@ -56,7 +56,7 @@ function App() {
   const [cloudSyncOpen, setCloudSyncOpen] = useState(false);
   const [recurringManagerOpen, setRecurringManagerOpen] = useState(false);
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
-  const [notesCenterOpen, setNotesCenterOpen] = useState(false);
+  const activeView = useAppStore((state) => state.activeView);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const settings = useAppStore((state) => state.settings);
   const undo = useAppStore((state) => state.undo);
@@ -315,232 +315,227 @@ function App() {
 
   return (
     <div className={`app theme-${colorScheme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-      <ProjectSidebar
-        onProjectSelected={handleProjectSelected}
+      <AppSidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onProjectSelected={handleProjectSelected}
       />
       <main className='main'>
-        <div className='main-header'>
-          <div className='main-title-block'>
-            <div className='main-title'>
-              <span>任务看板</span>
-            </div>
-            <div className='sort-dropdown-container'>
-              <button
-                className='sort-dropdown-trigger'
-                onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-                title='点击切换排序方式'
-              >
-                {(() => {
-                  const primary = sortRules[0];
-                  if (!primary) return '默认排序';
-                  const keyLabels: Record<string, string> = {
-                    dueDate: '截止时间',
-                    createdAt: '创建时间',
-                    priority: '优先级',
-                    status: '状态',
-                    title: '标题',
-                    project: '项目',
-                    updatedAt: '更新时间',
-                  };
-                  const label = keyLabels[primary.key] || primary.key;
-                  return `按${label}${primary.direction === 'asc' ? '升序' : '降序'}`;
-                })()}
-                <span className='sort-dropdown-arrow'>{sortDropdownOpen ? '▲' : '▼'}</span>
-              </button>
-              {sortDropdownOpen && (
-                <div className='sort-dropdown-menu'>
-                  <div
-                    className='sort-dropdown-item'
-                    onClick={() => {
-                      setSortRules([{ key: 'dueDate', direction: 'asc' }]);
-                      setSortDropdownOpen(false);
-                    }}
-                  >
-                    📅 按截止时间升序
-                  </div>
-                  <div
-                    className='sort-dropdown-item'
-                    onClick={() => {
-                      setSortRules([{ key: 'dueDate', direction: 'desc' }]);
-                      setSortDropdownOpen(false);
-                    }}
-                  >
-                    📅 按截止时间降序
-                  </div>
-                  <div
-                    className='sort-dropdown-item'
-                    onClick={() => {
-                      setSortRules([{ key: 'createdAt', direction: 'desc' }]);
-                      setSortDropdownOpen(false);
-                    }}
-                  >
-                    🕐 按创建时间降序
-                  </div>
-                  <div
-                    className='sort-dropdown-item'
-                    onClick={() => {
-                      setSortRules([{ key: 'createdAt', direction: 'asc' }]);
-                      setSortDropdownOpen(false);
-                    }}
-                  >
-                    🕐 按创建时间升序
-                  </div>
-                  <div
-                    className='sort-dropdown-item'
-                    onClick={() => {
-                      setSortRules([{ key: 'priority', direction: 'desc' }]);
-                      setSortDropdownOpen(false);
-                    }}
-                  >
-                    🔥 按优先级降序
-                  </div>
-                  <div
-                    className='sort-dropdown-item'
-                    onClick={() => {
-                      setSortRules([{ key: 'status', direction: 'asc' }]);
-                      setSortDropdownOpen(false);
-                    }}
-                  >
-                    📊 按状态升序
-                  </div>
-                  <div
-                    className='sort-dropdown-item'
-                    onClick={() => {
-                      setSortRules([{ key: 'title', direction: 'asc' }]);
-                      setSortDropdownOpen(false);
-                    }}
-                  >
-                    🔤 按标题升序
-                  </div>
+        {activeView === 'tasks' ? (
+          <>
+            <div className='main-header'>
+              <div className='main-title-block'>
+                <div className='main-title'>
+                  <span>任务看板</span>
                 </div>
-              )}
-            </div>
-          </div>
+                <div className='sort-dropdown-container'>
+                  <button
+                    className='sort-dropdown-trigger'
+                    onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                    title='点击切换排序方式'
+                  >
+                    {(() => {
+                      const primary = sortRules[0];
+                      if (!primary) return '默认排序';
+                      const keyLabels: Record<string, string> = {
+                        dueDate: '截止时间',
+                        createdAt: '创建时间',
+                        priority: '优先级',
+                        status: '状态',
+                        title: '标题',
+                        project: '项目',
+                        updatedAt: '更新时间',
+                      };
+                      const label = keyLabels[primary.key] || primary.key;
+                      return `按${label}${primary.direction === 'asc' ? '升序' : '降序'}`;
+                    })()}
+                    <span className='sort-dropdown-arrow'>{sortDropdownOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {sortDropdownOpen && (
+                    <div className='sort-dropdown-menu'>
+                      <div
+                        className='sort-dropdown-item'
+                        onClick={() => {
+                          setSortRules([{ key: 'dueDate', direction: 'asc' }]);
+                          setSortDropdownOpen(false);
+                        }}
+                      >
+                        📅 按截止时间升序
+                      </div>
+                      <div
+                        className='sort-dropdown-item'
+                        onClick={() => {
+                          setSortRules([{ key: 'dueDate', direction: 'desc' }]);
+                          setSortDropdownOpen(false);
+                        }}
+                      >
+                        📅 按截止时间降序
+                      </div>
+                      <div
+                        className='sort-dropdown-item'
+                        onClick={() => {
+                          setSortRules([{ key: 'createdAt', direction: 'desc' }]);
+                          setSortDropdownOpen(false);
+                        }}
+                      >
+                        🕐 按创建时间降序
+                      </div>
+                      <div
+                        className='sort-dropdown-item'
+                        onClick={() => {
+                          setSortRules([{ key: 'createdAt', direction: 'asc' }]);
+                          setSortDropdownOpen(false);
+                        }}
+                      >
+                        🕐 按创建时间升序
+                      </div>
+                      <div
+                        className='sort-dropdown-item'
+                        onClick={() => {
+                          setSortRules([{ key: 'priority', direction: 'desc' }]);
+                          setSortDropdownOpen(false);
+                        }}
+                      >
+                        🔥 按优先级降序
+                      </div>
+                      <div
+                        className='sort-dropdown-item'
+                        onClick={() => {
+                          setSortRules([{ key: 'status', direction: 'asc' }]);
+                          setSortDropdownOpen(false);
+                        }}
+                      >
+                        📊 按状态升序
+                      </div>
+                      <div
+                        className='sort-dropdown-item'
+                        onClick={() => {
+                          setSortRules([{ key: 'title', direction: 'asc' }]);
+                          setSortDropdownOpen(false);
+                        }}
+                      >
+                        🔤 按标题升序
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          {/* 搜索框 */}
-          {/* 搜索框 */}
-          <div className='search-box'>
-            <span className='search-icon'>🔍</span>
-            <input
-              ref={searchInputRef}
-              type='text'
-              className='search-input'
-              placeholder='搜索任务... (Ctrl+F 或 /)'
-              defaultValue={filters.search || ''}
-              onChange={(e) => setFilters({ search: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  e.currentTarget.blur();
-                }
-              }}
-            />
-            {filters.search && (
-              <button
-                className='search-clear'
-                onClick={() => {
-                  setFilters({ search: '' });
-                  if (searchInputRef.current) {
-                    searchInputRef.current.value = '';
-                  }
-                }}
-                title='清除搜索'
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          <div className='toolbar'>
-            {isTrashView ? (
-              <>
-                <button
-                  className='btn'
-                  style={{
-                    backgroundColor: '#fef2f2',
-                    color: '#dc2626',
-                    border: '1px solid #fecaca',
-                    fontWeight: 600,
-                    marginRight: 8
-                  }}
-                  onClick={() => setEmptyTrashConfirmOpen(true)}
-                >
-                  清空回收站
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  className='btn btn-primary-bold'
-                  onClick={() => setNewTaskChoiceOpen(true)}
-                  aria-label='新建任务'
-                >
-                  + 新建任务
-                </button>
-                <button
-                  className='btn btn-light'
-                  onClick={() => {
-                    const el = document.getElementById('filters-panel');
-                    if (el) {
-                      const isOpen = el.style.display !== 'none';
-                      el.style.display = isOpen ? 'none' : 'flex';
-                      setFilterPanelOpen(!isOpen);
+              {/* 搜索框 */}
+              <div className='search-box'>
+                <span className='search-icon'>🔍</span>
+                <input
+                  ref={searchInputRef}
+                  type='text'
+                  className='search-input'
+                  placeholder='搜索任务... (Ctrl+F 或 /)'
+                  defaultValue={filters.search || ''}
+                  onChange={(e) => setFilters({ search: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      e.currentTarget.blur();
                     }
                   }}
-                  aria-label='展开/收起筛选'
-                  title='展开/收起筛选'
-                >
-                  🔍 筛选 {filterPanelOpen ? '▲' : '▼'}
-                </button>
-                <button
-                  className='btn btn-light'
-                  onClick={() => setSettingsPanelOpen(true)}
-                  aria-label='设置'
-                  title='设置'
-                >
-                  ⚙️ 设置
-                </button>
-                <button
-                  className='btn btn-light'
-                  onClick={() => setNotesCenterOpen(true)}
-                  aria-label='随记中心'
-                  title='随记中心 - 记录灵感，AI 生成任务'
-                  style={{ marginLeft: 4 }}
-                >
-                  📝 随记
-                </button>
+                />
+                {filters.search && (
+                  <button
+                    className='search-clear'
+                    onClick={() => {
+                      setFilters({ search: '' });
+                      if (searchInputRef.current) {
+                        searchInputRef.current.value = '';
+                      }
+                    }}
+                    title='清除搜索'
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
 
-              </>
+              <div className='toolbar'>
+                {isTrashView ? (
+                  <>
+                    <button
+                      className='btn'
+                      style={{
+                        backgroundColor: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        fontWeight: 600,
+                        marginRight: 8
+                      }}
+                      onClick={() => setEmptyTrashConfirmOpen(true)}
+                    >
+                      清空回收站
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className='btn btn-primary-bold'
+                      onClick={() => setNewTaskChoiceOpen(true)}
+                      aria-label='新建任务'
+                    >
+                      + 新建任务
+                    </button>
+                    <button
+                      className='btn btn-light'
+                      onClick={() => {
+                        const el = document.getElementById('filters-panel');
+                        if (el) {
+                          const isOpen = el.style.display !== 'none';
+                          el.style.display = isOpen ? 'none' : 'flex';
+                          setFilterPanelOpen(!isOpen);
+                        }
+                      }}
+                      aria-label='展开/收起筛选'
+                      title='展开/收起筛选'
+                    >
+                      🔍 筛选 {filterPanelOpen ? '▲' : '▼'}
+                    </button>
+                    <button
+                      className='btn btn-light'
+                      onClick={() => setSettingsPanelOpen(true)}
+                      aria-label='设置'
+                      title='设置'
+                    >
+                      ⚙️ 设置
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <PrimaryToolbar />
+
+            {/* 统计仪表盘 */}
+            {!isTrashView && (
+              <div className='dashboard-row'>
+                <StatsCard
+                  tasks={projectTasks}
+                  projectMap={projectMap as any}
+                  activeFilter={filters.status}
+                  onFilterByStatus={(status: 'doing' | 'done' | 'paused' | 'all' | 'overdue' | 'dueToday') => {
+                    if (status === 'all') {
+                      setFilters({ statuses: [], status: 'all' });
+                    } else if (status === 'doing' || status === 'paused' || status === 'done') {
+                      setFilters({ statuses: [status], status: status });
+                    } else {
+                      setFilters({ statuses: [], status: status });
+                    }
+                  }}
+                />
+              </div>
             )}
-          </div>
-        </div>
 
-        <PrimaryToolbar />
-
-        {/* 统计仪表盘 */}
-        {!isTrashView && (
-          <div className='dashboard-row'>
-            <StatsCard
-              tasks={projectTasks}
-              projectMap={projectMap as any}
-              activeFilter={filters.status}
-              onFilterByStatus={(status: 'doing' | 'done' | 'paused' | 'all' | 'overdue' | 'dueToday') => {
-                if (status === 'all') {
-                  setFilters({ statuses: [], status: 'all' });
-                } else if (status === 'doing' || status === 'paused' || status === 'done') {
-                  setFilters({ statuses: [status], status: status });
-                } else {
-                  setFilters({ statuses: [], status: status });
-                }
-              }}
-            />
-          </div>
+            <section className='content'>
+              <TaskTable onTaskFocus={setActiveTaskId} activeTaskId={activeTaskId} />
+            </section>
+          </>
+        ) : (
+          <NotesMain />
         )}
-
-        <section className='content'>
-          <TaskTable onTaskFocus={setActiveTaskId} activeTaskId={activeTaskId} />
-        </section>
       </main>
 
       <DetailsDrawer
@@ -621,9 +616,6 @@ function App() {
         onCloudSync={() => setCloudSyncOpen(true)}
         onRecurringTasks={() => setRecurringManagerOpen(true)}
       />
-      {notesCenterOpen && (
-        <NotesCenter onClose={() => setNotesCenterOpen(false)} />
-      )}
     </div>
   );
 }

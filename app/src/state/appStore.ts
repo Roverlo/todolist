@@ -196,13 +196,15 @@ const initialData: AppData = {
   notes: [],
   tags: [
     { id: 'all', name: '全部', icon: '📌', count: 0, isSystem: true },
+    { id: 'uncategorized', name: '未分类', icon: '📋', count: 0, isSystem: true },
     { id: 'work', name: '工作', icon: '💼', count: 0, isSystem: false },
     { id: 'life', name: '生活', icon: '🏠', count: 0, isSystem: false },
     { id: 'idea', name: '灵感', icon: '💡', count: 0, isSystem: false },
   ],
-  noteSearchText: '',
-  activeNoteTagId: 'all',
   noteTreeExpandedState: {},
+  activeView: 'tasks',
+  noteViewMode: 'tree',
+  selectedNoteId: null,
 };
 
 const deepClone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -333,7 +335,17 @@ export interface AppStore extends AppData {
   setAIActiveProvider: (id: string | undefined) => void;
   updateAISettings: (settings: Partial<AISettings>) => void;
 
-  restoreData: (backupData: AppData) => void;
+  // View Switching
+  setActiveView: (view: 'tasks' | 'notes') => void;
+  setNoteViewMode: (mode: 'tree' | 'trash') => void;
+  setSelectedNoteId: (id: string | null) => void;
+
+  // Note Trash Actions
+  restoreNote: (id: string) => void;
+  restoreNotes: (ids: string[]) => void;
+  permanentDeleteNote: (id: string) => void;
+  permanentDeleteNotes: (ids: string[]) => void;
+  emptyNoteTrash: () => void;
 
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -355,8 +367,9 @@ const pickSnapshot = (state: Draft<AppStore>): AppDataSnapshot => ({
   tags: state.tags,
   // UI state is persisted in snapshot for undo/redo consistency
   noteSearchText: state.noteSearchText,
-  activeNoteTagId: state.activeNoteTagId,
   noteTreeExpandedState: state.noteTreeExpandedState,
+  activeView: state.activeView,
+  selectedNoteId: state.selectedNoteId,
 });
 
 const withHistory = (set: any, updater: (state: Draft<AppStore>) => void) => {
@@ -1246,7 +1259,14 @@ export const useAppStore = create<AppStore>()(
 
       deleteNote: (id: string) => {
         set(produce((state: AppStore) => {
-          state.notes = state.notes.filter(n => n.id !== id);
+          const note = state.notes.find(n => n.id === id);
+          if (note) {
+            note.deletedAt = Date.now();
+            note.updatedAt = Date.now();
+          }
+          if (state.selectedNoteId === id) {
+            state.selectedNoteId = null;
+          }
         }));
         get().refreshNoteTagCounts();
       },
@@ -1302,9 +1322,30 @@ export const useAppStore = create<AppStore>()(
 
       refreshNoteTagCounts: () => {
         set(produce((state: AppStore) => {
+          // 确保系统标签存在（迁移逻辑）
+          const systemTags = [
+            { id: 'all', name: '全部', icon: '📌', isSystem: true },
+            { id: 'uncategorized', name: '未分类', icon: '📋', isSystem: true },
+          ];
+          systemTags.forEach(sysTag => {
+            if (!state.tags.find(t => t.id === sysTag.id)) {
+              // 在 'all' 后面插入，或者在开头插入
+              const allIndex = state.tags.findIndex(t => t.id === 'all');
+              if (sysTag.id === 'uncategorized' && allIndex >= 0) {
+                state.tags.splice(allIndex + 1, 0, { ...sysTag, count: 0 });
+              } else {
+                state.tags.unshift({ ...sysTag, count: 0 });
+              }
+            }
+          });
+
+          // 刷新标签计数
           state.tags.forEach(tag => {
             if (tag.id === 'all') {
               tag.count = state.notes.length;
+            } else if (tag.id === 'uncategorized') {
+              // 未分类：没有任何标签的笔记数量
+              tag.count = state.notes.filter(n => !n.tags || n.tags.length === 0).length;
             } else {
               tag.count = state.notes.filter(n =>
                 n.tags?.includes(tag.name)
@@ -1382,6 +1423,61 @@ export const useAppStore = create<AppStore>()(
           }
           Object.assign(state.settings.ai, settings);
         }));
+      },
+
+      setActiveView: (view) => set({ activeView: view }),
+      setNoteViewMode: (mode) => set({ noteViewMode: mode }),
+      setSelectedNoteId: (id) => set({ selectedNoteId: id }),
+
+      restoreNote: (id: string) => {
+        set(produce((state: AppStore) => {
+          const note = state.notes.find(n => n.id === id);
+          if (note) {
+            note.deletedAt = undefined;
+            note.updatedAt = Date.now();
+          }
+        }));
+        get().refreshNoteTagCounts();
+      },
+
+      restoreNotes: (ids: string[]) => {
+        set(produce((state: AppStore) => {
+          ids.forEach(id => {
+            const note = state.notes.find(n => n.id === id);
+            if (note) {
+              note.deletedAt = undefined;
+              note.updatedAt = Date.now();
+            }
+          });
+        }));
+        get().refreshNoteTagCounts();
+      },
+
+      permanentDeleteNote: (id: string) => {
+        set(produce((state: AppStore) => {
+          state.notes = state.notes.filter(n => n.id !== id);
+          if (state.selectedNoteId === id) {
+            state.selectedNoteId = null;
+          }
+        }));
+        get().refreshNoteTagCounts();
+      },
+
+      permanentDeleteNotes: (ids: string[]) => {
+        set(produce((state: AppStore) => {
+          state.notes = state.notes.filter(n => !ids.includes(n.id));
+          if (state.selectedNoteId && ids.includes(state.selectedNoteId)) {
+            state.selectedNoteId = null;
+          }
+        }));
+        get().refreshNoteTagCounts();
+      },
+
+      emptyNoteTrash: () => {
+        set(produce((state: AppStore) => {
+          state.notes = state.notes.filter(n => !n.deletedAt);
+        }));
+        get().refreshNoteTagCounts();
       },
 
       setHasHydrated: (val) => {
@@ -1571,9 +1667,10 @@ export const useAppStore = create<AppStore>()(
         recurringTemplates: state.recurringTemplates,
         notes: state.notes,
         tags: state.tags,
-        noteSearchText: state.noteSearchText,
         activeNoteTagId: state.activeNoteTagId,
         noteTreeExpandedState: state.noteTreeExpandedState,
+        activeView: state.activeView,
+        selectedNoteId: state.selectedNoteId,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
