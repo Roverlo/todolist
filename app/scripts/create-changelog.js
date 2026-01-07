@@ -12,10 +12,10 @@ const [filePath, version, timestamp] = args;
 const content = `版本: ${version}
 时间: ${timestamp}
 更新内容:
-- 【AI 修复】修复了 AI 任务提取时的“幻觉”问题（如将“郊游”识别为“交友”）。
-- 【算法优化】全面优化 System Prompt，加入严禁同音字替换和忠实原文的指令。
-- 【参数调优】降低 AI 模型 Temperature 至 0.1，大幅提升提取精准度。
-- 【代码清理】移除冗余未使用的旧版 Prompt 和死代码，核心逻辑更纯净。`;
+- 【重大修复】彻底解决 AI 任务提取将中文人名转换为拼音的问题（如"小红"变"lxiao'h"）。
+- 【Prompt 重构】将 System Prompt 和 User Prompt 全面中文化，消除跨语言处理歧义。
+- 【规则强化】明确禁止拼音转换、音译、同音字替换，人名地名必须原样保留。
+- 【代码清理】移除冗余未使用的旧版英文 Prompt。`;
 
 try {
     fs.writeFileSync(filePath, content, 'utf8');

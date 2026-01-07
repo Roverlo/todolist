@@ -213,12 +213,12 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
             });
 
             const referenceDate = note?.updatedAt ? dayjs(note.updatedAt).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
-            const userPrompt = `Context:
-Reference Date: ${referenceDate}
-Note Title: ${note?.title || 'Untitled'}
-Available Projects: ${availableProjects.map(p => p.name).join(', ')}
+            const userPrompt = `上下文信息：
+参考日期：${referenceDate}
+笔记标题：${note?.title || '无标题'}
+可用项目：${availableProjects.map(p => p.name).join('、')}
 
-Content:
+笔记正文：
 ${note.content}`;
 
             const response = await provider.generateJson<{ tasks: AIGeneratedTask[] }>(
