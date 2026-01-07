@@ -51,10 +51,12 @@ export const CloudSyncModal = ({ open, onClose }: CloudSyncModalProps) => {
     const [showHelp, setShowHelp] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    const { tasks, projects, settings } = useAppStoreShallow((state) => ({
+    const { tasks, projects, settings, notes, tags } = useAppStoreShallow((state) => ({
         tasks: state.tasks,
         projects: state.projects,
         settings: state.settings,
+        notes: state.notes,
+        tags: state.tags,
     }));
 
     useEffect(() => {
@@ -137,7 +139,7 @@ export const CloudSyncModal = ({ open, onClose }: CloudSyncModalProps) => {
         setMessage('正在上传数据...');
 
         try {
-            const data = JSON.stringify({ tasks, projects, settings, timestamp: Date.now() }, null, 2);
+            const data = JSON.stringify({ tasks, projects, settings, notes, tags, timestamp: Date.now() }, null, 2);
 
             if (config.method === 'smb') {
                 const result = await invoke<{ success: boolean; message: string }>('smb_upload', {
@@ -213,13 +215,15 @@ export const CloudSyncModal = ({ open, onClose }: CloudSyncModalProps) => {
                 const parsed = JSON.parse(cloudData);
 
                 // 备份本地
-                localStorage.setItem('cloudSync_localBackup', JSON.stringify({ tasks, projects, settings, timestamp: Date.now() }));
+                localStorage.setItem('cloudSync_localBackup', JSON.stringify({ tasks, projects, settings, notes, tags, timestamp: Date.now() }));
 
                 // 应用
                 useAppStore.setState((state) => ({
                     ...state,
                     tasks: parsed.tasks || state.tasks,
                     projects: parsed.projects || state.projects,
+                    notes: parsed.notes || state.notes,
+                    tags: parsed.tags || state.tags,
                 }));
 
                 saveConfig({ ...config, lastSyncTime: Date.now() });
