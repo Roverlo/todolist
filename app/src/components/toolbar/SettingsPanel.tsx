@@ -880,6 +880,109 @@ export const SettingsPanel = ({
                                             💡 本软件为<b>便携版</b>，无需安装，下载新版本后替换当前 exe 即可更新，数据自动保留。
                                         </div>
                                     </div>
+
+                                    {/* 更新设置 */}
+                                    <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-main)', marginBottom: 10 }}>
+                                            ⚙️ 更新设置
+                                        </div>
+                                        {/* 启动时检查 */}
+                                        <label style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            marginBottom: 8,
+                                            cursor: 'pointer',
+                                            fontSize: 12,
+                                            color: 'var(--text-main)',
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.updateCheck?.checkOnStartup ?? true}
+                                                onChange={(e) => setSettings({
+                                                    updateCheck: {
+                                                        ...settings.updateCheck,
+                                                        checkOnStartup: e.target.checked,
+                                                        autoCheck: settings.updateCheck?.autoCheck ?? true,
+                                                        checkInterval: settings.updateCheck?.checkInterval ?? 60,
+                                                    },
+                                                })}
+                                                style={{ accentColor: 'var(--primary)' }}
+                                            />
+                                            启动时自动检查更新
+                                        </label>
+                                        {/* 定时检查 */}
+                                        <label style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            marginBottom: 8,
+                                            cursor: 'pointer',
+                                            fontSize: 12,
+                                            color: 'var(--text-main)',
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.updateCheck?.autoCheck ?? true}
+                                                onChange={(e) => setSettings({
+                                                    updateCheck: {
+                                                        ...settings.updateCheck,
+                                                        checkOnStartup: settings.updateCheck?.checkOnStartup ?? true,
+                                                        autoCheck: e.target.checked,
+                                                        checkInterval: settings.updateCheck?.checkInterval ?? 60,
+                                                    },
+                                                })}
+                                                style={{ accentColor: 'var(--primary)' }}
+                                            />
+                                            定时检查更新
+                                        </label>
+                                        {/* 检查间隔 */}
+                                        {(settings.updateCheck?.autoCheck ?? true) && (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                marginLeft: 20,
+                                                marginBottom: 8,
+                                                fontSize: 12,
+                                                color: 'var(--text-subtle)',
+                                            }}>
+                                                <span>检查间隔:</span>
+                                                <select
+                                                    value={settings.updateCheck?.checkInterval ?? 60}
+                                                    onChange={(e) => setSettings({
+                                                        updateCheck: {
+                                                            ...settings.updateCheck,
+                                                            checkOnStartup: settings.updateCheck?.checkOnStartup ?? true,
+                                                            autoCheck: settings.updateCheck?.autoCheck ?? true,
+                                                            checkInterval: parseInt(e.target.value),
+                                                        },
+                                                    })}
+                                                    style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: 4,
+                                                        border: '1px solid var(--border)',
+                                                        background: 'var(--surface)',
+                                                        color: 'var(--text-main)',
+                                                        fontSize: 12,
+                                                    }}
+                                                >
+                                                    <option value={10}>10 分钟</option>
+                                                    <option value={30}>30 分钟</option>
+                                                    <option value={60}>1 小时</option>
+                                                    <option value={120}>2 小时</option>
+                                                    <option value={240}>4 小时</option>
+                                                    <option value={1440}>每天一次</option>
+                                                </select>
+                                            </div>
+                                        )}
+                                        {/* 上次检查时间 */}
+                                        {settings.updateCheck?.lastCheckAt && (
+                                            <div style={{ fontSize: 11, color: 'var(--text-subtle)', marginTop: 4 }}>
+                                                上次检查: {new Date(settings.updateCheck.lastCheckAt).toLocaleString()}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 

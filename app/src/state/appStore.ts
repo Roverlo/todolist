@@ -98,6 +98,11 @@ const defaultSettings: Settings = {
     ],
     activeProviderId: 'deepseek-default',
   },
+  updateCheck: {
+    checkOnStartup: true,
+    autoCheck: true,
+    checkInterval: 60,
+  },
 };
 
 const makeProject = (name: string): Project => ({

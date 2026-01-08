@@ -20,6 +20,7 @@ import { SettingsPanel } from './components/toolbar/SettingsPanel';
 import { ThemeModal } from './components/toolbar/ThemeModal';
 import { FontSizeModal } from './components/toolbar/FontSizeModal';
 import { useAutoBackup } from './hooks/useAutoBackup';
+import { useAutoUpdateCheck } from './hooks/useAutoUpdateCheck';
 import { useVisibleTasks } from './hooks/useVisibleTasks';
 import { ToastContainer } from './components/ui/Toast';
 import './components/ui/Toast.css';
@@ -34,6 +35,7 @@ import { listen } from '@tauri-apps/api/event';
 
 function App() {
   useAutoBackup(); // 启动自动备份 hook
+  const { updateInfo, showUpdateModal, setShowUpdateModal, skipCurrentVersion } = useAutoUpdateCheck(); // 自动更新检查
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -616,6 +618,74 @@ function App() {
         onCloudSync={() => setCloudSyncOpen(true)}
         onRecurringTasks={() => setRecurringManagerOpen(true)}
       />
+      {/* 自动更新提示模态框 */}
+      {showUpdateModal && updateInfo && (
+        <div className="create-overlay" onClick={() => setShowUpdateModal(false)}>
+          <div
+            className="create-dialog"
+            style={{ width: 420, maxWidth: '90vw' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="create-dialog-header">
+              <div className="create-dialog-title-block">
+                <div className="create-dialog-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>🎉</span>
+                  <span>发现新版本！</span>
+                </div>
+              </div>
+              <button className="create-btn-icon" onClick={() => setShowUpdateModal(false)} title="关闭">
+                ✕
+              </button>
+            </header>
+            <div className="create-dialog-body" style={{ padding: '20px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '16px', background: 'var(--bg)', borderRadius: 12, marginBottom: 20 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginBottom: 4 }}>当前版本</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, fontFamily: 'monospace' }}>{settings.updateCheck?.skipVersion !== updateInfo.version ? '' : ''}</div>
+                </div>
+                <div style={{ fontSize: 24, color: 'var(--primary)' }}>→</div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginBottom: 4 }}>最新版本</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, fontFamily: 'monospace', color: 'var(--primary)' }}>{updateInfo.version}</div>
+                </div>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>更新内容</div>
+                <div style={{ padding: '12px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: 150, overflowY: 'auto' }}>
+                  {updateInfo.releaseNotes || '暂无更新说明'}
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginBottom: 12 }}>
+                发布于 {updateInfo.releaseDate}
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  onClick={() => skipCurrentVersion(updateInfo.version)}
+                  style={{ flex: 1, padding: '10px 16px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', fontSize: 13, cursor: 'pointer' }}
+                >
+                  此版本不再提醒
+                </button>
+                <button
+                  onClick={() => setShowUpdateModal(false)}
+                  style={{ flex: 1, padding: '10px 16px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', fontSize: 13, cursor: 'pointer' }}
+                >
+                  稍后提醒
+                </button>
+                <button
+                  onClick={async () => {
+                    const { openDownloadUrl } = await import('./utils/updateChecker');
+                    openDownloadUrl(updateInfo.downloadUrl);
+                    setShowUpdateModal(false);
+                  }}
+                  style={{ flex: 1, padding: '10px 16px', border: 'none', borderRadius: 8, background: 'var(--primary)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                >
+                  ⬇️ 立即下载
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

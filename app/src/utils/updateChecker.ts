@@ -23,7 +23,7 @@ const UPDATE_URL = 'https://update.xiaohulp.sbs/versions.json';
  * 当前应用版本号
  * 格式: YYYYMMDD_HHmm
  */
-export const CURRENT_VERSION = '20251228_1816';
+export const CURRENT_VERSION = '20260108_1840';
 
 /**
  * 检查更新（只检查最新版本）

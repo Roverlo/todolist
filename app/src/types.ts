@@ -196,6 +196,7 @@ export interface Settings {
   dueReminderSnoozeUntil?: string; // 暂时不提醒，直到该时间（ISO 格式）
   ai?: AISettings; // AI 设置
   defaultView?: 'last' | 'tasks' | 'notes'; // 默认启动视图
+  updateCheck?: UpdateCheckConfig; // 自动更新检查配置
 }
 
 export interface AutoBackupConfig {
@@ -205,6 +206,14 @@ export interface AutoBackupConfig {
   dailyBackup?: boolean; // 是否启用每日归档
   lastBackupAt?: string;
   customPath?: string; // 自定义备份目录路径
+}
+
+export interface UpdateCheckConfig {
+  checkOnStartup: boolean;    // 启动时检查，默认 true
+  autoCheck: boolean;         // 定时检查，默认 true
+  checkInterval: number;      // 检查间隔（分钟），默认 60，最小 10
+  lastCheckAt?: string;       // 上次检查时间（ISO 格式）
+  skipVersion?: string;       // 跳过提醒的版本号
 }
 
 export interface SortScheme {
