@@ -63,6 +63,19 @@ fn save_data(data: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn open_data_directory() -> Result<(), String> {
+    let data_path = get_unified_data_path().ok_or("无法确定数据存储位置")?;
+    let directory = data_path.parent().ok_or("无法确定数据存储目录")?;
+
+    fs::create_dir_all(directory).map_err(|e| format!("创建数据目录失败：{e}"))?;
+    std::process::Command::new("explorer")
+        .arg(directory)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("打开数据目录失败：{e}"))
+}
+
+#[tauri::command]
 fn frontend_log(level: String, message: String) {
     let lvl = match level.to_lowercase().as_str() {
         "trace" => log::Level::Trace,
@@ -443,7 +456,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            frontend_log, load_data, save_data,
+            frontend_log, load_data, save_data, open_data_directory,
             smb_test_connection, smb_upload, smb_download,
             ssh_test_connection, ssh_upload, ssh_download
         ])
