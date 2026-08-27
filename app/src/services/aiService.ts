@@ -4,6 +4,7 @@
 
 import { fetch } from '@tauri-apps/plugin-http';
 import type { AIProviderType, AIProviderProfile } from '../types';
+import { getOpenAIRequestOptions, withQwen3NoThink } from './ai';
 
 // ==================== AI 提供商配置 ====================
 
@@ -130,10 +131,11 @@ export async function testAIConnection(
                     messages: [
                         {
                             role: 'user',
-                            content: '请回复 OK',
+                            content: withQwen3NoThink('请回复 OK', model),
                         },
                     ],
                     max_tokens: 10,
+                    ...getOpenAIRequestOptions(model, endpoint, false),
                 }),
             });
         }
@@ -160,6 +162,21 @@ export async function testAIConnection(
             }
             console.error('[AI Test] Failed:', { status: response.status, errorText });
             return { success: false, message: errorMessage };
+        }
+
+        const data = await response.json() as {
+            choices?: Array<{ message?: { content?: string | null } }>;
+            content?: Array<{ text?: string | null }>;
+        };
+        const reply = isAnthropic
+            ? data.content?.[0]?.text
+            : data.choices?.[0]?.message?.content;
+
+        if (!reply?.trim()) {
+            return {
+                success: false,
+                message: '接口已响应，但模型没有返回有效内容；推理模型请关闭思考模式后重试',
+            };
         }
 
         return { success: true, message: '连接成功！' };

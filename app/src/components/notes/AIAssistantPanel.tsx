@@ -157,6 +157,8 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
     const handleGenerate = async () => {
         if (!note?.content) return;
 
+        let apiProgressInterval: number | undefined;
+
         const activeProviderConfig = aiSettings?.providers.find(p => p.id === aiSettings.activeProviderId);
         if (!activeProviderConfig?.apiKey) {
             setSettingsOpen(true);
@@ -198,7 +200,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
             setCurrentStage(2);
 
             // 模拟进度增长（在实际 API 调用期间）
-            const apiProgressInterval = setInterval(() => {
+            apiProgressInterval = window.setInterval(() => {
                 setProgress(prev => {
                     if (prev < 90) {
                         return Math.min(prev + 1, 90);
@@ -227,6 +229,7 @@ ${note.content}`;
             );
 
             clearInterval(apiProgressInterval);
+            apiProgressInterval = undefined;
 
             // 阶段 4: 完成 (90-100%)
             setCurrentStage(3);
@@ -245,10 +248,11 @@ ${note.content}`;
             } else {
                 throw new Error('AI 返回的数据格式不正确');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('AI Generation Error:', err);
-            setError(err.message || '生成失败，请重试');
+            setError(err instanceof Error ? err.message : '生成失败，请重试');
         } finally {
+            if (apiProgressInterval) window.clearInterval(apiProgressInterval);
             setLoading(false);
             setCurrentStage(0);
             setProgress(0);
