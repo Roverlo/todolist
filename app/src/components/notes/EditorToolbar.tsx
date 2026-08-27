@@ -30,6 +30,9 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         return null;
     }
 
+    const textColor = editor.getAttributes('textStyle').color || '#000000';
+    const highlightColor = editor.getAttributes('highlight').color || '#ffff00';
+
     const ToolbarButton = ({
         icon: ToolbarIcon,
         title,
@@ -59,8 +62,6 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         </button>
     );
 
-    const ToolbarDivider = () => <div className="editor-toolbar-divider" />;
-
     return (
         <div className="editor-toolbar">
             <div className="editor-toolbar-group">
@@ -77,8 +78,6 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                     isDisabled={!editor.can().chain().focus().redo().run()}
                 />
             </div>
-
-            <ToolbarDivider />
 
             <div className="editor-toolbar-group">
                 <ToolbarButton
@@ -107,8 +106,6 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                 />
             </div>
 
-            <ToolbarDivider />
-
             <div className="editor-toolbar-group">
                 <ToolbarButton
                     icon={AlignLeft}
@@ -130,8 +127,6 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                 />
             </div>
 
-            <ToolbarDivider />
-
             <div className="editor-toolbar-group">
                 <ToolbarButton
                     icon={List}
@@ -146,8 +141,6 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                     isActive={editor.isActive('orderedList')}
                 />
             </div>
-
-            <ToolbarDivider />
 
             <div className="editor-toolbar-group">
                 <ToolbarButton
@@ -164,12 +157,11 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                 />
             </div>
 
-            <ToolbarDivider />
-
             <div className="editor-toolbar-group">
                 <div className="editor-toolbar-select-wrapper" title="字体大小">
                     <select
                         className="editor-toolbar-select"
+                        aria-label="字体大小"
                         onChange={(e) => editor.chain().focus().setFontSize(e.target.value).run()}
                         value={editor.getAttributes('textStyle').fontSize || ''}
                         onMouseDown={(e) => {
@@ -189,32 +181,32 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                 </div>
             </div>
 
-            <ToolbarDivider />
-
             <div className="editor-toolbar-group">
                 <div className="color-picker-wrapper" title="字体颜色">
                     <Palette size={18} strokeWidth={2} className="color-picker-icon" aria-hidden="true" />
+                    <span className="color-picker-swatch" style={{ backgroundColor: textColor }} aria-hidden="true" />
                     <input
                         type="color"
                         className="color-picker-input"
+                        aria-label="字体颜色"
                         onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
                         onChange={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
-                        value={editor.getAttributes('textStyle').color || '#000000'}
+                        value={textColor}
                     />
                 </div>
                 <div className="color-picker-wrapper" title="背景颜色 (高亮)">
                     <Highlighter size={18} strokeWidth={2} className="color-picker-icon" aria-hidden="true" />
+                    <span className="color-picker-swatch" style={{ backgroundColor: highlightColor }} aria-hidden="true" />
                     <input
                         type="color"
                         className="color-picker-input"
+                        aria-label="背景颜色（高亮）"
                         onInput={(e) => editor.chain().focus().toggleHighlight({ color: (e.target as HTMLInputElement).value }).run()}
                         onChange={(e) => editor.chain().focus().toggleHighlight({ color: (e.target as HTMLInputElement).value }).run()}
-                        value={editor.getAttributes('highlight').color || '#ffff00'}
+                        value={highlightColor}
                     />
                 </div>
             </div>
-
-            <ToolbarDivider />
 
             <div className="editor-toolbar-group">
                 <ToolbarButton
