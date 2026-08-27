@@ -5,7 +5,7 @@
 import { fetch } from '@tauri-apps/plugin-http';
 import type { AIProviderProfile } from '../types';
 import { normalizeAIEndpoint } from './aiConfig';
-import { getOpenAIRequestOptions, withQwen3NoThink } from './ai';
+import { hasOpenAIReply, type OpenAIChatResponse } from './ai';
 
 export async function testAIConnection(
     profile: AIProviderProfile
@@ -35,9 +35,9 @@ export async function testAIConnection(
             },
             body: JSON.stringify({
                 model,
-                messages: [{ role: 'user', content: withQwen3NoThink('请回复 OK', model) }],
-                max_tokens: 10,
-                ...getOpenAIRequestOptions(model, endpoint, false),
+                messages: [{ role: 'user', content: '请回复 OK' }],
+                max_tokens: 1024,
+                stream: false,
             }),
         });
 
@@ -63,15 +63,12 @@ export async function testAIConnection(
             return { success: false, message: errorMessage };
         }
 
-        const data = await response.json() as {
-            choices?: Array<{ message?: { content?: string | null } }>;
-        };
-        const reply = data.choices?.[0]?.message?.content;
+        const data = await response.json() as OpenAIChatResponse;
 
-        if (!reply?.trim()) {
+        if (!hasOpenAIReply(data)) {
             return {
                 success: false,
-                message: '接口已响应，但模型没有返回有效内容；推理模型请关闭思考模式后重试',
+                message: '接口已响应，但没有返回 content 或 reasoning_content；请检查模型名称和服务端兼容配置',
             };
         }
 

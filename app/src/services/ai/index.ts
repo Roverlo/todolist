@@ -16,26 +16,18 @@ export function isQwen3Model(model: string): boolean {
     return /qwen3/i.test(model);
 }
 
-export function withQwen3NoThink(prompt: string, model: string): string {
-    return isQwen3Model(model) && !/\/no_think\b/i.test(prompt)
-        ? `${prompt}\n/no_think`
-        : prompt;
-}
-
 export function getOpenAIRequestOptions(
     model: string,
-    endpoint: string,
     jsonMode: boolean,
 ): Record<string, unknown> {
-    const qwen3 = isQwen3Model(model);
-    const dashScope = /dashscope[^/]*\.aliyuncs\.com/i.test(endpoint);
+    return jsonMode && !isQwen3Model(model)
+        ? { response_format: { type: 'json_object' } }
+        : {};
+}
 
-    return {
-        ...(jsonMode && (!qwen3 || dashScope)
-            ? { response_format: { type: 'json_object' } }
-            : {}),
-        ...(qwen3 && dashScope ? { enable_thinking: false } : {}),
-    };
+export function hasOpenAIReply(data: OpenAIChatResponse): boolean {
+    const message = data.choices?.[0]?.message;
+    return Boolean(message?.content?.trim() || message?.reasoning_content?.trim());
 }
 
 export function parseOpenAIJsonResponse<T>(data: OpenAIChatResponse): T {
@@ -44,10 +36,10 @@ export function parseOpenAIJsonResponse<T>(data: OpenAIChatResponse): T {
 
     if (!content) {
         if (choice?.finish_reason === 'length') {
-            throw new Error('AI 未返回最终结果：输出额度已被思考内容耗尽，请关闭思考模式后重试');
+            throw new Error('AI 的思考过程耗尽了输出额度，尚未返回最终 JSON；请缩短笔记后重试');
         }
         if (choice?.message?.reasoning_content?.trim()) {
-            throw new Error('AI 只返回了思考过程，未返回最终 JSON，请关闭思考模式后重试');
+            throw new Error('接口只返回了思考过程，未返回最终 JSON；请检查服务端是否会继续返回 content');
         }
         throw new Error('AI 接口响应成功，但没有返回可用内容');
     }
@@ -133,7 +125,7 @@ class OpenAICompatibleProvider implements AIProvider {
                 role: 'system',
                 content: `${systemPrompt}\n\nIMPORTANT: You must response with valid JSON only. No markdown code blocks, no explanations. Just the raw JSON string.`,
             },
-            { role: 'user', content: withQwen3NoThink(userPrompt, this.model) }
+            { role: 'user', content: userPrompt }
         ];
 
         const response = await customFetch(this.chatCompletionsUrl, {
@@ -146,8 +138,9 @@ class OpenAICompatibleProvider implements AIProvider {
                 model: this.model,
                 messages,
                 temperature: 0.1,
-                max_tokens: 4000,
-                ...getOpenAIRequestOptions(this.model, this.chatCompletionsUrl, true),
+                max_tokens: 16384,
+                stream: false,
+                ...getOpenAIRequestOptions(this.model, true),
             }),
         });
 
