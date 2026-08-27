@@ -292,7 +292,7 @@ export interface NoteTreeNode {
 
 // ==================== AI Types ====================
 
-export type AIProviderType = 'deepseek' | 'openai' | 'qwen' | 'custom' | 'gemini' | 'anthropic' | 'moonshot' | 'yi';
+export type AIProviderType = 'custom';
 
 export interface AIProviderProfile {
   id: string;

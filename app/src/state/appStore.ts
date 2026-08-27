@@ -23,9 +23,9 @@ import type {
   AISettings,
   SavedFilter,
   Note,
-  NoteTag,
-  AIProviderProfile
+  NoteTag
 } from '../types';
+import { toCustomAISettings } from '../services/aiConfig';
 
 const CORE_COLUMNS = [
   'project',
@@ -86,18 +86,7 @@ const defaultSettings: Settings = {
     retentionCount: 24,
     dailyBackup: true,
   },
-  ai: {
-    providers: [
-      {
-        id: 'deepseek-default',
-        type: 'deepseek',
-        name: 'DeepSeek V3',
-        model: 'deepseek-chat',
-        apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
-      }
-    ],
-    activeProviderId: 'deepseek-default',
-  },
+  ai: toCustomAISettings(),
   updateCheck: {
     checkOnStartup: true,
     autoCheck: true,
@@ -334,11 +323,7 @@ export interface AppStore extends AppData {
   setNoteTreeNodeExpanded: (nodeId: string, expanded: boolean) => void;
 
   // AI Settings Actions
-  addAIProvider: (provider: Omit<AIProviderProfile, 'id'>) => AIProviderProfile;
-  updateAIProvider: (id: string, updates: Partial<AIProviderProfile>) => void;
-  deleteAIProvider: (id: string) => void;
-  setAIActiveProvider: (id: string | undefined) => void;
-  updateAISettings: (settings: Partial<AISettings>) => void;
+  updateAISettings: (settings: AISettings) => void;
 
   // View Switching
   setActiveView: (view: 'tasks' | 'notes') => void;
@@ -1377,56 +1362,9 @@ export const useAppStore = create<AppStore>()(
       },
 
       // ==================== AI Settings Actions ====================
-      addAIProvider: (providerInput: Omit<AIProviderProfile, 'id'>) => {
-        const newProvider: AIProviderProfile = {
-          id: nanoid(10),
-          ...providerInput,
-        };
+      updateAISettings: (settings: AISettings) => {
         set(produce((state: AppStore) => {
-          if (!state.settings.ai) {
-            state.settings.ai = { providers: [], activeProviderId: undefined };
-          }
-          state.settings.ai.providers.push(newProvider);
-          if (state.settings.ai.providers.length === 1) {
-            state.settings.ai.activeProviderId = newProvider.id;
-          }
-        }));
-        return newProvider;
-      },
-
-      updateAIProvider: (id: string, updates: Partial<AIProviderProfile>) => {
-        set(produce((state: AppStore) => {
-          const provider = state.settings.ai?.providers.find(p => p.id === id);
-          if (provider) {
-            Object.assign(provider, updates);
-          }
-        }));
-      },
-
-      deleteAIProvider: (id: string) => {
-        set(produce((state: AppStore) => {
-          if (!state.settings.ai) return;
-          state.settings.ai.providers = state.settings.ai.providers.filter(p => p.id !== id);
-          if (state.settings.ai.activeProviderId === id) {
-            state.settings.ai.activeProviderId = state.settings.ai.providers[0]?.id;
-          }
-        }));
-      },
-
-      setAIActiveProvider: (id: string | undefined) => {
-        set(produce((state: AppStore) => {
-          if (state.settings.ai) {
-            state.settings.ai.activeProviderId = id;
-          }
-        }));
-      },
-
-      updateAISettings: (settings: Partial<AISettings>) => {
-        set(produce((state: AppStore) => {
-          if (!state.settings.ai) {
-            state.settings.ai = { providers: [], activeProviderId: undefined };
-          }
-          Object.assign(state.settings.ai, settings);
+          state.settings.ai = toCustomAISettings(settings);
         }));
       },
 
@@ -1491,7 +1429,7 @@ export const useAppStore = create<AppStore>()(
     }),
     {
       name: 'project-todo-app',
-      version: 10,
+      version: 12,
       storage: createJSONStorage(() => {
         const portableStorage: StateStorage = {
           getItem: async (name: string): Promise<string | null> => {
@@ -1655,6 +1593,9 @@ export const useAppStore = create<AppStore>()(
         if (version < 10) {
           // 强制更新排序规则以应用新的 DEFAULT_SORT (dueDate 优先)
           state.sortRules = DEFAULT_SORT;
+        }
+        if (version < 12) {
+          state.settings.ai = toCustomAISettings(state.settings.ai);
         }
         return state as any;
       },

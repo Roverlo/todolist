@@ -88,6 +88,12 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
     const [loading, setLoading] = useState(false);
     const [tasks, setTasks] = useState<AIGeneratedTask[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const activeProviderConfig = aiSettings?.providers.find(provider => provider.id === aiSettings.activeProviderId);
+    const hasAIConfig = Boolean(
+        activeProviderConfig?.apiKey?.trim()
+        && activeProviderConfig.model?.trim()
+        && activeProviderConfig.apiEndpoint?.trim()
+    );
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -157,8 +163,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
     const handleGenerate = async () => {
         if (!note?.content) return;
 
-        const activeProviderConfig = aiSettings?.providers.find(p => p.id === aiSettings.activeProviderId);
-        if (!activeProviderConfig?.apiKey) {
+        if (!activeProviderConfig || !hasAIConfig) {
             setSettingsOpen(true);
             return;
         }
@@ -397,7 +402,6 @@ ${note.content}`;
         setTimeout(() => setSuccessMsg(null), 3000);
     };
 
-    const hasApiKey = !!aiSettings?.providers.find(p => p.id === aiSettings.activeProviderId)?.apiKey;
     const selectedCount = tasks.filter(t => t.selected).length;
 
     return (
@@ -441,7 +445,7 @@ ${note.content}`;
                                 disabled={!note?.content}
                             >
                                 <Icon name="magic" size={16} />
-                                <span>{hasApiKey ? '生成任务' : '配置 AI 并生成'}</span>
+                                <span>{hasAIConfig ? '生成任务' : '配置 AI 并生成'}</span>
                             </button>
                         )}
                     </div>
