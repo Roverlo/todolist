@@ -1,6 +1,6 @@
 import type { AIProviderProfile, AISettings } from '../types';
 
-export const CUSTOM_AI_PROVIDER_ID = 'custom-primary';
+const LEGACY_SINGLE_PROVIDER_ID = 'custom-primary';
 
 const isCustomProvider = (provider: AIProviderProfile) =>
     provider.type === 'custom' || provider.id.startsWith('custom-');
@@ -8,25 +8,34 @@ const isCustomProvider = (provider: AIProviderProfile) =>
 const hasUserKey = (provider: AIProviderProfile) =>
     provider.id !== 'modelscope-free' && Boolean(provider.apiKey?.trim());
 
-export function toSingleCustomAISettings(settings?: AISettings): AISettings {
-    const providers = settings?.providers ?? [];
-    const active = providers.find(provider => provider.id === settings?.activeProviderId);
-    const source = (active && isCustomProvider(active) ? active : undefined)
-        ?? (active && hasUserKey(active) ? active : undefined)
-        ?? providers.find(provider => isCustomProvider(provider) && hasUserKey(provider))
-        ?? providers.find(isCustomProvider)
-        ?? providers.find(hasUserKey);
+const isGeneratedBlankProfile = (provider: AIProviderProfile) =>
+    provider.id === LEGACY_SINGLE_PROVIDER_ID
+    && (!provider.name.trim() || provider.name.trim() === '我的 AI 接口')
+    && !provider.apiKey?.trim()
+    && !provider.model?.trim()
+    && !provider.apiEndpoint?.trim();
+
+export function toCustomAISettings(settings?: AISettings): AISettings {
+    const providers = (settings?.providers ?? [])
+        .filter(provider => provider.id !== 'modelscope-free')
+        .filter(provider => !isGeneratedBlankProfile(provider))
+        .filter(provider => isCustomProvider(provider) || hasUserKey(provider))
+        .map(provider => ({
+            id: provider.id,
+            type: 'custom' as const,
+            name: provider.name.trim() || '未命名接口',
+            apiKey: provider.apiKey?.trim() || '',
+            model: provider.model?.trim() || '',
+            apiEndpoint: provider.apiEndpoint?.trim() || '',
+        }));
+
+    const activeProviderId = providers.some(provider => provider.id === settings?.activeProviderId)
+        ? settings?.activeProviderId
+        : providers[0]?.id;
 
     return {
-        activeProviderId: CUSTOM_AI_PROVIDER_ID,
-        providers: [{
-            id: CUSTOM_AI_PROVIDER_ID,
-            type: 'custom',
-            name: source?.name.trim() || '我的 AI 接口',
-            apiKey: source?.apiKey?.trim() || '',
-            model: source?.model?.trim() || '',
-            apiEndpoint: source?.apiEndpoint?.trim() || '',
-        }],
+        activeProviderId,
+        providers,
     };
 }
 
@@ -41,6 +50,9 @@ const usesLocalHttp = (value: string) => {
         || host === '::1'
         || host.endsWith('.local')
         || host.endsWith('.lan')
+        || host.endsWith('.internal')
+        || (!host.includes('.') && !host.includes(':'))
+        || /^(fc|fd|fe[89ab])/i.test(host)
         || parts[0] === 10
         || parts[0] === 127
         || (parts[0] === 169 && parts[1] === 254)

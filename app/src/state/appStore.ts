@@ -25,7 +25,7 @@ import type {
   Note,
   NoteTag
 } from '../types';
-import { toSingleCustomAISettings } from '../services/aiConfig';
+import { toCustomAISettings } from '../services/aiConfig';
 
 const CORE_COLUMNS = [
   'project',
@@ -86,7 +86,7 @@ const defaultSettings: Settings = {
     retentionCount: 24,
     dailyBackup: true,
   },
-  ai: toSingleCustomAISettings(),
+  ai: toCustomAISettings(),
   updateCheck: {
     checkOnStartup: true,
     autoCheck: true,
@@ -1364,7 +1364,7 @@ export const useAppStore = create<AppStore>()(
       // ==================== AI Settings Actions ====================
       updateAISettings: (settings: AISettings) => {
         set(produce((state: AppStore) => {
-          state.settings.ai = toSingleCustomAISettings(settings);
+          state.settings.ai = toCustomAISettings(settings);
         }));
       },
 
@@ -1429,7 +1429,7 @@ export const useAppStore = create<AppStore>()(
     }),
     {
       name: 'project-todo-app',
-      version: 11,
+      version: 12,
       storage: createJSONStorage(() => {
         const portableStorage: StateStorage = {
           getItem: async (name: string): Promise<string | null> => {
@@ -1594,8 +1594,8 @@ export const useAppStore = create<AppStore>()(
           // 强制更新排序规则以应用新的 DEFAULT_SORT (dueDate 优先)
           state.sortRules = DEFAULT_SORT;
         }
-        if (version < 11) {
-          state.settings.ai = toSingleCustomAISettings(state.settings.ai);
+        if (version < 12) {
+          state.settings.ai = toCustomAISettings(state.settings.ai);
         }
         return state as any;
       },
