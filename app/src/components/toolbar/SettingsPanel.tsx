@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useAppStoreShallow } from '../../state/appStore';
 import { checkForUpdate, CURRENT_VERSION } from '../../utils/updateChecker';
 import type { UpdateInfo } from '../../utils/updateChecker';
@@ -103,6 +104,12 @@ export const SettingsPanel = ({
         // 不关闭设置面板，让子模态框叠加在上面
         // 用户关闭子模态框后会回到设置面板
         action();
+    };
+
+    const handleOpenDataDirectory = () => {
+        invoke('open_data_directory').catch((error) => {
+            window.alert(`无法打开数据存储位置：${String(error)}`);
+        });
     };
 
     // Toggle Switch 组件
@@ -451,6 +458,24 @@ export const SettingsPanel = ({
                                     fontSize: 13,
                                     fontWeight: 600,
                                     color: 'var(--text-main)',
+                                    marginBottom: 4,
+                                }}
+                            >
+                                本地数据
+                            </div>
+                            <SettingCard
+                                icon="📂"
+                                title="数据存储位置"
+                                description="打开默认数据文件夹（系统文档\ProjectTodo）"
+                                onClick={handleOpenDataDirectory}
+                            />
+
+                            <div
+                                style={{
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: 'var(--text-main)',
+                                    marginTop: 12,
                                     marginBottom: 4,
                                 }}
                             >
