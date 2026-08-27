@@ -1,6 +1,5 @@
+import { fetch } from '@tauri-apps/plugin-http';
 import { normalizeAIEndpoint } from '../aiConfig';
-
-const customFetch = typeof window !== 'undefined' && window.fetch ? window.fetch.bind(window) : fetch;
 
 export interface OpenAIChatResponse {
     choices?: Array<{
@@ -94,7 +93,7 @@ class OpenAICompatibleProvider implements AIProvider {
     async chat(messages: AIMessage[]): Promise<string> {
         this.ensureConfigured();
 
-        const response = await customFetch(this.chatCompletionsUrl, {
+        const response = await fetch(this.chatCompletionsUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -128,7 +127,7 @@ class OpenAICompatibleProvider implements AIProvider {
             { role: 'user', content: userPrompt }
         ];
 
-        const response = await customFetch(this.chatCompletionsUrl, {
+        const response = await fetch(this.chatCompletionsUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

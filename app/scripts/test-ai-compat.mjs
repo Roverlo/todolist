@@ -4,14 +4,17 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 const sourcePath = fileURLToPath(new URL('../src/services/ai/index.ts', import.meta.url));
-const source = (await readFile(sourcePath, 'utf8')).replace(
-    "import { normalizeAIEndpoint } from '../aiConfig';",
-    'const normalizeAIEndpoint = value => value;',
-);
+const source = (await readFile(sourcePath, 'utf8'))
+    .replace("import { fetch } from '@tauri-apps/plugin-http';", 'const fetch = globalThis.fetch;')
+    .replace(
+        "import { normalizeAIEndpoint } from '../aiConfig';",
+        'const normalizeAIEndpoint = value => value;',
+    );
 const output = ts.transpileModule(source, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;
 let requestBody;
+globalThis.window = { fetch: async () => { throw new Error('WebView fetch must not be used'); } };
 globalThis.fetch = async (_url, init) => {
     requestBody = JSON.parse(init.body);
     return {
