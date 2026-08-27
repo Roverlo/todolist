@@ -1,5 +1,23 @@
 import { Editor } from '@tiptap/react';
-import { Icon, type IconName } from '../ui/Icon';
+import {
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
+    Bold,
+    Code2,
+    Highlighter,
+    Italic,
+    List,
+    ListOrdered,
+    Palette,
+    Quote,
+    Redo2,
+    RemoveFormatting,
+    Strikethrough,
+    Underline,
+    Undo2,
+    type LucideIcon,
+} from 'lucide-react';
 import clsx from 'clsx';
 import './RichTextEditor.css';
 
@@ -13,13 +31,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     }
 
     const ToolbarButton = ({
-        icon,
+        icon: ToolbarIcon,
         title,
         action,
         isActive = false,
         isDisabled = false,
     }: {
-        icon: IconName;
+        icon: LucideIcon;
         title: string;
         action: () => void;
         isActive?: boolean;
@@ -33,10 +51,11 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
             disabled={isDisabled}
             className={clsx('editor-toolbar-btn', { 'is-active': isActive })}
             title={title}
+            aria-label={title}
             type="button"
             onMouseDown={(e) => e.preventDefault()} // Prevent focus loss
         >
-            <Icon name={icon} size={16} />
+            <ToolbarIcon size={18} strokeWidth={2} aria-hidden="true" />
         </button>
     );
 
@@ -46,13 +65,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         <div className="editor-toolbar">
             <div className="editor-toolbar-group">
                 <ToolbarButton
-                    icon="undo"
+                    icon={Undo2}
                     title="撤销 (Ctrl+Z)"
                     action={() => editor.chain().focus().undo().run()}
                     isDisabled={!editor.can().chain().focus().undo().run()}
                 />
                 <ToolbarButton
-                    icon="redo"
+                    icon={Redo2}
                     title="重做 (Ctrl+Shift+Z)"
                     action={() => editor.chain().focus().redo().run()}
                     isDisabled={!editor.can().chain().focus().redo().run()}
@@ -63,25 +82,25 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
             <div className="editor-toolbar-group">
                 <ToolbarButton
-                    icon="bold"
+                    icon={Bold}
                     title="加粗 (Ctrl+B)"
                     action={() => editor.chain().focus().toggleBold().run()}
                     isActive={editor.isActive('bold')}
                 />
                 <ToolbarButton
-                    icon="italic"
+                    icon={Italic}
                     title="斜体 (Ctrl+I)"
                     action={() => editor.chain().focus().toggleItalic().run()}
                     isActive={editor.isActive('italic')}
                 />
                 <ToolbarButton
-                    icon="underline"
+                    icon={Underline}
                     title="下划线 (Ctrl+U)"
                     action={() => editor.chain().focus().toggleUnderline().run()}
                     isActive={editor.isActive('underline')}
                 />
                 <ToolbarButton
-                    icon="strike"
+                    icon={Strikethrough}
                     title="删除线 (Ctrl+Shift+S)"
                     action={() => editor.chain().focus().toggleStrike().run()}
                     isActive={editor.isActive('strike')}
@@ -92,19 +111,19 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
             <div className="editor-toolbar-group">
                 <ToolbarButton
-                    icon="align-left"
+                    icon={AlignLeft}
                     title="左对齐"
                     action={() => editor.chain().focus().setTextAlign('left').run()}
                     isActive={editor.isActive({ textAlign: 'left' })}
                 />
                 <ToolbarButton
-                    icon="align-center"
+                    icon={AlignCenter}
                     title="居中对齐"
                     action={() => editor.chain().focus().setTextAlign('center').run()}
                     isActive={editor.isActive({ textAlign: 'center' })}
                 />
                 <ToolbarButton
-                    icon="align-right"
+                    icon={AlignRight}
                     title="右对齐"
                     action={() => editor.chain().focus().setTextAlign('right').run()}
                     isActive={editor.isActive({ textAlign: 'right' })}
@@ -115,13 +134,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
             <div className="editor-toolbar-group">
                 <ToolbarButton
-                    icon="list-ul"
+                    icon={List}
                     title="无序列表"
                     action={() => editor.chain().focus().toggleBulletList().run()}
                     isActive={editor.isActive('bulletList')}
                 />
                 <ToolbarButton
-                    icon="list-ol"
+                    icon={ListOrdered}
                     title="有序列表"
                     action={() => editor.chain().focus().toggleOrderedList().run()}
                     isActive={editor.isActive('orderedList')}
@@ -132,13 +151,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
             <div className="editor-toolbar-group">
                 <ToolbarButton
-                    icon="quote"
+                    icon={Quote}
                     title="引用"
                     action={() => editor.chain().focus().toggleBlockquote().run()}
                     isActive={editor.isActive('blockquote')}
                 />
                 <ToolbarButton
-                    icon="code"
+                    icon={Code2}
                     title="代码块"
                     action={() => editor.chain().focus().toggleCodeBlock().run()}
                     isActive={editor.isActive('codeBlock')}
@@ -174,7 +193,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
             <div className="editor-toolbar-group">
                 <div className="color-picker-wrapper" title="字体颜色">
-                    <Icon name="palette" size={16} className="color-picker-icon" />
+                    <Palette size={18} strokeWidth={2} className="color-picker-icon" aria-hidden="true" />
                     <input
                         type="color"
                         className="color-picker-input"
@@ -184,7 +203,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                     />
                 </div>
                 <div className="color-picker-wrapper" title="背景颜色 (高亮)">
-                    <Icon name="highlighter" size={16} className="color-picker-icon" />
+                    <Highlighter size={18} strokeWidth={2} className="color-picker-icon" aria-hidden="true" />
                     <input
                         type="color"
                         className="color-picker-input"
@@ -199,7 +218,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
             <div className="editor-toolbar-group">
                 <ToolbarButton
-                    icon="eraser"
+                    icon={RemoveFormatting}
                     title="清除所有格式"
                     action={() => editor.chain().focus().unsetAllMarks().clearNodes().unsetFontSize().run()}
                 />
