@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { exit } from '@tauri-apps/plugin-process';
 
 interface CloseConfirmModalProps {
     open: boolean;
@@ -24,7 +25,7 @@ export const CloseConfirmModal = ({ open, onClose }: CloseConfirmModalProps) => 
             if (action === 'minimize') {
                 await appWindow.hide();
             } else {
-                await appWindow.destroy();
+                await exit(0);
             }
         } catch (err) {
             console.error('关闭操作失败:', err);

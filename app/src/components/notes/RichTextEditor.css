@@ -139,49 +139,132 @@
     cursor: text;
 }
 
-.color-picker-wrapper {
+.word-color-picker {
     display: flex;
     align-items: center;
     position: relative;
-    width: 28px;
     height: 28px;
-    justify-content: center;
-    cursor: pointer;
     border-radius: 4px;
-    overflow: hidden;
 }
 
-.color-picker-wrapper:hover {
+.word-color-apply,
+.word-color-menu {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+}
+
+.word-color-apply {
+    position: relative;
+    width: 26px;
+    border-radius: 4px 0 0 4px;
+}
+
+.word-color-menu {
+    width: 14px;
+    border-left: 1px solid rgba(107, 114, 128, 0.2);
+    border-radius: 0 4px 4px 0;
+}
+
+.word-color-apply:hover,
+.word-color-menu:hover {
     background-color: #f3f4f6;
 }
 
-.color-picker-input {
+.word-color-current {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    padding: 0;
-    margin: 0;
-    border: none;
-}
-
-.color-picker-icon {
-    pointer-events: none;
-    color: #6b7280;
-}
-
-.color-picker-swatch {
-    position: absolute;
-    right: 6px;
+    right: 5px;
     bottom: 3px;
-    left: 6px;
-    height: 2px;
+    left: 5px;
+    height: 3px;
     border-radius: 999px;
-    box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.18);
-    pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.22);
+}
+
+.word-color-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 1000;
+    width: 236px;
+    padding: 10px;
+    color: #374151;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(17, 24, 39, 0.2);
+}
+
+.word-color-popover-title {
+    margin-bottom: 7px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.word-color-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 18px);
+    gap: 4px;
+}
+
+.word-color-option {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid rgba(17, 24, 39, 0.24);
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.word-color-option:hover,
+.word-color-option:focus-visible {
+    outline: 2px solid #4f46e5;
+    outline-offset: 1px;
+}
+
+.word-color-popover-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.word-color-clear,
+.word-color-custom {
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 7px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    color: #374151;
+    background: #fff;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.word-color-clear:hover,
+.word-color-custom:hover {
+    background: #f3f4f6;
+}
+
+.word-color-custom input {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
 }
 
 /* Header Portal Styles */
@@ -217,7 +300,8 @@
 }
 
 #editor-toolbar-portal .editor-toolbar-btn:hover:not(:disabled),
-#editor-toolbar-portal .color-picker-wrapper:hover {
+#editor-toolbar-portal .word-color-apply:hover,
+#editor-toolbar-portal .word-color-menu:hover {
     background-color: rgba(255, 255, 255, 0.2);
     color: #fff;
     transform: translateY(-1px);
@@ -229,18 +313,28 @@
     box-shadow: 0 2px 8px rgba(46, 16, 101, 0.24);
 }
 
-#editor-toolbar-portal .color-picker-icon {
+#editor-toolbar-portal .word-color-apply,
+#editor-toolbar-portal .word-color-menu {
     color: rgba(255, 255, 255, 0.88);
 }
 
-#editor-toolbar-portal .color-picker-wrapper {
-    border-radius: 7px;
+#editor-toolbar-portal .word-color-apply {
+    border-radius: 7px 0 0 7px;
+}
+
+#editor-toolbar-portal .word-color-menu {
+    border-left-color: rgba(255, 255, 255, 0.2);
+    border-radius: 0 7px 7px 0;
+}
+
+#editor-toolbar-portal .word-color-picker {
     transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 #editor-toolbar-portal .editor-toolbar-btn:focus-visible,
 #editor-toolbar-portal .editor-toolbar-select:focus-visible,
-#editor-toolbar-portal .color-picker-wrapper:focus-within {
+#editor-toolbar-portal .word-color-apply:focus-visible,
+#editor-toolbar-portal .word-color-menu:focus-visible {
     outline: 2px solid rgba(255, 255, 255, 0.9);
     outline-offset: 1px;
 }

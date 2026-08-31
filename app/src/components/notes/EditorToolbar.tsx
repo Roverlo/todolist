@@ -1,9 +1,11 @@
+import { useEffect, useRef, useState } from 'react';
 import { Editor } from '@tiptap/react';
 import {
     AlignCenter,
     AlignLeft,
     AlignRight,
     Bold,
+    ChevronDown,
     Code2,
     Highlighter,
     Italic,
@@ -25,13 +27,143 @@ interface EditorToolbarProps {
     editor: Editor | null;
 }
 
+const COLOR_PALETTE = [
+    ['黑色', '#000000'], ['深灰', '#595959'], ['灰色', '#a5a5a5'], ['浅灰', '#d9d9d9'], ['白色', '#ffffff'],
+    ['深红', '#c00000'], ['红色', '#ff0000'], ['橙色', '#ed7d31'], ['金色', '#ffc000'], ['黄色', '#fff200'],
+    ['深绿', '#008000'], ['绿色', '#70ad47'], ['青色', '#00b0f0'], ['浅蓝', '#5b9bd5'], ['蓝色', '#0070c0'],
+    ['深蓝', '#002060'], ['紫色', '#7030a0'], ['品红', '#c000c0'], ['棕色', '#7f6000'], ['米色', '#f4b183'],
+] as const;
+
+function WordColorPicker({
+    icon: PickerIcon,
+    label,
+    color,
+    clearLabel,
+    onApply,
+    onClear,
+}: {
+    icon: LucideIcon;
+    label: string;
+    color: string;
+    clearLabel: string;
+    onApply: (color: string) => void;
+    onClear: () => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const closeOutside = (event: PointerEvent) => {
+            if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
+        };
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setOpen(false);
+        };
+
+        document.addEventListener('pointerdown', closeOutside);
+        document.addEventListener('keydown', closeOnEscape);
+        return () => {
+            document.removeEventListener('pointerdown', closeOutside);
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [open]);
+
+    const chooseColor = (nextColor: string) => {
+        onApply(nextColor);
+        setOpen(false);
+    };
+
+    return (
+        <div className="word-color-picker" ref={wrapperRef}>
+            <button
+                type="button"
+                className="word-color-apply"
+                title={`应用${label} ${color}`}
+                aria-label={`应用${label}`}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onApply(color)}
+            >
+                <PickerIcon size={18} strokeWidth={2} aria-hidden="true" />
+                <span className="word-color-current" style={{ backgroundColor: color }} aria-hidden="true" />
+            </button>
+            <button
+                type="button"
+                className="word-color-menu"
+                title={`选择${label}`}
+                aria-label={`${label}菜单`}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setOpen(value => !value)}
+            >
+                <ChevronDown size={12} strokeWidth={2.5} aria-hidden="true" />
+            </button>
+
+            {open && (
+                <div className="word-color-popover" role="menu" aria-label={`选择${label}`}>
+                    <div className="word-color-popover-title">主题颜色</div>
+                    <div className="word-color-grid">
+                        {COLOR_PALETTE.map(([name, value]) => (
+                            <button
+                                type="button"
+                                role="menuitem"
+                                key={value}
+                                className="word-color-option"
+                                style={{ backgroundColor: value }}
+                                title={name}
+                                aria-label={`${label}：${name}`}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => chooseColor(value)}
+                            />
+                        ))}
+                    </div>
+                    <div className="word-color-popover-footer">
+                        <button
+                            type="button"
+                            role="menuitem"
+                            className="word-color-clear"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                                onClear();
+                                setOpen(false);
+                            }}
+                        >
+                            {clearLabel}
+                        </button>
+                        <label className="word-color-custom">
+                            其他颜色
+                            <input
+                                type="color"
+                                value={color}
+                                aria-label={`${label}其他颜色`}
+                                onChange={(event) => chooseColor(event.target.value)}
+                            />
+                        </label>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function EditorToolbar({ editor }: EditorToolbarProps) {
+    const [textColor, setTextColor] = useState('#000000');
+    const [highlightColor, setHighlightColor] = useState('#fff200');
+
     if (!editor) {
         return null;
     }
 
-    const textColor = editor.getAttributes('textStyle').color || '#000000';
-    const highlightColor = editor.getAttributes('highlight').color || '#ffff00';
+    const applyTextColor = (color: string) => {
+        setTextColor(color);
+        editor.chain().focus().setColor(color).run();
+    };
+    const applyHighlightColor = (color: string) => {
+        setHighlightColor(color);
+        editor.chain().focus().setHighlight({ color }).run();
+    };
 
     const ToolbarButton = ({
         icon: ToolbarIcon,
@@ -182,30 +314,22 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
             </div>
 
             <div className="editor-toolbar-group">
-                <div className="color-picker-wrapper" title="字体颜色">
-                    <Palette size={18} strokeWidth={2} className="color-picker-icon" aria-hidden="true" />
-                    <span className="color-picker-swatch" style={{ backgroundColor: textColor }} aria-hidden="true" />
-                    <input
-                        type="color"
-                        className="color-picker-input"
-                        aria-label="字体颜色"
-                        onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
-                        onChange={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
-                        value={textColor}
-                    />
-                </div>
-                <div className="color-picker-wrapper" title="背景颜色 (高亮)">
-                    <Highlighter size={18} strokeWidth={2} className="color-picker-icon" aria-hidden="true" />
-                    <span className="color-picker-swatch" style={{ backgroundColor: highlightColor }} aria-hidden="true" />
-                    <input
-                        type="color"
-                        className="color-picker-input"
-                        aria-label="背景颜色（高亮）"
-                        onInput={(e) => editor.chain().focus().toggleHighlight({ color: (e.target as HTMLInputElement).value }).run()}
-                        onChange={(e) => editor.chain().focus().toggleHighlight({ color: (e.target as HTMLInputElement).value }).run()}
-                        value={highlightColor}
-                    />
-                </div>
+                <WordColorPicker
+                    icon={Palette}
+                    label="字体颜色"
+                    color={textColor}
+                    clearLabel="自动颜色"
+                    onApply={applyTextColor}
+                    onClear={() => editor.chain().focus().unsetColor().run()}
+                />
+                <WordColorPicker
+                    icon={Highlighter}
+                    label="背景颜色"
+                    color={highlightColor}
+                    clearLabel="无颜色"
+                    onApply={applyHighlightColor}
+                    onClear={() => editor.chain().focus().unsetHighlight().run()}
+                />
             </div>
 
             <div className="editor-toolbar-group">

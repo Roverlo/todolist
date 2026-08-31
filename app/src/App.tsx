@@ -32,6 +32,7 @@ import { StatsCard } from './components/ui/StatsCard';
 import { CloseConfirmModal } from './components/ui/CloseConfirmModal';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
+import { exit } from '@tauri-apps/plugin-process';
 
 function App() {
   useAutoBackup(); // 启动自动备份 hook
@@ -104,8 +105,8 @@ function App() {
           console.log('[CloseHandler] Hiding window');
           await appWindow.hide();
         } else if (savedChoice === 'exit') {
-          console.log('[CloseHandler] Destroying window');
-          await appWindow.destroy();
+          console.log('[CloseHandler] Exiting application');
+          await exit(0);
         } else {
           console.log('[CloseHandler] Showing modal');
           setCloseConfirmOpen(true);
