@@ -2,6 +2,7 @@ import { fetch } from '@tauri-apps/plugin-http';
 import { normalizeAIEndpoint } from '../aiConfig';
 
 export interface OpenAIChatResponse {
+    model?: string | null;
     choices?: Array<{
         finish_reason?: string | null;
         message?: {
@@ -59,6 +60,9 @@ export function parseOpenAIJsonResponse<T>(data: OpenAIChatResponse): T {
     try {
         return JSON.parse(json) as T;
     } catch (error) {
+        if (choice?.finish_reason === 'length') {
+            throw new Error('AI 返回的 JSON 被截断（输出额度不足）；请缩短笔记后重试');
+        }
         console.error('JSON Parse Error:', error, { finishReason: choice?.finish_reason });
         throw new Error('AI 返回的格式不是有效的 JSON');
     }

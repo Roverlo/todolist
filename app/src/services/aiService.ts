@@ -5,7 +5,17 @@
 import { fetch } from '@tauri-apps/plugin-http';
 import type { AIProviderProfile } from '../types';
 import { normalizeAIEndpoint } from './aiConfig';
-import { hasOpenAIReply, type OpenAIChatResponse } from './ai';
+import {
+    getOpenAIRequestOptions,
+    parseOpenAIJsonResponse,
+    type OpenAIChatResponse,
+} from './ai';
+
+const sameModel = (left: string, right: string) => {
+    const normalize = (value: string) => value.trim().toLowerCase();
+    const basename = (value: string) => normalize(value).split('/').pop();
+    return normalize(left) === normalize(right) || basename(left) === basename(right);
+};
 
 export async function testAIConnection(
     profile: AIProviderProfile
@@ -27,17 +37,54 @@ export async function testAIConnection(
     }
 
     try {
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+        };
+        const modelsEndpoint = new URL(endpoint);
+        modelsEndpoint.pathname = modelsEndpoint.pathname.replace(/\/chat\/completions$/i, '/models');
+
+        try {
+            const modelsResponse = await fetch(modelsEndpoint.toString(), { headers });
+            if (modelsResponse.ok) {
+                const modelsData = await modelsResponse.json() as {
+                    data?: Array<{ id?: string | null }>;
+                };
+                const modelIds = modelsData.data
+                    ?.map(item => item.id?.trim())
+                    .filter((id): id is string => Boolean(id)) ?? [];
+
+                if (modelIds.length > 0 && !modelIds.some(id => sameModel(id, model))) {
+                    return {
+                        success: false,
+                        message: `接口可用，但模型列表中没有“${model}”`,
+                    };
+                }
+            }
+        } catch {
+            // Some OpenAI-compatible gateways do not expose /models; the probe below still validates the route.
+        }
+
+        const probe = crypto.randomUUID();
         const response = await fetch(endpoint, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
+            headers,
             body: JSON.stringify({
                 model,
-                messages: [{ role: 'user', content: '请回复 OK' }],
-                max_tokens: 1024,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Return valid JSON only. No markdown or explanation.',
+                    },
+                    {
+                        role: 'user',
+                        content: `Return exactly this JSON object: {"probe":"${probe}"}`,
+                    },
+                ],
+                temperature: 0,
+                max_tokens: 16384,
                 stream: false,
+                ...getOpenAIRequestOptions(model, true),
             }),
         });
 
@@ -64,15 +111,30 @@ export async function testAIConnection(
         }
 
         const data = await response.json() as OpenAIChatResponse;
+        const actualModel = data.model?.trim();
 
-        if (!hasOpenAIReply(data)) {
+        if (!actualModel) {
             return {
                 success: false,
-                message: '接口已响应，但没有返回 content 或 reasoning_content；请检查模型名称和服务端兼容配置',
+                message: '接口已响应，但没有返回实际模型名称，无法验证所填模型',
+            };
+        }
+        if (!sameModel(actualModel, model)) {
+            return {
+                success: false,
+                message: `服务端实际使用模型“${actualModel}”，与填写的“${model}”不一致`,
             };
         }
 
-        return { success: true, message: '连接成功！' };
+        const result = parseOpenAIJsonResponse<{ probe?: string }>(data);
+        if (result?.probe !== probe) {
+            return {
+                success: false,
+                message: '模型已响应，但未按要求返回测试 JSON；当前配置不适合任务生成',
+            };
+        }
+
+        return { success: true, message: '配置验证成功！' };
     } catch (error) {
         console.error('[AI Test] Error:', error);
         const errMsg = error instanceof Error ? error.message : String(error);
