@@ -47,6 +47,7 @@ try {
 
     const editor = page.locator('.ProseMirror');
     await editor.fill('颜色回归测试');
+    assert.equal(await page.getByLabel('所属日期', { exact: true }).count(), 0, '编辑区不应显示所属日期');
     await editor.press('Control+A');
     await page.getByRole('button', { name: '字体颜色菜单' }).click();
     await page.getByRole('menuitem', { name: '字体颜色：绿色' }).click();
@@ -69,10 +70,14 @@ try {
 
     // All data below lives in this fresh browser context, never the desktop user's storage.
     const storedNotes = () => page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.notes);
+    const selectedNoteDate = () => page.evaluate(() => {
+        const state = JSON.parse(localStorage.getItem('project-todo-app')).state;
+        return state.notes.find(n => n.id === state.selectedNoteId)?.date;
+    });
     const createOnDate = async (date, title) => {
         await page.getByRole('button', { name: date, exact: true }).click();
         await page.getByRole('button', { name: `${date} 新建随记`, exact: true }).click();
-        assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), date);
+        assert.equal(await selectedNoteDate(), date);
         await page.getByPlaceholder('标题（可选）').fill(title);
         await editor.fill(`${title}正文`);
         await page.getByRole('button', { name: '保存', exact: true }).click();
@@ -93,18 +98,22 @@ try {
     const future = await createOnDate('2026-10-18', '未来安排');
     await createOnDate('2026-10-18', '同日第二条事项');
 
-    // Changing the date while typing must preserve the unsaved title and body.
+    // Store updates to the note date must still preserve the unsaved title and body.
     await page.getByPlaceholder('标题（可选）').fill('跨年安排');
     await editor.fill('跨年日期调整后的正文');
-    await page.getByLabel('所属日期', { exact: true }).fill('2027-01-15');
+    await page.evaluate(async () => {
+        const { useAppStore } = await import('/src/state/appStore.ts');
+        const store = useAppStore.getState();
+        store.updateNote(store.selectedNoteId, { date: '2027-01-15' });
+    });
     assert.equal(await page.locator('.notes-calendar-title').innerText(), '2027年1月');
     assert.equal(await page.getByPlaceholder('标题（可选）').inputValue(), '跨年安排');
     assert.equal(await editor.innerText(), '跨年日期调整后的正文');
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('project-todo-app')).state.notes
         .some(n => n.title === '跨年安排' && n.date === '2027-01-15' && n.content.includes('跨年日期调整后的正文')));
     await page.reload();
-    await page.getByLabel('所属日期', { exact: true }).waitFor();
-    assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), '2027-01-15');
+    await page.getByPlaceholder('标题（可选）').waitFor();
+    assert.equal(await selectedNoteDate(), '2027-01-15');
     assert.equal((await storedNotes()).find(n => n.id === past.id).date, '2026-08-31');
     assert.equal((await storedNotes()).find(n => n.id === future.id).date, '2026-10-18');
 
@@ -112,7 +121,7 @@ try {
     assert.equal(await page.getByRole('button', { name: '2027-01-15', exact: true }).getAttribute('aria-pressed'), 'true');
     const beforeToday = await storedNotes();
     await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
-    assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), '2026-09-05');
+    assert.equal(await selectedNoteDate(), '2026-09-05');
     assert.equal(await page.locator('.notes-calendar-title').innerText(), '2026年9月');
     assert.equal(await page.getByPlaceholder('标题（可选）').inputValue(), '随记01');
     const afterToday = await storedNotes();
@@ -167,7 +176,7 @@ try {
 
     // With no entry for today, the shortcut must create today rather than the selected old day.
     await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
-    assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), '2026-09-05');
+    assert.equal(await selectedNoteDate(), '2026-09-05');
     assert.equal(await page.getByPlaceholder('标题（可选）').inputValue(), '随记');
     assert.equal((await storedNotes()).length, 2);
 

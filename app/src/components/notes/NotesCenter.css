@@ -733,23 +733,6 @@
   background: var(--primary-hover);
 }
 
-.note-editor-date {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.note-editor-date input {
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-}
-
 .note-editor-title {
   font-size: 22px;
   font-weight: 600;
