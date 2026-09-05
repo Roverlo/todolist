@@ -5,26 +5,26 @@
 
 .editor-toolbar.reactjs-tiptap-editor {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: #faf8ff;
-    border-bottom: 1px solid #e8e2f1;
-    color: #374151;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #fafbfc;
+    border-bottom: 1px solid #e5e7eb;
+    color: #475467;
     font-size: 13px;
 }
 
+.editor-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .editor-toolbar-group {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: 2px;
-    padding-right: 6px;
-    border-right: 1px solid #e5dff0 !important;
+    flex-shrink: 0;
 }
 
-.editor-toolbar-group:last-child { border-right: 0 !important; }
+.editor-toolbar-group + .editor-toolbar-group { padding-left: 8px; border-left: 1px solid #e1e5eb; }
+.editor-group-label { flex: 0 0 auto; margin-right: 6px; color: #667085; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.editor-toolbar-divider { width: 1px; height: 18px; margin: 0 5px; background: #e1e5eb; }
 .editor-tool { display: inline-flex; align-items: center; }
 .editor-sr-only {
     position: absolute;
@@ -36,34 +36,71 @@
     white-space: nowrap;
 }
 
-.editor-toolbar-btn {
+.editor-toolbar .editor-toolbar-btn,
+.editor-toolbar .editor-tool > button,
+.editor-toolbar .editor-more > summary {
     display: inline-flex;
     width: 32px;
     height: 32px;
     align-items: center;
     justify-content: center;
     padding: 0;
-    border: 0;
-    border-radius: 5px;
+    border: 1px solid transparent;
+    border-radius: 6px;
     background: transparent;
-    color: #4b5563;
+    box-shadow: none;
+    color: #475467;
     cursor: pointer;
+    font: inherit;
+    font-weight: 400;
+    transition: background-color 120ms, border-color 120ms, color 120ms;
 }
 
-.editor-toolbar.reactjs-tiptap-editor button:hover:not(:disabled) { background: #ede9fe; }
-.editor-toolbar.reactjs-tiptap-editor button[data-state='on'] { background: #ede9fe; color: #6d28d9; }
+.editor-toolbar .editor-tool > button svg,
+.editor-toolbar-btn svg { width: 17px; height: 17px; stroke-width: 1.75; }
+.editor-toolbar .editor-tool > button svg.lucide-chevron-down { width: 12px; }
+.editor-toolbar .editor-tool[data-tool='段落标题'] > button { width: 82px; justify-content: space-between; padding: 0 8px; }
+.editor-toolbar .editor-tool[data-tool='字号'] > button { width: 66px; justify-content: space-between; padding: 0 8px; }
+.editor-toolbar .editor-tool[data-tool='行距'] > button { width: 40px; gap: 2px; }
+.editor-toolbar .editor-tool:is([data-tool='段落标题'], [data-tool='字号']) > button { border-color: #e1e5eb; background: #fff; }
+.editor-toolbar.reactjs-tiptap-editor button:hover:not(:disabled),
+.editor-toolbar .editor-more > summary:hover { background: #f0f1f5; border-color: #d8dce5; }
+.editor-toolbar.reactjs-tiptap-editor button[data-state='on'],
+.editor-toolbar .editor-more[open] > summary { background: #ede9fe; border-color: #d8ccf6; color: #6d28d9; }
+.editor-toolbar .editor-tool > button:disabled { opacity: 0.35; cursor: not-allowed; }
 .editor-toolbar.reactjs-tiptap-editor button:focus-visible,
-.editor-toolbar.reactjs-tiptap-editor select:focus-visible { outline: 2px solid #7c3aed; outline-offset: 1px; }
+.editor-toolbar.reactjs-tiptap-editor select:focus-visible,
+.editor-toolbar .editor-more > summary:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
 .editor-toolbar.reactjs-tiptap-editor .editor-list-select {
-    width: 110px;
+    width: 104px;
     height: 32px;
-    padding: 0 5px;
-    border: 1px solid #ddd6e9;
-    border-radius: 5px;
-    background: #fff;
-    color: #374151;
+    padding: 0 22px 0 9px;
+    border: 1px solid #e1e5eb;
+    border-radius: 6px;
+    appearance: none;
+    background-color: #fff;
+    background-image: linear-gradient(45deg, transparent 50%, #667085 50%), linear-gradient(135deg, #667085 50%, transparent 50%);
+    background-position: right 12px center, right 8px center;
+    background-size: 4px 4px;
+    background-repeat: no-repeat;
+    color: #344054;
+    font-family: inherit;
     font-size: 12px;
+    cursor: pointer;
 }
+.editor-toolbar .editor-list-select[aria-label='正文字体'] { width: 112px; }
+.editor-toolbar .editor-list-select[aria-label='编号样式'] { width: 96px; }
+.editor-toolbar .editor-list-select:hover { border-color: #b9c1d1; }
+.editor-more { position: relative; }
+.editor-toolbar .editor-more > summary { width: auto; gap: 4px; padding: 0 7px; list-style: none; font-size: 12px; }
+.editor-more > summary::-webkit-details-marker { display: none; }
+.editor-more-menu { position: absolute; top: calc(100% + 6px); right: 0; width: 152px; padding: 5px; z-index: 20; border: 1px solid #e1e5eb; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #10182814; }
+.editor-more-menu .editor-tool { width: 100%; gap: 8px; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
+.editor-more-menu .editor-tool:hover { background: #f4f2fa; }
+.editor-more-menu .editor-sr-only { position: static; width: auto; height: auto; clip-path: none; overflow: visible; order: 1; font-size: 12px; }
+.editor-context-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; }
+.editor-toolbar .editor-context-tools .editor-list-select { width: 152px; }
+.editor-context-hint { color: #667085; font-size: 11px; }
 
 /* Keep editor theme variables within the library's own surfaces. */
 .reactjs-tiptap-editor,
@@ -138,32 +175,33 @@ div[data-richtext-portal] { z-index: 1200; }
     display: flex;
     align-items: center;
     position: relative;
-    height: 28px;
-    border-radius: 4px;
+    height: 32px;
+    border: 1px solid transparent;
+    border-radius: 6px;
 }
 
 .word-color-apply,
 .word-color-menu {
-    height: 28px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
     background: transparent;
-    color: #6b7280;
+    color: #475467;
     cursor: pointer;
     padding: 0;
 }
 
 .word-color-apply {
     position: relative;
-    width: 26px;
+    width: 28px;
     border-radius: 4px 0 0 4px;
 }
 
 .word-color-menu {
     width: 14px;
-    border-left: 1px solid rgba(107, 114, 128, 0.2);
+    border-left: 1px solid #e1e5eb;
     border-radius: 0 4px 4px 0;
 }
 
@@ -179,7 +217,7 @@ div[data-richtext-portal] { z-index: 1200; }
     left: 5px;
     height: 3px;
     border-radius: 999px;
-    box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.22);
+    box-shadow: 0 0 0 1px #1018281f;
 }
 
 .word-color-popover {

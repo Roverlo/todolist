@@ -9,11 +9,18 @@ use ssh2::Session;
 /// 获取统一的数据存储路径：用户文档目录下的 ProjectTodo/data.json
 /// 所有版本的 EXE 都会读写这个位置，确保数据共享
 fn get_unified_data_path() -> Option<PathBuf> {
+    // Isolate packaged-app smoke checks from a running user's notes.
+    if let Some(directory) = std::env::var_os("PROJECTTODO_TEST_DATA_DIR").filter(|value| !value.is_empty()) {
+        return Some(PathBuf::from(directory).join("data.json"));
+    }
     dirs::document_dir().map(|p| p.join("ProjectTodo").join("data.json"))
 }
 
 /// 获取旧版数据路径：EXE 同目录（用于向后兼容和数据迁移）
 fn get_legacy_data_path() -> Option<PathBuf> {
+    if std::env::var_os("PROJECTTODO_TEST_DATA_DIR").is_some_and(|value| !value.is_empty()) {
+        return None;
+    }
     std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|p| p.join("data.json")))

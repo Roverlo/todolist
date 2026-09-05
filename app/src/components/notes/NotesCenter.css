@@ -22,16 +22,19 @@
   }
 }
 
-/* ==================== 顶部标题栏 - 优化版 (44px) ==================== */
+/* ==================== 随记标题栏 ==================== */
 
 .notes-center-header {
-  height: 44px;
+  height: 48px;
+  position: relative;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background: var(--primary);
-  box-shadow: var(--shadow-card);
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: none;
   flex-shrink: 0;
 }
 
@@ -39,15 +42,15 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: white;
+  color: #344054;
 }
 
 .notes-center-title svg {
-  opacity: 0.95;
+  color: #7c3aed;
 }
 
 .notes-center-title-text {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -58,16 +61,16 @@
   gap: 6px;
 }
 
-/* 胶囊按钮适配 */
 .notes-center-header .btn {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: white;
-  font-size: 13px;
-  padding: 0 12px;
-  /* Fixed height for uniformity */
+  background: #fff;
+  border: 1px solid #e1e5eb;
+  border-radius: 6px;
+  box-shadow: none;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 10px;
   height: 32px;
-  /* Flex layout for centering content */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -75,15 +78,18 @@
 }
 
 .notes-center-header .btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.4);
-  transform: translateY(-1px);
+  background: #f3f4f6;
+  border-color: #cbd2df;
+  transform: none;
 }
 
-.notes-center-header .btn.active {
-  background: rgba(255, 255, 255, 0.35);
-  border-color: rgba(255, 255, 255, 0.5);
+.notes-center-header .btn:is(.active, [aria-pressed='true']) {
+  background: #f3effc;
+  border-color: #ded3f5;
+  color: #6d28d9;
 }
+.notes-center-header .notes-settings-btn { width: 32px; padding: 0; }
+.notes-center-header .btn:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
 
 /* ==================== 主内容区 ==================== */
 
@@ -2174,3 +2180,15 @@
   color: var(--text-subtle);
   gap: 16px;
 }
+
+.note-editor-actions .btn {
+  height: 34px;
+  border-radius: 6px;
+  box-shadow: none;
+  font-weight: 500;
+  transform: none;
+}
+.note-editor-actions .btn-light { background: #fff; border: 1px solid #dce1e9; color: #475467; }
+.note-editor-actions .btn-light:hover { background: #f3f4f6; border-color: #cbd2df; }
+.note-editor-actions .btn-primary { background: #7c3aed; border: 1px solid #7c3aed; }
+.note-editor-actions .btn-primary:hover { background: #6d28d9; }

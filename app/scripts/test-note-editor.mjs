@@ -4,6 +4,10 @@ import { createServer as createTcpServer } from 'node:net';
 import { chromium } from 'playwright';
 import { createServer as createViteServer } from 'vite';
 
+const tauriConfig = JSON.parse(await readFile(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
+assert.ok(tauriConfig.app.windows.every(window => window.dragDropEnabled === false),
+    'Windows WebView must allow HTML drag/drop so images can reach the editor');
+
 const port = await new Promise(resolve => {
     const probe = createTcpServer();
     probe.listen(0, '127.0.0.1', () => {
@@ -299,12 +303,24 @@ try {
     assert.match(await readFile(await (await downloadPromise).path(), 'utf8'), /data:image\/png;base64,/);
     console.log('Passed: image upload, sizing, paste/drop, validation, persistence and HTML export');
 
+    await openNote('<p>工具栏布局检查</p>', '工具栏布局');
+    assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
+    await page.getByLabel('更多插入工具', { exact: true }).click();
+    await page.getByRole('button', { name: '分隔线', exact: true }).click();
+    await body.locator('hr').waitFor();
+    assert.equal(await page.locator('.editor-more').evaluate(el => el.open), false);
+    await page.getByLabel('更多插入工具', { exact: true }).press('Enter');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.editor-more').evaluate(el => el.open), false);
     for (const width of [1100, 1280, 1500]) {
         await page.setViewportSize({ width, height: 840 });
+        assert.ok(await page.locator('.editor-toolbar-row').evaluateAll(rows => rows.length === 2 && rows.every(row => row.getBoundingClientRect().height <= 34)),
+            `Formatting and paragraph rows must keep a stable layout at ${width}px`);
         assert.ok(await page.getByRole('toolbar').evaluate(el => {
             const bounds = el.getBoundingClientRect();
             return [...el.querySelectorAll('button, select')].every(control => {
                 const rect = control.getBoundingClientRect();
+                if (!rect.width || !rect.height) return true;
                 return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
             });
         }), `Toolbar must fit the supported ${width}px desktop window`);

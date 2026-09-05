@@ -5,6 +5,7 @@ import { NotesRecycleBin } from './NotesRecycleBin';
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { AISettingsModal } from './AISettingsModal';
 import { Icon } from '../ui/Icon';
+import { PanelRight, Settings2 } from 'lucide-react';
 import './NotesCenter.css';
 
 export function NotesMain() {
@@ -42,18 +43,20 @@ export function NotesMain() {
     return (
         <div className="notes-main-root" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
             {/* Header / Toolbar */}
-            <div className="notes-center-header" style={{ position: 'relative', zIndex: 10 }}>
-                <div className="notes-center-title" style={{ paddingRight: '20px' }}>
+            <div className="notes-center-header">
+                <div className="notes-center-title">
                     <Icon name="note" size={18} />
-                    <span className="notes-center-title-text" style={{ fontSize: '14px' }}>随记编辑器</span>
+                    <span className="notes-center-title-text">随记编辑器</span>
                 </div>
 
                 <div className="notes-center-actions">
-                    <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className={`btn btn-light ${aiPanelOpen ? 'active' : ''}`} title={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}>
-                        <span>{aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}</span>
+                    <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className="btn btn-light" aria-pressed={aiPanelOpen}
+                        aria-label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} title={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}>
+                        <PanelRight size={16} />
+                        <span>AI 助手</span>
                     </button>
-                    <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light" title="AI 设置">
-                        <Icon name="settings" size={16} />
+                    <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light notes-settings-btn" aria-label="AI 设置" title="AI 设置">
+                        <Settings2 size={16} />
                     </button>
                 </div>
             </div>
