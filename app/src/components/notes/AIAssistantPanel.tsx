@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { Icon, type IconName } from '../ui/Icon';
 import type { Note, AIGeneratedTask, Subtask, RecurringTemplate } from '../../types';
 import { useAppStore } from '../../state/appStore';
+import { getNoteDate } from '../../utils/noteDate';
 import { createAIProvider } from '../../services/ai';
 import { SYSTEM_PROMPT_TASK_EXTRACTION } from '../../services/ai/prompts';
 import { TaskPreviewCard } from './TaskPreviewCard';
@@ -219,7 +220,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
                 apiKey: activeProviderConfig.apiKey!
             });
 
-            const referenceDate = note?.updatedAt ? dayjs(note.updatedAt).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+            const referenceDate = getNoteDate(note);
             const userPrompt = `上下文信息：
 参考日期：${referenceDate}
 笔记标题：${note?.title || '无标题'}

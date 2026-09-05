@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import type { Note } from '../../types';
+import { getNoteDate } from '../../utils/noteDate';
 
 interface Props {
     open: boolean;
@@ -57,6 +58,7 @@ export const NoteExportModal = ({ open, onClose, notes, defaultFileName }: Props
 
         notesToExport.forEach(note => {
             markdown += `## ${note.title || '未命名随记'}\n\n`;
+            markdown += `所属日期: ${getNoteDate(note)}\n\n`;
             markdown += `创建时间: ${new Date(note.createdAt).toLocaleString('zh-CN')}\n\n`;
             if (note.tags && note.tags.length > 0) {
                 markdown += `标签: ${note.tags.map(t => `#${t}`).join(' ')}\n\n`;
@@ -217,7 +219,7 @@ export const NoteExportModal = ({ open, onClose, notes, defaultFileName }: Props
                                             alignItems: 'center',
                                             gap: 8,
                                         }}>
-                                            <span>{dayjs(note.createdAt).format('YYYY-MM-DD HH:mm')}</span>
+                                            <span>{getNoteDate(note)}</span>
                                             {note.tags && note.tags.length > 0 && (
                                                 <span style={{ color: 'var(--primary)' }}>
                                                     {note.tags.slice(0, 2).map(t => `#${t}`).join(' ')}

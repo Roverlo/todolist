@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
 import type { Note } from '../../types';
+import { useAppStore } from '../../state/appStore';
+import { getNoteDate, isNoteDate } from '../../utils/noteDate';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -160,6 +162,21 @@ export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
 
     return (
         <div className="note-editor">
+            <label className="note-editor-date">
+                所属日期
+                <input
+                    type="date"
+                    aria-label="所属日期"
+                    value={getNoteDate(note)}
+                    max="9999-12-31"
+                    required
+                    onChange={(e) => {
+                        if (isNoteDate(e.target.value)) {
+                            useAppStore.getState().updateNote(note.id, { date: e.target.value });
+                        }
+                    }}
+                />
+            </label>
             <input
                 className="note-editor-title"
                 type="text"

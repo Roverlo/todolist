@@ -410,6 +410,12 @@
   background: white;
 }
 
+.notes-calendar-create-btn {
+  width: 100%;
+  margin-top: 6px;
+  justify-content: center;
+}
+
 .notes-calendar-clear-btn {
   width: 100%;
   padding: 4px;
@@ -707,6 +713,23 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.3);
   background: var(--primary-hover);
+}
+
+.note-editor-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.note-editor-date input {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-main);
+  font: inherit;
 }
 
 .note-editor-title {

@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { Icon } from '../ui/Icon';
 import { useAppStore } from '../../state/appStore';
+import { getNoteDate } from '../../utils/noteDate';
 
 interface NotesCalendarProps {
     selectedDate: Dayjs | null;
@@ -22,7 +23,8 @@ export function NotesCalendar({ selectedDate, onDateSelect, currentMonth, onMont
     const notesCountByDate = useMemo(() => {
         const counts: Record<string, number> = {};
         notes.forEach(note => {
-            const dateKey = dayjs(note.updatedAt).format('YYYY-MM-DD');
+            if (note.deletedAt) return;
+            const dateKey = getNoteDate(note);
             counts[dateKey] = (counts[dateKey] || 0) + 1;
         });
         return counts;
@@ -111,6 +113,8 @@ export function NotesCalendar({ selectedDate, onDateSelect, currentMonth, onMont
                                 } ${isToday(day) ? 'today' : ''} ${isSelected(day) ? 'selected' : ''
                                 } ${count > 0 ? 'has-notes' : ''}`}
                             onClick={() => onDateSelect(day)}
+                            aria-label={dateKey}
+                            aria-pressed={!!isSelected(day)}
                             title={count > 0 ? `${count} 条笔记` : undefined}
                         >
                             <span className="notes-calendar-day-number">{day.date()}</span>

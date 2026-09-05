@@ -26,6 +26,7 @@ import type {
   NoteTag
 } from '../types';
 import { toCustomAISettings } from '../services/aiConfig';
+import { getNoteDate, isNoteDate } from '../utils/noteDate';
 
 const CORE_COLUMNS = [
   'project',
@@ -305,7 +306,7 @@ export interface AppStore extends AppData {
   materializeRecurringTasks: () => void;
   migrateLegacyRecurringTasks: () => void;
   // Note Actions
-  addNote: (note: { title?: string; content: string; tags?: string[] }) => Note;
+  addNote: (note: { title?: string; content: string; tags?: string[]; date?: string }) => Note;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   toggleNotePin: (id: string) => void;
@@ -317,6 +318,10 @@ export interface AppStore extends AppData {
   refreshNoteTagCounts: () => void;
 
   // Note UI Actions
+  selectedNoteDate: string | null;
+  noteCalendarMonth: string;
+  setSelectedNoteDate: (date: string | null) => void;
+  setNoteCalendarMonth: (month: string) => void;
   setNoteSearchText: (text: string) => void;
   setActiveNoteTag: (tagId: string | null) => void;
   toggleNoteTreeNode: (nodeId: string) => void;
@@ -389,6 +394,8 @@ export const useAppStore = create<AppStore>()(
       undoStack: [],
       redoStack: [],
       _hasHydrated: false,
+      selectedNoteDate: null,
+      noteCalendarMonth: dayjs().format('YYYY-MM'),
       addProject: (name) => {
         const trimmed = name.trim();
         if (!trimmed) {
@@ -1218,12 +1225,15 @@ export const useAppStore = create<AppStore>()(
       },
 
       // ==================== Note CRUD ====================
-      addNote: (noteInput: { title?: string; content: string; tags?: string[] }) => {
+      addNote: (noteInput) => {
         const now = Date.now();
+        const date = noteInput.date ?? get().selectedNoteDate ?? dayjs(now).format('YYYY-MM-DD');
+        if (!isNoteDate(date)) throw new Error('所属日期无效');
         const newNote: Note = {
           id: nanoid(12),
           title: noteInput.title?.trim() || '',
           content: noteInput.content,
+          date,
           tags: noteInput.tags || [],
           createdAt: now,
           updatedAt: now,
@@ -1232,17 +1242,39 @@ export const useAppStore = create<AppStore>()(
 
         set(produce((state: AppStore) => {
           state.notes.unshift(newNote);
+          state.selectedNoteDate = date;
+          state.noteCalendarMonth = date.slice(0, 7);
+          state.noteSearchText = '';
+          state.activeNoteTagId = 'all';
+          state.noteViewMode = 'tree';
+          state.noteTreeExpandedState = {
+            ...state.noteTreeExpandedState,
+            [`year-${date.slice(0, 4)}`]: true,
+            [`month-${date.slice(0, 7)}`]: true,
+          };
         }));
         get().refreshNoteTagCounts();
         return newNote;
       },
 
       updateNote: (id: string, updates: Partial<Note>) => {
+        if (updates.date !== undefined && !isNoteDate(updates.date)) throw new Error('所属日期无效');
         set(produce((state: AppStore) => {
           const note = state.notes.find(n => n.id === id);
           if (!note) return;
+          const date = updates.date ?? getNoteDate(note);
           Object.assign(note, updates);
+          note.date = date;
           note.updatedAt = Date.now();
+          if (updates.date) {
+            state.selectedNoteDate = date;
+            state.noteCalendarMonth = date.slice(0, 7);
+            state.noteTreeExpandedState = {
+              ...state.noteTreeExpandedState,
+              [`year-${date.slice(0, 4)}`]: true,
+              [`month-${date.slice(0, 7)}`]: true,
+            };
+          }
         }));
         get().refreshNoteTagCounts();
       },
@@ -1251,6 +1283,7 @@ export const useAppStore = create<AppStore>()(
         set(produce((state: AppStore) => {
           const note = state.notes.find(n => n.id === id);
           if (note) {
+            note.date = getNoteDate(note);
             note.deletedAt = Date.now();
             note.updatedAt = Date.now();
           }
@@ -1265,6 +1298,7 @@ export const useAppStore = create<AppStore>()(
         set(produce((state: AppStore) => {
           const note = state.notes.find(n => n.id === id);
           if (note) {
+            note.date = getNoteDate(note);
             note.isPinned = !note.isPinned;
             note.updatedAt = Date.now();
           }
@@ -1346,6 +1380,11 @@ export const useAppStore = create<AppStore>()(
       },
 
       // ==================== Note UI Actions ====================
+      setSelectedNoteDate: (date) => set({
+        selectedNoteDate: date,
+        ...(date ? { noteCalendarMonth: date.slice(0, 7) } : {}),
+      }),
+      setNoteCalendarMonth: (month) => set({ noteCalendarMonth: month }),
       setNoteSearchText: (text: string) => set({ noteSearchText: text }),
       setActiveNoteTag: (tagId: string | null) => set({ activeNoteTagId: tagId }),
       toggleNoteTreeNode: (nodeId: string) => {
@@ -1376,6 +1415,7 @@ export const useAppStore = create<AppStore>()(
         set(produce((state: AppStore) => {
           const note = state.notes.find(n => n.id === id);
           if (note) {
+            note.date = getNoteDate(note);
             note.deletedAt = undefined;
             note.updatedAt = Date.now();
           }
@@ -1388,6 +1428,7 @@ export const useAppStore = create<AppStore>()(
           ids.forEach(id => {
             const note = state.notes.find(n => n.id === id);
             if (note) {
+              note.date = getNoteDate(note);
               note.deletedAt = undefined;
               note.updatedAt = Date.now();
             }

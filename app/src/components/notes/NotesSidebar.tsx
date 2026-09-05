@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useAppStore } from '../../state/appStore';
 import dayjs from 'dayjs';
 
@@ -9,6 +9,7 @@ import { NotesSearch } from './NotesSearch';
 import { NotesToolbar } from './NotesToolbar';
 import { Icon } from '../ui/Icon';
 import type { Note, NoteTreeNode } from '../../types';
+import { getNoteDate } from '../../utils/noteDate';
 
 interface NotesSidebarProps {
     selectedNoteId: string | null;
@@ -28,8 +29,10 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
     const setNoteViewMode = useAppStore((state) => state.setNoteViewMode);
     const deletedNotesCount = useAppStore((state) => state.notes.filter(n => n.deletedAt).length);
 
-    const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
-    const [currentMonth, setCurrentMonth] = useState(dayjs().startOf('month'));
+    const selectedDate = useAppStore((state) => state.selectedNoteDate);
+    const setSelectedDate = useAppStore((state) => state.setSelectedNoteDate);
+    const currentMonth = useAppStore((state) => state.noteCalendarMonth);
+    const setCurrentMonth = useAppStore((state) => state.setNoteCalendarMonth);
 
     // 筛选笔记
     const filteredNotes = useMemo(() => {
@@ -38,8 +41,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
         // 按日期筛选
         if (selectedDate) {
             result = result.filter(note => {
-                const noteDate = dayjs(note.updatedAt);
-                return noteDate.isSame(selectedDate, 'day');
+                return getNoteDate(note) === selectedDate;
             });
         }
 
@@ -67,7 +69,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
             );
         }
 
-        return result;
+        return result.sort((a, b) => getNoteDate(b).localeCompare(getNoteDate(a)) || b.updatedAt - a.updatedAt);
     }, [notes, selectedDate, activeTagId, tags, searchText]);
 
     // 构建树形结构
@@ -75,15 +77,15 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
         return buildNoteTree(filteredNotes, treeExpandedState);
     }, [filteredNotes, treeExpandedState]);
 
-    // 初始化：展开当前月份
+    // 展开选中日期所在的月份
     useEffect(() => {
-        const now = dayjs();
+        const now = selectedDate ? dayjs(selectedDate) : dayjs();
         const currentYearId = `year-${now.year()}`;
         const currentMonthId = `month-${now.format('YYYY-MM')}`;
 
         setTreeNodeExpanded(currentYearId, true);
         setTreeNodeExpanded(currentMonthId, true);
-    }, [setTreeNodeExpanded]);
+    }, [selectedDate, setTreeNodeExpanded]);
 
     const handleNodeClick = (node: NoteTreeNode) => {
         if (node.type === 'note' && node.noteId) {
@@ -105,11 +107,15 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
 
             <div className="notes-sidebar-calendar-container">
                 <NotesCalendar
-                    selectedDate={selectedDate}
-                    onDateSelect={(date) => setSelectedDate(date)}
-                    currentMonth={currentMonth}
-                    onMonthChange={setCurrentMonth}
+                    selectedDate={selectedDate ? dayjs(selectedDate) : null}
+                    onDateSelect={(date) => setSelectedDate(date.format('YYYY-MM-DD'))}
+                    currentMonth={dayjs(currentMonth)}
+                    onMonthChange={(date) => setCurrentMonth(date.format('YYYY-MM'))}
                 />
+                <button className="btn btn-primary notes-calendar-create-btn" onClick={onCreateNote}>
+                    <Icon name="plus" size={14} />
+                    {selectedDate ? `${selectedDate} 新建随记` : '新建随记'}
+                </button>
                 {selectedDate && (
                     <button
                         className="notes-calendar-clear-btn"
@@ -124,14 +130,17 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
             <NotesToolbar
                 onToday={() => {
                     const today = dayjs();
-                    const todayNote = notes.find(n => dayjs(n.updatedAt).isSame(today, 'day'));
+                    setSelectedDate(today.format('YYYY-MM-DD'));
+                    useAppStore.getState().setNoteSearchText('');
+                    useAppStore.getState().setActiveNoteTag('all');
+                    setNoteViewMode('tree');
+                    const todayNote = notes.find(n => !n.deletedAt && getNoteDate(n) === today.format('YYYY-MM-DD'));
                     if (todayNote) {
                         onSelectNote(todayNote);
                         const yearId = `year-${today.year()}`;
                         const monthId = `month-${today.format('YYYY-MM')}`;
                         setTreeNodeExpanded(yearId, true);
                         setTreeNodeExpanded(monthId, true);
-                        setCurrentMonth(today.startOf('month')); // Sync calendar
                     } else {
                         onCreateNote();
                     }
@@ -139,7 +148,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                 onPrev={() => {
                     if (!selectedNoteId) return;
                     const index = filteredNotes.findIndex(n => n.id === selectedNoteId);
-                    if (index < filteredNotes.length - 1) {
+                    if (index >= 0 && index < filteredNotes.length - 1) {
                         onSelectNote(filteredNotes[index + 1]);
                     }
                 }}
@@ -154,12 +163,12 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                     if (!selectedNoteId) return;
                     const note = notes.find(n => n.id === selectedNoteId);
                     if (note) {
-                        const date = dayjs(note.updatedAt);
+                        const date = dayjs(getNoteDate(note));
+                        setSelectedDate(getNoteDate(note));
                         const yearId = `year-${date.year()}`;
                         const monthId = `month-${date.format('YYYY-MM')}`;
                         setTreeNodeExpanded(yearId, true);
                         setTreeNodeExpanded(monthId, true);
-                        setCurrentMonth(date.startOf('month')); // Sync calendar
 
                         setTimeout(() => {
                             const el = document.querySelector(`[data-node-id="note-${selectedNoteId}"]`);
@@ -167,7 +176,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                         }, 100);
                     }
                 }}
-                canPrev={!!selectedNoteId && filteredNotes.findIndex(n => n.id === selectedNoteId) < filteredNotes.length - 1}
+                canPrev={!!selectedNoteId && filteredNotes.findIndex(n => n.id === selectedNoteId) >= 0 && filteredNotes.findIndex(n => n.id === selectedNoteId) < filteredNotes.length - 1}
                 canNext={!!selectedNoteId && filteredNotes.findIndex(n => n.id === selectedNoteId) > 0}
                 hasActiveNote={!!selectedNoteId}
             />
@@ -212,7 +221,7 @@ function buildNoteTree(notes: Note[], expandedState: Record<string, boolean>): N
     const groupedByYear = new Map<number, Map<number, Note[]>>();
 
     regularNotes.forEach(note => {
-        const date = dayjs(note.updatedAt);
+        const date = dayjs(getNoteDate(note));
         const year = date.year();
         const month = date.month() + 1;
 
@@ -267,9 +276,9 @@ function buildNoteTree(notes: Note[], expandedState: Record<string, boolean>): N
                     const monthId = `month-${year}-${String(month).padStart(2, '0')}`;
 
                     const noteChildren = monthNotes
-                        .sort((a, b) => b.updatedAt - a.updatedAt)
+                        .sort((a, b) => getNoteDate(b).localeCompare(getNoteDate(a)) || b.updatedAt - a.updatedAt)
                         .map(note => {
-                            const noteDate = dayjs(note.updatedAt);
+                            const noteDate = dayjs(getNoteDate(note));
                             return {
                                 id: `note-${note.id}`,
                                 type: 'note' as const,

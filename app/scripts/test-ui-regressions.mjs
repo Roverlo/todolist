@@ -33,7 +33,8 @@ let browser;
 try {
     await server.listen();
     browser = await chromium.launch({ channel: 'msedge', headless: true });
-    const page = await browser.newPage();
+    const page = await browser.newPage({ viewport: { width: 1500, height: 900 }, timezoneId: 'Asia/Shanghai' });
+    await page.clock.setFixedTime(new Date('2026-09-05T04:00:00Z'));
     await page.goto(server.resolvedUrls.local[0]);
     await page.waitForTimeout(700);
 
@@ -63,7 +64,107 @@ try {
     await page.getByRole('menuitem', { name: '无颜色' }).click();
     assert.equal(await editor.locator('mark').count(), 0);
 
-    console.log('UI color and process-exit regression checks passed');
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+
+    // All data below lives in this fresh browser context, never the desktop user's storage.
+    const storedNotes = () => page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.notes);
+    const createOnDate = async (date, title) => {
+        await page.getByRole('button', { name: date, exact: true }).click();
+        await page.getByRole('button', { name: `${date} 新建随记`, exact: true }).click();
+        assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), date);
+        await page.getByPlaceholder('标题（可选）').fill(title);
+        await editor.fill(`${title}正文`);
+        await page.getByRole('button', { name: '保存', exact: true }).click();
+        await page.waitForFunction(title => JSON.parse(localStorage.getItem('project-todo-app')).state.notes
+            .some(n => n.title === title && n.content.includes(`${title}正文`)), title);
+        const note = (await storedNotes()).find(n => n.title === title);
+        assert.equal(note.date, date);
+        assert.equal(note.createdAt, Date.parse('2026-09-05T04:00:00Z'));
+        assert.equal(await page.locator(`[data-node-id="note-${note.id}"]`).count(), 1);
+        assert.match(await page.getByRole('button', { name: date, exact: true }).getAttribute('class'), /has-notes/);
+        return note;
+    };
+
+    await page.getByTitle('上个月', { exact: true }).click();
+    const past = await createOnDate('2026-08-31', '补记过去事项');
+    await page.getByTitle('下个月', { exact: true }).click();
+    await page.getByTitle('下个月', { exact: true }).click();
+    const future = await createOnDate('2026-10-18', '未来安排');
+    await createOnDate('2026-10-18', '同日第二条事项');
+
+    // Changing the date while typing must preserve the unsaved title and body.
+    await page.getByPlaceholder('标题（可选）').fill('跨年安排');
+    await editor.fill('跨年日期调整后的正文');
+    await page.getByLabel('所属日期', { exact: true }).fill('2027-01-15');
+    assert.equal(await page.locator('.notes-calendar-title').innerText(), '2027年1月');
+    assert.equal(await page.getByPlaceholder('标题（可选）').inputValue(), '跨年安排');
+    assert.equal(await editor.innerText(), '跨年日期调整后的正文');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('project-todo-app')).state.notes
+        .some(n => n.title === '跨年安排' && n.date === '2027-01-15' && n.content.includes('跨年日期调整后的正文')));
+    await page.reload();
+    await page.getByLabel('所属日期', { exact: true }).waitFor();
+    assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), '2027-01-15');
+    assert.equal((await storedNotes()).find(n => n.id === past.id).date, '2026-08-31');
+    assert.equal((await storedNotes()).find(n => n.id === future.id).date, '2026-10-18');
+
+    await page.getByTitle('在列表中定位当前笔记', { exact: true }).click();
+    assert.equal(await page.getByRole('button', { name: '2027-01-15', exact: true }).getAttribute('aria-pressed'), 'true');
+    await page.getByTitle('写今天的日记', { exact: true }).click();
+    assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), '2026-09-05');
+    assert.equal(await page.locator('.notes-calendar-title').innerText(), '2026年9月');
+
+    // Legacy notes retain their original day through every timestamp-changing action.
+    const legacyDates = await page.evaluate(async () => {
+        const { useAppStore } = await import('/src/state/appStore.ts');
+        const { getNoteDate } = await import('/src/utils/noteDate.ts');
+        const store = useAppStore.getState();
+        const original = { id: 'legacy-date', title: '旧笔记', content: '', createdAt: Date.parse('2025-12-01T04:00:00Z'), updatedAt: Date.parse('2025-12-31T23:30:00+08:00') };
+        const operations = [
+            () => store.updateNote(original.id, { content: '修改旧笔记' }),
+            () => store.toggleNotePin(original.id),
+            () => store.deleteNote(original.id),
+            () => store.restoreNote(original.id),
+            () => store.restoreNotes([original.id]),
+        ];
+        const dates = operations.map(operation => {
+            useAppStore.setState({ notes: [original] });
+            operation();
+            return getNoteDate(useAppStore.getState().notes[0]);
+        });
+        for (const date of ['2026-02-30', '2026-2-3', '', 'invalid']) {
+            for (const operation of [() => store.addNote({ content: '', date }), () => store.updateNote(original.id, { date })]) {
+                let rejected = false;
+                try { operation(); } catch { rejected = true; }
+                if (!rejected) throw new Error(`Accepted invalid date: ${date}`);
+            }
+        }
+        store.setSelectedNoteDate('2025-12-31');
+        store.deleteNote(original.id);
+        return dates;
+    });
+    assert.deepEqual(legacyDates, Array(5).fill('2025-12-31'));
+    assert.doesNotMatch(await page.getByRole('button', { name: '2025-12-31', exact: true }).getAttribute('class'), /has-notes/);
+    await page.getByRole('button', { name: '回收站', exact: false }).click();
+    await page.locator('.recycle-bin-table tbody tr').dblclick();
+    await page.getByTitle('返回随记列表', { exact: true }).click();
+    assert.match(await page.getByRole('button', { name: '2025-12-31', exact: true }).getAttribute('class'), /has-notes/);
+    assert.equal(await page.getByText('31日 - 旧笔记', { exact: true }).count(), 1);
+
+    await page.locator('[data-node-id="month-2025-12"]').click({ button: 'right' });
+    await page.getByRole('button', { name: '导出为 Markdown', exact: true }).click();
+    assert.equal(await page.locator('.create-dialog-subtitle').innerText(), '选择要导出的笔记，共 1 条');
+    page.once('dialog', dialog => dialog.dismiss());
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: '导出 (1)', exact: true }).click();
+    const download = await downloadPromise;
+    assert.match(await readFile(await download.path(), 'utf8'), /所属日期: 2025-12-31/);
+
+    // With no entry for today, the shortcut must create today rather than the selected old day.
+    await page.getByTitle('写今天的日记', { exact: true }).click();
+    assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), '2026-09-05');
+    assert.equal((await storedNotes()).length, 2);
+
+    console.log('UI color, process-exit, past/future dates, autosave/reload, legacy dates, validation, trash and dated export regression checks passed');
 } finally {
     await browser?.close();
     await server.close();

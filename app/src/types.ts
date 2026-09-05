@@ -258,6 +258,7 @@ export interface Note {
   id: string;
   title: string;          // 可选标题，默认为空
   content: string;        // 笔记内容
+  date?: string;         // 所属日期 YYYY-MM-DD；旧笔记沿用原更新时间对应的日期
   tags?: string[];        // 标签数组
   createdAt: number;      // 创建时间戳
   updatedAt: number;      // 更新时间戳

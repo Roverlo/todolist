@@ -7,6 +7,7 @@ import { NoteExportModal } from './NoteExportModal';
 import { NoteTagPopup } from './NoteTagPopup';
 import { useAppStore } from '../../state/appStore';
 import type { NoteTreeNode, Note } from '../../types';
+import { getNoteDate } from '../../utils/noteDate';
 
 interface NotesTreeProps {
     tree: NoteTreeNode;
@@ -62,7 +63,10 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                     id: 'new-sibling',
                     label: '新建相邻笔记',
                     icon: 'plus',
-                    onClick: onCreateNote,
+                    onClick: () => {
+                        if (note) useAppStore.getState().setSelectedNoteDate(getNoteDate(note));
+                        onCreateNote?.();
+                    },
                 },
                 { id: 'div1', label: '', divider: true },
                 {
@@ -105,18 +109,8 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
         if (node.type === 'year' || node.type === 'month') {
             // 获取该节点下的所有笔记
             const getNotesInNode = (): string[] => {
-                if (node.type === 'year') {
-                    return notes.filter(n => {
-                        const year = new Date(n.updatedAt).getFullYear();
-                        return year.toString() === node.date;
-                    }).map(n => n.id);
-                } else {
-                    return notes.filter(n => {
-                        const date = new Date(n.updatedAt);
-                        const yearMonth = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-                        return yearMonth === node.date;
-                    }).map(n => n.id);
-                }
+                return notes.filter(n => !n.deletedAt && getNoteDate(n).slice(0, node.type === 'year' ? 4 : 7) === node.date)
+                    .map(n => n.id);
             };
 
             const openExportModal = () => {
@@ -134,7 +128,10 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                     id: 'new-note',
                     label: '新建笔记',
                     icon: 'plus',
-                    onClick: onCreateNote,
+                    onClick: () => {
+                        useAppStore.getState().setSelectedNoteDate(node.type === 'year' ? `${node.date}-01-01` : `${node.date}-01`);
+                        onCreateNote?.();
+                    },
                 },
                 { id: 'div1', label: '', divider: true },
                 {
@@ -244,6 +241,7 @@ function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu }: T
         <>
             <div
                 className={'tree-node level-' + level + (isSelected ? ' selected' : '')}
+                data-node-id={node.id}
                 style={{ paddingLeft: indent + 'px' }}
                 onClick={() => onNodeClick(node)}
                 onContextMenu={(e) => onContextMenu(e, node)}
