@@ -6,7 +6,7 @@ interface TagEditorModalProps {
     onClose: () => void;
 }
 
-const EMOJI_PRESETS = ['🏷️', '💼', '🏠', '💡', '📚', '🎯', '🔥', '⭐', '📝', '🎨', '🚀', '💪', '🎓', '🌟', '✨', '❤️'];
+const EMOJI_PRESETS = ['🏷️', '💼', '🏠', '💡', '📚', '🎯', '🔥', '📝', '🎨', '🚀', '💪', '🎓', '❤️'];
 
 export function TagEditorModal({ onClose }: TagEditorModalProps) {
     const tags = useAppStore((state) => state.tags);

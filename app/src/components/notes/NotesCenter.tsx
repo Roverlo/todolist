@@ -70,7 +70,6 @@ export function NotesCenter({ onClose }: NotesCenterProps) {
                         className={`btn btn-light ${aiPanelOpen ? 'active' : ''}`}
                         title={aiPanelOpen ? '隐藏 AI 面板' : '显示 AI 面板'}
                     >
-                        <Icon name="magic" size={16} />
                         <span>{aiPanelOpen ? '隐藏' : '显示'} AI</span>
                     </button>
                     <button

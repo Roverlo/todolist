@@ -53,7 +53,6 @@ export function NotesMain() {
 
                 <div className="notes-center-actions">
                     <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className={`btn btn-light ${aiPanelOpen ? 'active' : ''}`} title={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}>
-                        <Icon name="magic" size={16} />
                         <span>{aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}</span>
                     </button>
                     <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light" title="AI 设置">

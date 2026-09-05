@@ -73,7 +73,7 @@ function parseRecurringHint(hint: string | undefined): RecurringTemplate['schedu
 const AI_STAGES = [
     { id: 'connect', name: '连接服务', icon: 'send' as IconName, progress: 10 },
     { id: 'analyze', name: '分析内容', icon: 'search' as IconName, progress: 30 },
-    { id: 'process', name: 'AI 处理', icon: 'sparkles' as IconName, progress: 90 },
+    { id: 'process', name: 'AI 处理', icon: 'refresh' as IconName, progress: 90 },
     { id: 'complete', name: '生成完成', icon: 'check' as IconName, progress: 100 }
 ] as const;
 
@@ -413,7 +413,6 @@ ${note.content}`;
         <div className="ai-panel">
             <div className="ai-panel-header">
                 <div className="ai-panel-title">
-                    <Icon name="magic" size={18} />
                     <span>AI 助手</span>
                 </div>
             </div>
@@ -435,9 +434,6 @@ ${note.content}`;
 
                 {tasks.length === 0 && !loading && (
                     <div className="ai-panel-empty">
-                        <div className="ai-icon-bg">
-                            <Icon name="sparkles" size={24} />
-                        </div>
                         <p>从笔记中提取待办事项</p>
                         <p className="ai-subtext">AI 将分析您的笔记内容，自动识别任务、截止日期、子任务和负责人。</p>
 
@@ -449,7 +445,6 @@ ${note.content}`;
                                 onClick={handleGenerate}
                                 disabled={!note?.content}
                             >
-                                <Icon name="magic" size={16} />
                                 <span>{hasAIConfig ? '生成任务' : '配置 AI 并生成'}</span>
                             </button>
                         )}

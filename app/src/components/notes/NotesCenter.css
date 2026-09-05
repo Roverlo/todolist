@@ -1343,19 +1343,6 @@
   gap: 16px;
 }
 
-.ai-icon-bg {
-  width: 56px;
-  height: 56px;
-  background: var(--bg-surface);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary);
-  margin-bottom: 8px;
-  border: 1px solid var(--border);
-}
-
 .ai-subtext {
   font-size: 13px;
   color: var(--text-subtle);
@@ -1378,7 +1365,6 @@
   align-items: center;
   gap: 8px;
   background: linear-gradient(135deg, var(--primary), #8b5cf6);
-  /* Gradient for magic feel */
   color: white;
   border: none;
   padding: 10px 20px;
