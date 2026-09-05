@@ -26,6 +26,7 @@ const port = await new Promise((resolve, reject) => {
 });
 const server = await createViteServer({
     logLevel: 'silent',
+    optimizeDeps: { include: ['react-window'] },
     server: { host: '127.0.0.1', port, strictPort: true },
 });
 let browser;
@@ -200,7 +201,69 @@ try {
     });
     assert.deepEqual(numberedNotes, ['项目会议', '随记01', '随记100', '随记']);
 
-    console.log('UI color, process-exit, past/future dates, autosave/reload, legacy dates, validation, trash, dated export and daily numbered creation regression checks passed');
+    const migrationAndHistory = await page.evaluate(async () => {
+        const { useAppStore } = await import('/src/state/appStore.ts');
+        const legacy = JSON.parse(JSON.stringify(useAppStore.getState()));
+        legacy.tasks = [{ ...legacy.tasks[0], id: 'legacy-task', status: 'todo', extras: { keep: '保留字段' } }];
+        legacy.filters.status = 'todo';
+        legacy.savedFilters = [{ id: 'legacy-filter', name: '旧筛选', filters: { search: '', status: 'todo' } }];
+        legacy.recurringTemplates = [{
+            id: 'legacy-template', projectId: legacy.projects[0].id, title: '旧周期任务',
+            status: 'doing', active: true, dueStrategy: 'sameDay', onsiteOwner: '旧责任人',
+            schedule: { type: 'daily' },
+            defaults: { notes: '保留备注', tags: ['工作'], nextStep: null, onsiteOwner: '旧字段', lineOwner: '旧字段' },
+        }];
+        const migrated = await useAppStore.persist.getOptions().migrate(legacy, 5);
+        useAppStore.setState({ ...migrated, undoStack: [], redoStack: [] });
+        const store = useAppStore.getState();
+        store.deleteTask('legacy-task');
+        store.restoreTask('legacy-task');
+        const restored = useAppStore.getState().tasks.find(t => t.id === 'legacy-task');
+        store.updateTask('legacy-task', { title: '修改后的任务' });
+        store.undo();
+        const undone = useAppStore.getState().tasks.find(t => t.id === 'legacy-task').title;
+        store.redo();
+        const redone = useAppStore.getState().tasks.find(t => t.id === 'legacy-task').title;
+        return {
+            statuses: [migrated.tasks[0].status, migrated.filters.status, migrated.savedFilters[0].filters.status],
+            template: migrated.recurringTemplates[0], restored, undone, redone,
+            originalTitle: legacy.tasks[0].title, originalProject: legacy.tasks[0].projectId,
+        };
+    });
+    assert.deepEqual(migrationAndHistory.statuses, ['paused', 'paused', 'paused']);
+    assert.equal(migrationAndHistory.template.owners, '旧责任人');
+    assert.deepEqual(migrationAndHistory.template.defaults, { notes: '保留备注', tags: ['工作'] });
+    assert.equal(migrationAndHistory.template.schedule.interval, 1);
+    assert.equal(migrationAndHistory.template.schedule.anchorDate, '2026-09-05');
+    assert.deepEqual(migrationAndHistory.restored.extras, { keep: '保留字段' });
+    assert.equal(migrationAndHistory.restored.projectId, migrationAndHistory.originalProject);
+    assert.equal(migrationAndHistory.undone, migrationAndHistory.originalTitle);
+    assert.equal(migrationAndHistory.redone, '修改后的任务');
+
+    // Exercise the installed react-window API, including scrolling beyond the first viewport.
+    await page.evaluate(async () => {
+        const { useAppStore } = await import('/src/state/appStore.ts');
+        const { default: React } = await import('/node_modules/.vite/deps/react.js');
+        const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+        const { VirtualTaskTable } = await import('/src/components/task-table/VirtualTaskTable.tsx');
+        const sample = useAppStore.getState().tasks[0];
+        useAppStore.setState({
+            tasks: Array.from({ length: 60 }, (_, i) => ({ ...sample, id: `virtual-${i}`, title: `虚拟任务${String(i).padStart(2, '0')}` })),
+            filters: { search: '', status: 'all', statuses: [], tags: [] },
+            sortRules: [{ key: 'title', direction: 'asc' }],
+        });
+        const host = document.createElement('div');
+        host.id = 'virtual-task-check';
+        document.body.appendChild(host);
+        ReactDOM.createRoot(host).render(React.createElement(VirtualTaskTable, { height: 480, onTaskFocus: () => {} }));
+    });
+    const virtualTable = page.locator('#virtual-task-check');
+    await virtualTable.getByText('虚拟任务00', { exact: true }).waitFor();
+    assert.ok(await virtualTable.locator('tbody tr').count() < 60, '虚拟表格只应渲染视口附近的任务');
+    await virtualTable.getByRole('list').evaluate(list => { list.scrollTop = list.scrollHeight; });
+    await virtualTable.getByText('虚拟任务59', { exact: true }).waitFor();
+
+    console.log('UI regressions passed: color, exit, note dates, drafts/autosave/reload, numbering, trash/export, legacy migration, undo/redo and virtual scrolling');
 } finally {
     await browser?.close();
     await server.close();

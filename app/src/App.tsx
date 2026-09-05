@@ -78,7 +78,7 @@ function App() {
     if (isHydrated) {
       migrateLegacyRecurringTasks();
     }
-  }, [isHydrated]);
+  }, [isHydrated, migrateLegacyRecurringTasks]);
 
   // 主题切换
   useEffect(() => {
@@ -247,7 +247,7 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo, redo, activeTaskId]);
+  }, [undo, redo, activeTaskId, purgeTrash]);
 
   useEffect(() => {
     return () => { };
@@ -517,7 +517,7 @@ function App() {
               <div className='dashboard-row'>
                 <StatsCard
                   tasks={projectTasks}
-                  projectMap={projectMap as any}
+                  projectMap={projectMap}
                   activeFilter={filters.status}
                   onFilterByStatus={(status: 'doing' | 'done' | 'paused' | 'all' | 'overdue' | 'dueToday') => {
                     if (status === 'all') {
@@ -566,8 +566,7 @@ function App() {
         onClose={() => setExportOpen(false)}
         tasks={tasks}
         allTasks={allTasks}
-        projectMap={projectMap as any}
-        currentProjectId={filters.projectId}
+        projectMap={projectMap}
       />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
@@ -578,7 +577,7 @@ function App() {
         open={reminderOpen}
         onClose={() => setReminderOpen(false)}
         tasks={allTasks}
-        projectMap={allProjectMap as any}
+        projectMap={allProjectMap}
       />
       <ToastContainer />
       <ConfirmDialog

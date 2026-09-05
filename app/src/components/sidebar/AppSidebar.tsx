@@ -3,7 +3,7 @@ import { TaskSidebarContent } from './TaskSidebarContent';
 import { NotesSidebar } from '../notes/NotesSidebar';
 import { Icon } from '../ui/Icon';
 import clsx from 'clsx';
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 interface AppSidebarProps {
@@ -13,13 +13,12 @@ interface AppSidebarProps {
 }
 
 export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: AppSidebarProps) => {
-    const { activeView, setActiveView, selectedNoteId, setSelectedNoteId, addNote, settings } = useAppStoreShallow((state) => ({
+    const { activeView, setActiveView, selectedNoteId, setSelectedNoteId, addNote } = useAppStoreShallow((state) => ({
         activeView: state.activeView,
         setActiveView: state.setActiveView,
         selectedNoteId: state.selectedNoteId,
         setSelectedNoteId: state.setSelectedNoteId,
         addNote: state.addNote,
-        settings: state.settings,
     }));
 
 
@@ -39,13 +38,6 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: A
             setIsAboutHovered(true);
         }
     };
-
-    // Handle Default View Startup
-    useEffect(() => {
-        if (settings.defaultView && settings.defaultView !== 'last') {
-            // Implementation reserved for future strict startup handling
-        }
-    }, []);
 
     const handleCreateNote = () => {
         const newNote = addNote({ content: '' });

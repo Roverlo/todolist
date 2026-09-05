@@ -124,8 +124,3 @@ export const CloseConfirmModal = ({ open, onClose }: CloseConfirmModalProps) => 
         </div>
     );
 };
-
-// 重置用户的关闭偏好（可在设置中调用）
-export const resetClosePreference = () => {
-    localStorage.removeItem('closeAction');
-};

@@ -149,10 +149,7 @@ export const ProjectSidebar = ({ onProjectSelected, collapsed, onToggleCollapse 
     },
   ];
 
-  const totalSystemCount = useMemo(
-    () => systemItems.find((item) => item.key === 'ALL')?.count ?? 0,
-    [systemItems],
-  );
+  const totalSystemCount = visibleTasks.length;
 
   // 活跃的周期任务模板数量
   const activeRecurringCount = useMemo(

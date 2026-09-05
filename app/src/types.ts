@@ -45,8 +45,8 @@ export interface Dependency {
 
 export interface HistoryChange {
   field: string;
-  from: any;
-  to: any;
+  from: unknown;
+  to: unknown;
 }
 
 export interface HistoryLog {

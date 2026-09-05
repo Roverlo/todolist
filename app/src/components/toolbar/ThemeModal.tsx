@@ -34,7 +34,7 @@ export const ThemeModal = ({ open, onClose }: ThemeModalProps) => {
     { key: 'sky', name: '天空蓝', color: '#0284c7', desc: '通透、明快' },
     { key: 'rose', name: '樱花粉', color: '#e11d48', desc: '治愈、温暖' },
     { key: 'indigo', name: '深邃靛', color: '#4f46e5', desc: '沉稳、商务' },
-  ];
+  ] as const;
 
   return (
     <div className='create-overlay'>
@@ -60,7 +60,7 @@ export const ThemeModal = ({ open, onClose }: ThemeModalProps) => {
               return (
                 <div
                   key={theme.key}
-                  onClick={() => setSettings({ colorScheme: theme.key as any })}
+                  onClick={() => setSettings({ colorScheme: theme.key })}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',

@@ -1,7 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import type { CSSProperties } from 'react';
-// @ts-ignore - react-window export issue with TypeScript
-import { FixedSizeList } from 'react-window';
+import { List, type RowComponentProps } from 'react-window';
 import { useVisibleTasks } from '../../hooks/useVisibleTasks';
 import { useAppStoreShallow } from '../../state/appStore';
 import { TaskRow } from './TaskRow';
@@ -23,12 +21,12 @@ interface RowData {
   onDeleteTask: (taskId: string) => void;
 }
 
-const Row = ({ index, style, data }: { index: number; style: CSSProperties; data: RowData }) => {
+const Row = ({ index, style, ariaAttributes, data }: RowComponentProps<{ data: RowData }>) => {
   const item = data.tasks[index];
-  if (!item) return null;
+  if (!item) return <div style={style} {...ariaAttributes} />;
 
   return (
-    <div style={style}>
+    <div style={style} {...ariaAttributes}>
       <table className="task-table" style={{ tableLayout: 'fixed', width: '100%' }}>
         <tbody>
           <TaskRow
@@ -138,15 +136,13 @@ export const VirtualTaskTable = React.memo(({ onTaskFocus, height = 600 }: Virtu
           </tr>
         </thead>
       </table>
-      <FixedSizeList
-        height={height}
-        itemCount={rows.length}
-        itemSize={80}
-        width="100%"
-        itemData={itemData}
-      >
-        {Row}
-      </FixedSizeList>
+      <List
+        style={{ height, width: '100%' }}
+        rowCount={rows.length}
+        rowHeight={80}
+        rowProps={{ data: itemData }}
+        rowComponent={Row}
+      />
       <DeleteChoiceDialog
         open={!!deleteCandidateId}
         title="删除任务"

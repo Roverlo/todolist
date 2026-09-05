@@ -180,7 +180,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     }
   };
 
-  const handleAddOrUpdateProgress = (_stayEditing: boolean) => {
+  const handleAddOrUpdateProgress = () => {
     if (!progressNote.trim()) return;
     const at = dayjs(progressTime).valueOf();
     const nextList: ProgressEntry[] = editingProgressId
@@ -498,7 +498,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 />
               </div>
               <div className='footer-actions' style={{ justifyContent: 'flex-end', marginBottom: 10 }}>
-                <button className='btn btn-primary-outline' type='button' onClick={() => handleAddOrUpdateProgress(false)}>
+                <button className='btn btn-primary-outline' type='button' onClick={handleAddOrUpdateProgress}>
                   {editingProgressId ? '更新进展' : '添加该进展到记录'}
                 </button>
               </div>

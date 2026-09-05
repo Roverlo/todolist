@@ -11,13 +11,12 @@ interface Props {
   tasks: Task[];
   allTasks: Task[];
   projectMap: Record<string, { name: string } | undefined>;
-  currentProjectId?: string;
 }
 
 type ExportScope = 'current' | 'all' | 'dateRange';
 type ExportFormat = 'csv' | 'markdown' | 'json';
 
-export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, currentProjectId: _currentProjectId }: Props) => {
+export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap }: Props) => {
   const defaultName = `tasks-${dayjs().format('YYYYMMDD-HHmmss')}`;
   const [dir, setDir] = useState<string>('');
   const [scope, setScope] = useState<ExportScope>('current');
@@ -401,16 +400,16 @@ export const ExportModal = ({ open, onClose, tasks, allTasks, projectMap, curren
               📁 导出格式
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-              {[
+              {([
                 { value: 'json', icon: '{ }', name: 'JSON', desc: '支持导入' },
                 { value: 'csv', icon: '📊', name: 'CSV', desc: '适合 Excel' },
                 { value: 'markdown', icon: '📝', name: 'Markdown', desc: '文档整理' },
-              ].map(fmt => {
+              ] as const).map(fmt => {
                 const isSelected = format === fmt.value;
                 return (
                   <div
                     key={fmt.value}
-                    onClick={() => setFormat(fmt.value as any)}
+                    onClick={() => setFormat(fmt.value)}
                     style={{
                       padding: '16px 12px',
                       borderRadius: 10,

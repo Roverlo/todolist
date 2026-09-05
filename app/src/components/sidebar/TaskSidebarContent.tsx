@@ -134,10 +134,7 @@ export const TaskSidebarContent = ({ onProjectSelected }: TaskSidebarContentProp
         },
     ];
 
-    const totalSystemCount = useMemo(
-        () => systemItems.find((item) => item.key === 'ALL')?.count ?? 0,
-        [systemItems],
-    );
+    const totalSystemCount = visibleTasks.length;
 
     const activeRecurringCount = useMemo(
         () => recurringTemplates.filter((t) => t.active).length,
@@ -230,8 +227,7 @@ export const TaskSidebarContent = ({ onProjectSelected }: TaskSidebarContentProp
                                 >
                                     <div className='system-main'>
                                         <div className='system-icon'>
-                                            {/* 使用 Icon 组件，添加类型强制转换，因为 systemItems 改为了 icon name */}
-                                            <Icon name={item.icon as any} size={18} />
+                                            <Icon name={item.icon} size={18} />
                                         </div>
                                         <div className='system-label-block'>
                                             <div className='system-name'>{item.label}</div>

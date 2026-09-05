@@ -68,7 +68,7 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
                 const customPath = settings.autoBackup?.customPath;
                 const backupDir = customPath || await join(dataDir, 'auto_backups');
                 setBackupFullPath(backupDir);
-            } catch (err) {
+            } catch {
                 setBackupFullPath('(无法获取路径)');
             }
         };

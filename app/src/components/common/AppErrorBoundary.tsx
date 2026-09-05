@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 type Props = {
   children: ReactNode;
@@ -21,7 +21,7 @@ export class AppErrorBoundary extends Component<Props, State> {
     };
   }
 
-  componentDidCatch(error: Error, info: any) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[AppErrorBoundary]', error, info);
   }
 

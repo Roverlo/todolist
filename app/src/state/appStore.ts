@@ -1,8 +1,8 @@
-import { create } from 'zustand';
+import { create, type StoreApi } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { StateStorage } from 'zustand/middleware';
 import { invoke } from '@tauri-apps/api/core';
-import { produce } from 'immer';
+import { produce, type Draft } from 'immer';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
 import { useShallow } from 'zustand/react/shallow';
@@ -204,8 +204,6 @@ const initialData: AppData = {
 
 const deepClone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
-type Draft<T> = T extends (...args: any[]) => any ? never : T;
-
 type DictionaryKey = 'onsiteOwners' | 'lineOwners' | 'tags';
 
 const rebuildDictionary = (state: Draft<AppStore>) => {
@@ -246,12 +244,6 @@ const rebuildDictionary = (state: Draft<AppStore>) => {
   state.dictionary.onsiteOwners = Array.from(onsite).sort();
   state.dictionary.lineOwners = Array.from(line).sort();
   state.dictionary.tags = Array.from(tags).sort();
-};
-
-const registerFromTask = (state: Draft<AppStore>, _payload: Partial<Task>) => {
-  // This function is now just a trigger for full rebuild to ensure consistency
-  // Or we can keep it as an optimistic update, but rebuildDictionary is safer.
-  rebuildDictionary(state);
 };
 
 export interface AppStore extends AppData {
@@ -367,10 +359,9 @@ const pickSnapshot = (state: Draft<AppStore>): AppDataSnapshot => ({
   selectedNoteId: state.selectedNoteId,
 });
 
-const withHistory = (set: any, updater: (state: Draft<AppStore>) => void) => {
+const withHistory = (set: StoreApi<AppStore>['setState'], updater: (state: Draft<AppStore>) => void) => {
   set(
-    produce((state: AppStore) => {
-      const draft = state as Draft<AppStore>;
+    produce((draft: Draft<AppStore>) => {
       const snapshot = deepClone(pickSnapshot(draft));
       draft.undoStack.push(snapshot);
       const depth = draft.settings.undoDepth ?? 10;
@@ -401,7 +392,7 @@ export const useAppStore = create<AppStore>()(
         if (!trimmed) {
           throw new Error('Project name cannot be empty');
         }
-        let existing = get().projects.find((p) => p.name === trimmed);
+        const existing = get().projects.find((p) => p.name === trimmed);
         if (existing) {
           return existing;
         }
@@ -549,7 +540,7 @@ export const useAppStore = create<AppStore>()(
           id: nanoid(12),
           projectId,
           title: title.trim(),
-          status: (rest.status as any) ?? 'doing',
+          status: rest.status ?? 'doing',
           priority: rest.priority ?? 'medium',
           dueDate: rest.dueDate,
           createdAt: Date.now(),
@@ -564,11 +555,11 @@ export const useAppStore = create<AppStore>()(
           history: [],
           progress: [],
           subtasks: rest.subtasks ?? [],
-          extras: (rest as any).extras ?? {},
+          extras: rest.extras ?? {},
         };
         withHistory(set, (state) => {
           state.tasks.push(newTask);
-          registerFromTask(state, newTask);
+          rebuildDictionary(state);
         });
         return newTask;
       },
@@ -576,14 +567,14 @@ export const useAppStore = create<AppStore>()(
         withHistory(set, (state) => {
           const task = state.tasks.find((t) => t.id === id);
           if (!task) return;
-          const prevStatus = task.status as any;
+          const prevStatus = task.status;
           Object.assign(task, updates);
           task.updatedAt = Date.now();
-          registerFromTask(state, task);
+          rebuildDictionary(state);
           const recurringRaw = (task.extras?.recurring ?? '') as string;
           let recurring: { type: 'daily' | 'weekly' | 'monthly'; dueWeekday?: number; dueDom?: number; day?: number; dueStrategy?: 'sameDay' | 'endOfWeek' | 'endOfMonth' | 'none'; autoRenew?: boolean } | null = null;
           try { recurring = recurringRaw ? JSON.parse(recurringRaw) : null; } catch { recurring = null; }
-          if (recurring?.autoRenew && prevStatus !== 'done' && (updates.status as any) === 'done') {
+          if (recurring?.autoRenew && prevStatus !== 'done' && updates.status === 'done') {
             const now = dayjs();
             let due = '';
             let visibleFrom = '';
@@ -610,7 +601,7 @@ export const useAppStore = create<AppStore>()(
                 id: nanoid(12),
                 projectId: task.projectId,
                 title: task.title,
-                status: 'doing' as any,
+                status: 'doing',
                 priority: task.priority,
                 dueDate: due,
                 createdAt: Date.now(),
@@ -734,8 +725,9 @@ export const useAppStore = create<AppStore>()(
                 task.title = `[原项目已被删除] ${task.title}`;
               }
             }
-            const { trashedAt, trashedFrom, ...rest } = task.extras ?? {};
-            task.extras = rest;
+            task.extras ??= {};
+            delete task.extras.trashedAt;
+            delete task.extras.trashedFrom;
             task.updatedAt = Date.now();
             rebuildDictionary(state);
           }
@@ -769,7 +761,7 @@ export const useAppStore = create<AppStore>()(
             ids.includes(task.id)
               ? (() => {
                 const updated = { ...task, ...updates, updatedAt: Date.now() };
-                registerFromTask(state, updated);
+                rebuildDictionary(state);
                 return updated;
               })()
               : task,
@@ -984,7 +976,7 @@ export const useAppStore = create<AppStore>()(
               id: nanoid(12),
               projectId: incoming.projectId,
               title: incoming.title.trim(),
-              status: (incoming.status as any) ?? 'doing',
+              status: incoming.status ?? 'doing',
               priority: incoming.priority ?? 'medium',
               dueDate: incoming.dueDate,
               createdAt: incoming.createdAt ?? Date.now(),
@@ -997,10 +989,10 @@ export const useAppStore = create<AppStore>()(
               attachments: incoming.attachments ?? [],
               dependencies: incoming.dependencies ?? [],
               history: incoming.history ?? [],
-              extras: (incoming as any).extras ?? {},
+              extras: incoming.extras ?? {},
             };
             state.tasks.push(normalized);
-            registerFromTask(state, normalized);
+            rebuildDictionary(state);
           });
         });
       },
@@ -1134,7 +1126,7 @@ export const useAppStore = create<AppStore>()(
                 subtasks: tpl.subtasks?.map(st => ({ ...st, id: nanoid(8), createdAt: Date.now(), completed: false })) ?? [],
               };
               state.tasks.push(newTask);
-              registerFromTask(state, newTask);
+              rebuildDictionary(state);
             });
           });
         });
@@ -1522,7 +1514,7 @@ export const useAppStore = create<AppStore>()(
               console.error('Failed to save local backup', e);
             }
           },
-          removeItem: async (_name: string): Promise<void> => {
+          removeItem: async (): Promise<void> => {
             // Not implemented for file storage
           },
         };
@@ -1577,17 +1569,17 @@ export const useAppStore = create<AppStore>()(
         if (version < 6) {
           state.tasks = state.tasks.map((t) => ({
             ...t,
-            status: (t.status as any) === 'todo' ? ('paused' as any) : t.status,
+            status: (t.status as string) === 'todo' ? 'paused' : t.status,
           }));
           state.filters = {
             ...state.filters,
-            status: (state.filters.status as any) === 'todo' ? ('paused' as any) : state.filters.status,
+            status: (state.filters.status as string) === 'todo' ? 'paused' : state.filters.status,
           };
           state.savedFilters = state.savedFilters.map((sf) => ({
             ...sf,
             filters: {
               ...sf.filters,
-              status: (sf.filters.status as any) === 'todo' ? ('paused' as any) : sf.filters.status,
+              status: (sf.filters.status as string) === 'todo' ? 'paused' : sf.filters.status,
             },
           }));
         }
@@ -1598,18 +1590,16 @@ export const useAppStore = create<AppStore>()(
           state.columnConfig = { ...state.columnConfig, columns: filtered, pinned } as ColumnConfig;
         }
         if (version < 8) {
-          state.recurringTemplates = (state.recurringTemplates ?? []).map((tpl) => {
-            const defaults = (tpl.defaults ?? {}) as Record<string, any>;
-            const { onsiteOwner, lineOwner, ...restDefaults } = defaults;
-            const cleanedEntries = Object.entries(restDefaults).filter(
-              ([, value]) => value !== undefined && value !== null,
+          state.recurringTemplates = (state.recurringTemplates ?? []).map((tpl: RecurringTemplate & { onsiteOwner?: string }) => {
+            const cleanedEntries = Object.entries(tpl.defaults ?? {}).filter(
+              ([key, value]) => key !== 'onsiteOwner' && key !== 'lineOwner' && value !== undefined && value !== null,
             );
             const cleanedDefaults = cleanedEntries.length
               ? (Object.fromEntries(cleanedEntries) as RecurringTemplate['defaults'])
               : undefined;
             return {
               ...tpl,
-              owners: (tpl as any).owners ?? (tpl as any).onsiteOwner,
+              owners: tpl.owners ?? tpl.onsiteOwner,
               defaults: cleanedDefaults,
               schedule: {
                 ...tpl.schedule,
@@ -1647,7 +1637,7 @@ export const useAppStore = create<AppStore>()(
         if (version < 12) {
           state.settings.ai = toCustomAISettings(state.settings.ai);
         }
-        return state as any;
+        return state;
       },
       partialize: (state) => ({
         projects: state.projects,

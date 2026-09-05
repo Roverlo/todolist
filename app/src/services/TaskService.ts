@@ -15,9 +15,7 @@ export interface CreateTaskDTO {
   notes?: string;
 }
 
-export interface UpdateTaskDTO extends Partial<Omit<Task, 'id' | 'createdAt'>> {
-  // Additional fields can be added here
-}
+export type UpdateTaskDTO = Partial<Omit<Task, 'id' | 'createdAt'>>;
 
 export class TaskService {
   /**

@@ -1,46 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { create } from 'zustand';
-
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-interface Toast {
-  id: string;
-  message: string;
-  type: ToastType;
-  duration?: number;
-}
-
-interface ToastStore {
-  toasts: Toast[];
-  addToast: (message: string, type?: ToastType, duration?: number) => void;
-  removeToast: (id: string) => void;
-  clearToasts: () => void;
-}
-
-export const useToastStore = create<ToastStore>((set) => ({
-  toasts: [],
-  addToast: (message, type = 'info', duration = 3000) => {
-    const id = Date.now().toString();
-    const toast: Toast = { id, message, type, duration };
-    set((state) => ({ toasts: [...state.toasts, toast] }));
-    
-    if (duration > 0) {
-      setTimeout(() => {
-        set((state) => ({
-          toasts: state.toasts.filter((t) => t.id !== id),
-        }));
-      }, duration);
-    }
-  },
-  removeToast: (id) => {
-    set((state) => ({
-      toasts: state.toasts.filter((t) => t.id !== id),
-    }));
-  },
-  clearToasts: () => {
-    set({ toasts: [] });
-  },
-}));
+import React, { useCallback, useEffect, useState } from 'react';
+import { useToastStore, type Toast } from '../../state/toastStore';
 
 interface ToastItemProps {
   toast: Toast;
@@ -50,10 +9,10 @@ interface ToastItemProps {
 const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
   const [isExiting, setIsExiting] = useState(false);
 
-  const handleRemove = () => {
+  const handleRemove = useCallback(() => {
     setIsExiting(true);
     setTimeout(() => onRemove(toast.id), 300);
-  };
+  }, [onRemove, toast.id]);
 
   useEffect(() => {
     if (toast.duration && toast.duration > 0) {
@@ -62,7 +21,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
       }, toast.duration);
       return () => clearTimeout(timer);
     }
-  }, [toast.id, toast.duration]);
+  }, [toast.duration, handleRemove]);
 
   const getIcon = () => {
     switch (toast.type) {
@@ -112,21 +71,4 @@ export const ToastContainer: React.FC = () => {
       ))}
     </div>
   );
-};
-
-// Hook for easy toast usage
-export const useToast = () => {
-  const { addToast } = useToastStore();
-  
-  return {
-    success: (message: string, duration?: number) => 
-      addToast(message, 'success', duration),
-    error: (message: string, duration?: number) => 
-      addToast(message, 'error', duration),
-    warning: (message: string, duration?: number) => 
-      addToast(message, 'warning', duration),
-    info: (message: string, duration?: number) => 
-      addToast(message, 'info', duration),
-    show: addToast,
-  };
 };

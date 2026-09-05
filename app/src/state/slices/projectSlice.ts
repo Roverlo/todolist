@@ -33,7 +33,7 @@ export const createProjectSlice: StateCreator<
     if (!trimmed) {
       throw new Error('Project name cannot be empty');
     }
-    let existing = get().projects.find((p) => p.name === trimmed);
+    const existing = get().projects.find((p) => p.name === trimmed);
     if (existing) {
       return existing;
     }

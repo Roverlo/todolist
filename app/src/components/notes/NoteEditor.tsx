@@ -24,12 +24,16 @@ interface NoteEditorProps {
     onCreate?: () => void;
 }
 
-export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
-    const [title, setTitle] = useState('');
-    const [tags, setTags] = useState<string[]>([]);
+export function NoteEditor(props: NoteEditorProps) {
+    return <NoteEditorContent key={props.note?.id} {...props} />;
+}
+
+function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
+    const [title, setTitle] = useState(note?.title || '');
+    const [tags, setTags] = useState<string[]>(note?.tags || []);
     const [hasChanges, setHasChanges] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
-    const [lastSaved, setLastSaved] = useState<number | null>(null);
+    const [lastSaved, setLastSaved] = useState<number | null>(note?.updatedAt ?? null);
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
     useEffect(() => {
@@ -54,33 +58,12 @@ export function NoteEditor({ note, onSave, onCreate }: NoteEditorProps) {
                 placeholder: '在此记录你的想法...\n\n💡 提示：\n- 支持 Markdown 快捷键\n- Ctrl+S 快速保存',
             }),
         ],
-        content: '',
+        content: note?.content || '',
         onUpdate: () => {
             setHasChanges(true);
             setSaveStatus('unsaved');
         },
     });
-
-    // Sync note data with state and editor
-    useEffect(() => {
-        if (note) {
-            setTitle(note.title || '');
-            setTags(note.tags || []);
-            if (editor && note.id) {
-                editor.commands.setContent(note.content, { emitUpdate: false });
-            }
-            setHasChanges(false);
-            setSaveStatus('saved');
-            setLastSaved(note.updatedAt);
-        } else {
-            setTitle('');
-            setTags([]);
-            editor?.commands.setContent('', { emitUpdate: false });
-            setHasChanges(false);
-            setSaveStatus('saved');
-            setLastSaved(null);
-        }
-    }, [note?.id, editor]); // Only when note ID changes
 
     const handleSave = useCallback(() => {
         if (!editor) return;

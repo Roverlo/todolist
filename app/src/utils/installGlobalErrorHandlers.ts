@@ -29,10 +29,11 @@ const forwardToBackend = (level: 'error' | 'warn', message: string) => {
 };
 
 export const installGlobalErrorHandlers = () => {
-  if ((window as any).__APP_ERROR_HANDLERS_INSTALLED__) {
+  const appWindow = window as Window & { __APP_ERROR_HANDLERS_INSTALLED__?: boolean };
+  if (appWindow.__APP_ERROR_HANDLERS_INSTALLED__) {
     return;
   }
-  (window as any).__APP_ERROR_HANDLERS_INSTALLED__ = true;
+  appWindow.__APP_ERROR_HANDLERS_INSTALLED__ = true;
 
   window.addEventListener('error', (event) => {
     const detail =

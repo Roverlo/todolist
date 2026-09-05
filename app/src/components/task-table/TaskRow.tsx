@@ -222,9 +222,7 @@ export const TaskRow = memo(({
 
   const textStyle: React.CSSProperties = {
     fontSize,
-    // @ts-ignore
     WebkitLineClamp: lineClamp,
-    // @ts-ignore
     lineClamp: lineClamp, // Standard property for future support
     whiteSpace: 'pre-wrap', // Preserve newlines and spaces
     wordBreak: 'break-word',

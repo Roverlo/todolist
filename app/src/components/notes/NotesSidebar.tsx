@@ -22,7 +22,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
     const tags = useAppStore((state) => state.tags);
     const searchText = useAppStore((state) => state.noteSearchText) || '';
     const activeTagId = useAppStore((state) => state.activeNoteTagId);
-    const treeExpandedState = useAppStore((state) => state.noteTreeExpandedState) || {};
+    const treeExpandedState = useAppStore((state) => state.noteTreeExpandedState);
     const toggleTreeNode = useAppStore((state) => state.toggleNoteTreeNode);
     const setTreeNodeExpanded = useAppStore((state) => state.setNoteTreeNodeExpanded);
     const noteViewMode = useAppStore((state) => state.noteViewMode);
@@ -74,7 +74,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
 
     // 构建树形结构
     const tree = useMemo(() => {
-        return buildNoteTree(filteredNotes, treeExpandedState);
+        return buildNoteTree(filteredNotes, treeExpandedState ?? {});
     }, [filteredNotes, treeExpandedState]);
 
     // 展开选中日期所在的月份
