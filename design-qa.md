@@ -50,4 +50,6 @@ EXE 的本地上传、粘贴和拖入图片会保存到系统“文档 / Project
 
 合入 main 后构建免安装 EXE，使用 `scripts/test-portable.ps1 -Executable <exe> -EditorWorkflow` 执行隔离启动及实际 WebView 工作流：通过原生 HTTP 请求本机模拟接口，并检查上传图片真实落盘、内容摘要及原有用户数据未改变。结果写入对应 `app/ui-check.local/portable-*/result.json`，随包说明记录最终提交与 SHA-256。
 
+第一次原生验证发现既有 HTTP scope 漏掉了自定义端口，导致带端口的本机/内网 AI 地址被拒绝；现已补齐 HTTP/HTTPS 端口匹配，并将原生桥返回的错误原因显示出来。兼容检查和打包工作流均新增该路径的检查。
+
 AI 流程使用本机模拟服务，未调用用户的真实付费接口；不将流程回归等同于实际模型提取准确率验证。

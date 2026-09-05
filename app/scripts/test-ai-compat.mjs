@@ -3,6 +3,12 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
+const capabilities = JSON.parse(await readFile(new URL('../src-tauri/capabilities/default.json', import.meta.url), 'utf8'));
+const httpScope = capabilities.permissions.find(permission => permission.identifier === 'http:default').allow;
+for (const url of ['http://127.0.0.1:11434/v1', 'http://internal.example:8080/v1', 'https://internal.example:8443/v1', 'https://internal.example/v1']) {
+    assert.ok(httpScope.some(entry => new URLPattern(entry.url).test(url)), 'Native HTTP scope must allow configured endpoint ports: ' + url);
+}
+
 const compile = async (relativePath, replacements) => {
     let source = await readFile(fileURLToPath(new URL(relativePath, import.meta.url)), 'utf8');
     for (const [from, to] of replacements) source = source.replace(from, to);

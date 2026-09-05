@@ -46,6 +46,16 @@ try {
         assert.ok(dataPath, '--data is required for the isolated native check');
         browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdp}`);
         page = browser.contexts()[0].pages()[0];
+        const bridgeCheck = await page.evaluate(async url => {
+            try {
+                const rid = await window.__TAURI_INTERNALS__.invoke('plugin:http|fetch', {
+                    clientConfig: { method: 'POST', url, headers: [], data: [] },
+                });
+                await window.__TAURI_INTERNALS__.invoke('plugin:http|fetch_cancel', { rid });
+                return 'ok';
+            } catch (error) { return String(error); }
+        }, endpoint + '/chat/completions');
+        assert.equal(bridgeCheck, 'ok', 'Native HTTP bridge scope check: ' + bridgeCheck);
     } else {
         server = await createViteServer({
             logLevel: 'error', server: { host: '127.0.0.1', port: 0 },

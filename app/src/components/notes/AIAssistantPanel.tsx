@@ -168,7 +168,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
         } catch (error) {
             if (request.current !== controller) return;
             if (controller.signal.reason === 'timeout') setError('生成超时，请重试，或在设置中检查模型与接口。');
-            else if (!controller.signal.aborted) setError(error instanceof Error ? error.message : '生成失败，请重试');
+            else if (!controller.signal.aborted) setError(error instanceof Error ? error.message : typeof error === 'string' ? error : '生成失败，请重试');
         } finally {
             window.clearTimeout(timeout);
             if (request.current === controller) { request.current = null; setLoading(false); }
