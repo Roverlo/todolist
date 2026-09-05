@@ -35,10 +35,10 @@ export function NotesToolbar({
                 <button
                     className="notes-toolbar-btn primary"
                     onClick={onToday}
-                    title="写今天的日记"
+                    title="新增当日随记"
                 >
-                    <Icon name="edit" size={14} />
-                    <span>写今天</span>
+                    <Icon name="plus" size={14} />
+                    <span>新增当日随记</span>
                 </button>
 
                 <button

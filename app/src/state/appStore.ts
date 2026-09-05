@@ -1229,9 +1229,18 @@ export const useAppStore = create<AppStore>()(
         const now = Date.now();
         const date = noteInput.date ?? get().selectedNoteDate ?? dayjs(now).format('YYYY-MM-DD');
         if (!isNoteDate(date)) throw new Error('所属日期无效');
+        let title = noteInput.title?.trim();
+        if (!title) {
+          const dayNotes = get().notes.filter(note => !note.deletedAt && getNoteDate(note) === date);
+          const nextNumber = dayNotes.reduce((next, note) => {
+            const number = Number(note.title.match(/^随记(\d+)$/)?.[1]);
+            return Number.isSafeInteger(number + 1) ? Math.max(next, number + 1) : next;
+          }, dayNotes.length);
+          title = dayNotes.length ? `随记${String(nextNumber).padStart(2, '0')}` : '随记';
+        }
         const newNote: Note = {
           id: nanoid(12),
-          title: noteInput.title?.trim() || '',
+          title,
           content: noteInput.content,
           date,
           tags: noteInput.tags || [],

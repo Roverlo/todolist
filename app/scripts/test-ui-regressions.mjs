@@ -109,9 +109,14 @@ try {
 
     await page.getByTitle('在列表中定位当前笔记', { exact: true }).click();
     assert.equal(await page.getByRole('button', { name: '2027-01-15', exact: true }).getAttribute('aria-pressed'), 'true');
-    await page.getByTitle('写今天的日记', { exact: true }).click();
+    const beforeToday = await storedNotes();
+    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
     assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), '2026-09-05');
     assert.equal(await page.locator('.notes-calendar-title').innerText(), '2026年9月');
+    assert.equal(await page.getByPlaceholder('标题（可选）').inputValue(), '随记01');
+    const afterToday = await storedNotes();
+    assert.equal(afterToday.length, beforeToday.length + 1);
+    for (const note of beforeToday) assert.deepEqual(afterToday.find(n => n.id === note.id), note);
 
     // Legacy notes retain their original day through every timestamp-changing action.
     const legacyDates = await page.evaluate(async () => {
@@ -160,11 +165,42 @@ try {
     assert.match(await readFile(await download.path(), 'utf8'), /所属日期: 2025-12-31/);
 
     // With no entry for today, the shortcut must create today rather than the selected old day.
-    await page.getByTitle('写今天的日记', { exact: true }).click();
+    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
     assert.equal(await page.getByLabel('所属日期', { exact: true }).inputValue(), '2026-09-05');
+    assert.equal(await page.getByPlaceholder('标题（可选）').inputValue(), '随记');
     assert.equal((await storedNotes()).length, 2);
 
-    console.log('UI color, process-exit, past/future dates, autosave/reload, legacy dates, validation, trash and dated export regression checks passed');
+    for (let number = 1; number <= 10; number++) {
+        await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+        await page.waitForFunction(title => document.querySelector('.note-editor-title')?.value === title, `随记${String(number).padStart(2, '0')}`);
+    }
+    const todayTitles = (await storedNotes()).filter(n => n.date === '2026-09-05').map(n => n.title).sort();
+    assert.deepEqual(todayTitles, ['随记', ...Array.from({ length: 10 }, (_, i) => `随记${String(i + 1).padStart(2, '0')}`)]);
+    await page.reload();
+    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.note-editor-title')?.value === '随记11');
+    const toolbarFits = await page.locator('.notes-toolbar').evaluate(el => {
+        const bounds = el.getBoundingClientRect();
+        return [...el.querySelectorAll('button')].every(button => {
+            const rect = button.getBoundingClientRect();
+            return rect.left >= bounds.left && rect.right <= bounds.right;
+        });
+    });
+    assert.ok(toolbarFits, '新增按钮和原有导航按钮均应完整显示');
+
+    const numberedNotes = await page.evaluate(async () => {
+        const { useAppStore } = await import('/src/state/appStore.ts');
+        const store = useAppStore.getState();
+        const custom = store.addNote({ date: '2028-01-01', title: '项目会议', content: '保留原内容' });
+        const firstNumbered = store.addNote({ date: '2028-01-01', content: '' });
+        store.addNote({ date: '2028-01-01', title: '随记99', content: '' });
+        const afterExistingNumber = store.addNote({ date: '2028-01-01', content: '' });
+        const otherDay = store.addNote({ date: '2028-01-02', content: '' });
+        return [custom, firstNumbered, afterExistingNumber, otherDay].map(n => n.title);
+    });
+    assert.deepEqual(numberedNotes, ['项目会议', '随记01', '随记100', '随记']);
+
+    console.log('UI color, process-exit, past/future dates, autosave/reload, legacy dates, validation, trash, dated export and daily numbered creation regression checks passed');
 } finally {
     await browser?.close();
     await server.close();

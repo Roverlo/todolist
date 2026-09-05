@@ -129,21 +129,8 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
             {/* 快捷导航栏 (控制中枢) - 移至日历下方 */}
             <NotesToolbar
                 onToday={() => {
-                    const today = dayjs();
-                    setSelectedDate(today.format('YYYY-MM-DD'));
-                    useAppStore.getState().setNoteSearchText('');
-                    useAppStore.getState().setActiveNoteTag('all');
-                    setNoteViewMode('tree');
-                    const todayNote = notes.find(n => !n.deletedAt && getNoteDate(n) === today.format('YYYY-MM-DD'));
-                    if (todayNote) {
-                        onSelectNote(todayNote);
-                        const yearId = `year-${today.year()}`;
-                        const monthId = `month-${today.format('YYYY-MM')}`;
-                        setTreeNodeExpanded(yearId, true);
-                        setTreeNodeExpanded(monthId, true);
-                    } else {
-                        onCreateNote();
-                    }
+                    setSelectedDate(dayjs().format('YYYY-MM-DD'));
+                    onCreateNote();
                 }}
                 onPrev={() => {
                     if (!selectedNoteId) return;
