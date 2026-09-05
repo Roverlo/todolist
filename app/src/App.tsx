@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import dayjs from 'dayjs';
 import './App.css';
 import { AppSidebar } from './components/sidebar/AppSidebar';
-import { NotesMain } from './components/notes/NotesMain';
 import { PrimaryToolbar } from './components/toolbar/PrimaryToolbar';
 import { TaskTable } from './components/task-table/TaskTable';
 import { DetailsDrawer } from './components/details/DetailsDrawer';
@@ -33,6 +32,8 @@ import { CloseConfirmModal } from './components/ui/CloseConfirmModal';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import { exit } from '@tauri-apps/plugin-process';
+
+const NotesMain = lazy(() => import('./components/notes/NotesMain').then(module => ({ default: module.NotesMain })));
 
 function App() {
   useAutoBackup(); // 启动自动备份 hook
@@ -537,7 +538,9 @@ function App() {
             </section>
           </>
         ) : (
-          <NotesMain />
+          <Suspense fallback={<div role="status">正在打开随记…</div>}>
+            <NotesMain />
+          </Suspense>
         )}
       </main>
 

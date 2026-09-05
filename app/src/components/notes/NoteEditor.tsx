@@ -1,22 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
 import type { Note } from '../../types';
 import { useAppStore } from '../../state/appStore';
 import { getNoteDate, isNoteDate } from '../../utils/noteDate';
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import { TextStyle } from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import Highlight from '@tiptap/extension-highlight';
-import TextAlign from '@tiptap/extension-text-align';
-import Image from '@tiptap/extension-image';
-import Placeholder from '@tiptap/extension-placeholder';
-import { FontSize } from './extensions/FontSize';
+import { RichTextProvider } from 'reactjs-tiptap-editor';
+import { localeActions } from 'reactjs-tiptap-editor/locale-bundle';
+import { noteExtensions } from './extensions/NoteExtensions';
+import { useToastStore } from '../../state/toastStore';
 import { EditorToolbar } from './EditorToolbar';
 import { NoteTagSelector } from './NoteTagSelector';
+import 'reactjs-tiptap-editor/style.css';
 import './RichTextEditor.css';
+
+localeActions.setLang('zh_CN');
 
 interface NoteEditorProps {
     note: Note | null;
@@ -31,52 +29,71 @@ export function NoteEditor(props: NoteEditorProps) {
 function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
     const [title, setTitle] = useState(note?.title || '');
     const [tags, setTags] = useState<string[]>(note?.tags || []);
+    const [contentHtml, setContentHtml] = useState(note?.content || '');
+    const [revision, setRevision] = useState(0);
     const [hasChanges, setHasChanges] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+    const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved'>('saved');
     const [lastSaved, setLastSaved] = useState<number | null>(note?.updatedAt ?? null);
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+    const pendingSave = useRef(false);
+    const draft = useRef({ title, tags, contentHtml, onSave });
+
+    useLayoutEffect(() => {
+        draft.current = { title, tags, contentHtml, onSave };
+    }, [title, tags, contentHtml, onSave]);
+
+    const markChanged = useCallback(() => {
+        pendingSave.current = true;
+        setRevision(value => value + 1);
+        setHasChanges(true);
+        setSaveStatus('unsaved');
+    }, []);
 
     useEffect(() => {
         setPortalTarget(document.getElementById('editor-toolbar-portal'));
     }, []);
 
     const editor = useEditor({
-        extensions: [
-            StarterKit,
-            Underline,
-            TextStyle,
-            FontSize,
-            Color,
-            Highlight.configure({
-                multicolor: true,
-            }),
-            TextAlign.configure({
-                types: ['heading', 'paragraph'],
-            }),
-            Image,
-            Placeholder.configure({
-                placeholder: '在此记录你的想法...\n\n💡 提示：\n- 支持 Markdown 快捷键\n- Ctrl+S 快速保存',
-            }),
-        ],
+        immediatelyRender: false,
+        extensions: noteExtensions,
         content: note?.content || '',
-        onUpdate: () => {
-            setHasChanges(true);
-            setSaveStatus('unsaved');
+        editorProps: { attributes: { 'aria-label': '随记正文', role: 'textbox', 'aria-multiline': 'true' } },
+        onUpdate: ({ editor }) => {
+            setContentHtml(editor.getHTML());
+            markChanged();
         },
     });
 
-    const handleSave = useCallback(() => {
-        if (!editor) return;
+    const saveDraft = useCallback(() => {
+        if (!pendingSave.current) return false;
+        try {
+            const current = draft.current;
+            current.onSave(current.title, current.contentHtml, current.tags);
+            pendingSave.current = false;
+            return true;
+        } catch (error) {
+            useToastStore.getState().addToast(error instanceof Error ? error.message : '随记保存失败，请重试', 'error');
+            return false;
+        }
+    }, []);
 
-        setSaveStatus('saving');
-        const contentHtml = editor.getHTML();
-        onSave(title, contentHtml, tags);
-        setHasChanges(false);
-        setTimeout(() => {
+    const handleSave = useCallback(() => {
+        if (saveDraft()) {
+            setHasChanges(false);
             setSaveStatus('saved');
             setLastSaved(Date.now());
-        }, 500);
-    }, [title, tags, editor, onSave]);
+        }
+    }, [saveDraft]);
+
+    // Flush the old note's snapshot before its editor is destroyed on navigation.
+    useEffect(() => {
+        const flush = () => { saveDraft(); };
+        window.addEventListener('pagehide', flush);
+        return () => {
+            window.removeEventListener('pagehide', flush);
+            flush();
+        };
+    }, [saveDraft]);
 
     // Auto save (3s debounce)
     useEffect(() => {
@@ -86,18 +103,16 @@ function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
             }, 3000);
             return () => clearTimeout(timer);
         }
-    }, [hasChanges, title, handleSave, note]);
+    }, [hasChanges, revision, handleSave, note]);
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setTitle(e.target.value);
-        setHasChanges(true);
-        setSaveStatus('unsaved');
+        markChanged();
     };
 
     const handleTagsChange = (newTags: string[]) => {
         setTags(newTags);
-        setHasChanges(true);
-        setSaveStatus('unsaved');
+        markChanged();
     };
 
     // Keyboard shortcuts (Ctrl+S)
@@ -140,8 +155,7 @@ function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
         );
     }
 
-    // Use usage of storage if available or text length
-    const charCount = editor?.storage.characterCount?.characters?.() ?? editor?.getText().length ?? 0;
+    const charCount = editor?.getText().length ?? 0;
 
     return (
         <div className="note-editor">
@@ -168,13 +182,9 @@ function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
                 onChange={handleTitleChange}
             />
 
-            {/* Render Toolbar via Portal if target exists */}
-            {portalTarget && editor && createPortal(
-                <EditorToolbar editor={editor} />,
-                portalTarget
-            )}
-
-            <div
+            {editor && <RichTextProvider editor={editor}>
+                {portalTarget ? createPortal(<EditorToolbar editor={editor} />, portalTarget) : <EditorToolbar editor={editor} />}
+                <div
                 className="note-editor-content-wrapper"
                 onClick={(e) => {
                     // Only focus if clicking the wrapper itself directly, not the editor content
@@ -182,9 +192,10 @@ function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
                         editor.commands.focus('end');
                     }
                 }}
-            >
-                <EditorContent editor={editor} className="editor-content" />
-            </div>
+                >
+                    <EditorContent editor={editor} className="editor-content" />
+                </div>
+            </RichTextProvider>}
 
             <div className="note-editor-footer">
                 <div className="note-editor-meta">
@@ -197,13 +208,6 @@ function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
                     <span className="note-editor-count">
                         字数: {charCount}
                     </span>
-
-                    {saveStatus === 'saving' && (
-                        <span className="note-editor-status saving">
-                            <Icon name="refresh" size={12} />
-                            保存中...
-                        </span>
-                    )}
 
                     {saveStatus === 'saved' && lastSaved && (
                         <span className="note-editor-status saved">
@@ -254,7 +258,6 @@ function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
                     <button
                         className="btn btn-primary"
                         onClick={handleSave}
-                        disabled={saveStatus === 'saving'}
                         title="Ctrl+S"
                     >
                         <Icon name="check" size={16} />

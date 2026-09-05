@@ -48,9 +48,6 @@ export function NotesMain() {
                     <span className="notes-center-title-text" style={{ fontSize: '14px' }}>随记编辑器</span>
                 </div>
 
-                {/* Portal Target for Editor Toolbar */}
-                <div id="editor-toolbar-portal" style={{ flex: 1, display: 'flex', alignItems: 'center', marginLeft: '-10px' }}></div>
-
                 <div className="notes-center-actions">
                     <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className={`btn btn-light ${aiPanelOpen ? 'active' : ''}`} title={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}>
                         <span>{aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}</span>
@@ -60,6 +57,8 @@ export function NotesMain() {
                     </button>
                 </div>
             </div>
+
+            <div id="editor-toolbar-portal" />
 
             {/* Main Content Area */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>

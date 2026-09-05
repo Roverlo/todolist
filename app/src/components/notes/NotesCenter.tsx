@@ -49,9 +49,9 @@ export function NotesCenter({ onClose }: NotesCenterProps) {
     };
 
     // 保存笔记 (仅更新)
-    const handleSaveNote = (title: string, content: string) => {
+    const handleSaveNote = (title: string, content: string, tags?: string[]) => {
         if (activeNote) {
-            updateNote(activeNote.id, { title, content });
+            updateNote(activeNote.id, { title, content, tags });
         }
     };
 

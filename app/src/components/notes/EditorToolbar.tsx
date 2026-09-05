@@ -1,31 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
-import { Editor } from '@tiptap/react';
-import {
-    AlignCenter,
-    AlignLeft,
-    AlignRight,
-    Bold,
-    ChevronDown,
-    Code2,
-    Highlighter,
-    Italic,
-    List,
-    ListOrdered,
-    Palette,
-    Quote,
-    Redo2,
-    RemoveFormatting,
-    Strikethrough,
-    Underline,
-    Undo2,
-    type LucideIcon,
-} from 'lucide-react';
-import clsx from 'clsx';
-import './RichTextEditor.css';
-
-interface EditorToolbarProps {
-    editor: Editor | null;
-}
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { type Editor, useEditorState } from '@tiptap/react';
+import { ChevronDown, Highlighter, Palette, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, type LucideIcon } from 'lucide-react';
+import { RichTextBold } from 'reactjs-tiptap-editor/bold';
+import { RichTextItalic } from 'reactjs-tiptap-editor/italic';
+import { RichTextUnderline } from 'reactjs-tiptap-editor/textunderline';
+import { RichTextStrike } from 'reactjs-tiptap-editor/strike';
+import { RichTextFontSize } from 'reactjs-tiptap-editor/fontsize';
+import { RichTextHeading } from 'reactjs-tiptap-editor/heading';
+import { RichTextFormatPainter } from 'reactjs-tiptap-editor/formatpainter';
+import { RichTextLineHeight } from 'reactjs-tiptap-editor/lineheight';
+import { RichTextTaskList } from 'reactjs-tiptap-editor/tasklist';
+import { RichTextLink } from 'reactjs-tiptap-editor/link';
+import { RichTextImage } from 'reactjs-tiptap-editor/image';
+import { RichTextTable } from 'reactjs-tiptap-editor/table';
+import { RichTextClear } from 'reactjs-tiptap-editor/clear';
+import { RichTextUndo, RichTextRedo } from 'reactjs-tiptap-editor/history';
+import { RichTextBlockquote } from 'reactjs-tiptap-editor/blockquote';
+import { RichTextCode } from 'reactjs-tiptap-editor/code';
+import { RichTextCodeBlock } from 'reactjs-tiptap-editor/codeblock';
+import { RichTextHorizontalRule } from 'reactjs-tiptap-editor/horizontalrule';
+import { BULLET_STYLES, NUMBER_STYLES, FONT_FAMILIES } from './extensions/NoteExtensions';
+import { EditorSearch } from './EditorSearch';
 
 const COLOR_PALETTE = [
     ['黑色', '#000000'], ['深灰', '#595959'], ['灰色', '#a5a5a5'], ['浅灰', '#d9d9d9'], ['白色', '#ffffff'],
@@ -148,199 +143,139 @@ function WordColorPicker({
     );
 }
 
-export function EditorToolbar({ editor }: EditorToolbarProps) {
+function Tool({ label, children }: { label: string; children: ReactNode }) {
+    return <label className="editor-tool"><span className="editor-sr-only">{label}</span>{children}</label>;
+}
+
+export function EditorToolbar({ editor }: { editor: Editor }) {
+    const [searchOpen, setSearchOpen] = useState(false);
     const [textColor, setTextColor] = useState('#000000');
     const [highlightColor, setHighlightColor] = useState('#fff200');
+    const lists = useEditorState({
+        editor,
+        selector: ({ editor }) => ({
+            bullet: editor.isActive('bulletList') ? editor.getAttributes('bulletList').listStyle || 'disc' : '',
+            ordered: editor.isActive('orderedList') ? editor.getAttributes('orderedList').listStyle || 'decimal' : '',
+            table: editor.isActive('table'),
+            canMerge: editor.can().mergeCells(),
+            canSplit: editor.can().splitCell(),
+            image: editor.isActive('imageBlock') || editor.isActive('image'),
+            font: editor.getAttributes('textStyle').fontFamily || '',
+            align: ['left', 'center', 'right', 'justify'].find(value => editor.isActive({ textAlign: value })),
+        }),
+    });
 
-    if (!editor) {
-        return null;
-    }
-
-    const applyTextColor = (color: string) => {
-        setTextColor(color);
-        editor.chain().focus().setColor(color).run();
+    const setListStyle = (type: 'bulletList' | 'orderedList', value: string) => {
+        const chain = editor.chain().focus();
+        if (value === 'none' || !editor.isActive(type)) {
+            if (type === 'bulletList') chain.toggleBulletList();
+            else chain.toggleOrderedList();
+        }
+        if (value !== 'none') chain.updateAttributes(type, { listStyle: value });
+        chain.run();
     };
-    const applyHighlightColor = (color: string) => {
-        setHighlightColor(color);
-        editor.chain().focus().setHighlight({ color }).run();
-    };
 
-    const ToolbarButton = ({
-        icon: ToolbarIcon,
-        title,
-        action,
-        isActive = false,
-        isDisabled = false,
-    }: {
-        icon: LucideIcon;
-        title: string;
-        action: () => void;
-        isActive?: boolean;
-        isDisabled?: boolean;
-    }) => (
-        <button
-            onClick={(e) => {
-                e.preventDefault();
-                action();
-            }}
-            disabled={isDisabled}
-            className={clsx('editor-toolbar-btn', { 'is-active': isActive })}
-            title={title}
-            aria-label={title}
-            type="button"
-            onMouseDown={(e) => e.preventDefault()} // Prevent focus loss
-        >
-            <ToolbarIcon size={18} strokeWidth={2} aria-hidden="true" />
-        </button>
-    );
+    const tableActions = [
+        ['上方插入行', () => editor.chain().focus().addRowBefore().run()],
+        ['下方插入行', () => editor.chain().focus().addRowAfter().run()],
+        ['删除当前行', () => editor.chain().focus().deleteRow().run()],
+        ['左侧插入列', () => editor.chain().focus().addColumnBefore().run()],
+        ['右侧插入列', () => editor.chain().focus().addColumnAfter().run()],
+        ['删除当前列', () => editor.chain().focus().deleteColumn().run()],
+        ['合并单元格', () => editor.chain().focus().mergeCells().run(), !lists.canMerge],
+        ['拆分单元格', () => editor.chain().focus().splitCell().run(), !lists.canSplit],
+        ['切换表头行', () => editor.chain().focus().toggleHeaderRow().run()],
+        ['删除表格', () => editor.chain().focus().deleteTable().run()],
+    ] as const;
 
-    return (
-        <div className="editor-toolbar">
-            <div className="editor-toolbar-group">
-                <ToolbarButton
-                    icon={Undo2}
-                    title="撤销 (Ctrl+Z)"
-                    action={() => editor.chain().focus().undo().run()}
-                    isDisabled={!editor.can().chain().focus().undo().run()}
-                />
-                <ToolbarButton
-                    icon={Redo2}
-                    title="重做 (Ctrl+Shift+Z)"
-                    action={() => editor.chain().focus().redo().run()}
-                    isDisabled={!editor.can().chain().focus().redo().run()}
-                />
+    return (<>
+        <div className="editor-toolbar reactjs-tiptap-editor" role="toolbar" aria-label="随记编辑工具"
+            onMouseDown={event => {
+                if (event.target instanceof Element && event.target.closest('button')) event.preventDefault();
+            }}>
+            <div className="editor-toolbar-group" role="group" aria-label="编辑">
+                <Tool label="撤销"><RichTextUndo /></Tool>
+                <Tool label="重做"><RichTextRedo /></Tool>
+                <button type="button" className="editor-toolbar-btn" aria-label="查找替换" title="查找替换"
+                    data-state={searchOpen ? 'on' : 'off'} onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
+                <Tool label="格式刷"><RichTextFormatPainter /></Tool>
+                <Tool label="清除格式"><RichTextClear /></Tool>
             </div>
-
-            <div className="editor-toolbar-group">
-                <ToolbarButton
-                    icon={Bold}
-                    title="加粗 (Ctrl+B)"
-                    action={() => editor.chain().focus().toggleBold().run()}
-                    isActive={editor.isActive('bold')}
-                />
-                <ToolbarButton
-                    icon={Italic}
-                    title="斜体 (Ctrl+I)"
-                    action={() => editor.chain().focus().toggleItalic().run()}
-                    isActive={editor.isActive('italic')}
-                />
-                <ToolbarButton
-                    icon={Underline}
-                    title="下划线 (Ctrl+U)"
-                    action={() => editor.chain().focus().toggleUnderline().run()}
-                    isActive={editor.isActive('underline')}
-                />
-                <ToolbarButton
-                    icon={Strikethrough}
-                    title="删除线 (Ctrl+Shift+S)"
-                    action={() => editor.chain().focus().toggleStrike().run()}
-                    isActive={editor.isActive('strike')}
-                />
+            <div className="editor-toolbar-group" role="group" aria-label="字体">
+                <select className="editor-list-select" aria-label="正文字体" value={lists.font}
+                    onChange={event => event.target.value
+                        ? editor.chain().focus().setFontFamily(event.target.value).run()
+                        : editor.chain().focus().unsetFontFamily().run()}>
+                    {FONT_FAMILIES.map(([value, name]) => <option key={value} value={value}>{name}</option>)}
+                    {!FONT_FAMILIES.some(([value]) => value === lists.font) && <option value={lists.font}>{lists.font}</option>}
+                </select>
+                <Tool label="段落标题"><RichTextHeading /></Tool>
+                <Tool label="字号"><RichTextFontSize /></Tool>
+                <Tool label="加粗"><RichTextBold /></Tool>
+                <Tool label="斜体"><RichTextItalic /></Tool>
+                <Tool label="下划线"><RichTextUnderline /></Tool>
+                <Tool label="删除线"><RichTextStrike /></Tool>
+                <WordColorPicker icon={Palette} label="字体颜色" color={textColor} clearLabel="自动颜色"
+                    onApply={color => { setTextColor(color); editor.chain().focus().setColor(color).run(); }}
+                    onClear={() => editor.chain().focus().unsetColor().run()} />
+                <WordColorPicker icon={Highlighter} label="背景颜色" color={highlightColor} clearLabel="无颜色"
+                    onApply={color => { setHighlightColor(color); editor.chain().focus().setHighlight({ color }).run(); }}
+                    onClear={() => editor.chain().focus().unsetHighlight().run()} />
             </div>
-
-            <div className="editor-toolbar-group">
-                <ToolbarButton
-                    icon={AlignLeft}
-                    title="左对齐"
-                    action={() => editor.chain().focus().setTextAlign('left').run()}
-                    isActive={editor.isActive({ textAlign: 'left' })}
-                />
-                <ToolbarButton
-                    icon={AlignCenter}
-                    title="居中对齐"
-                    action={() => editor.chain().focus().setTextAlign('center').run()}
-                    isActive={editor.isActive({ textAlign: 'center' })}
-                />
-                <ToolbarButton
-                    icon={AlignRight}
-                    title="右对齐"
-                    action={() => editor.chain().focus().setTextAlign('right').run()}
-                    isActive={editor.isActive({ textAlign: 'right' })}
-                />
+            <div className="editor-toolbar-group" role="group" aria-label="段落和列表">
+                {([['left', '左对齐', AlignLeft], ['center', '居中对齐', AlignCenter], ['right', '右对齐', AlignRight], ['justify', '两端对齐', AlignJustify]] as const)
+                    .map(([value, label, AlignIcon]) => <button key={value} type="button" className="editor-toolbar-btn"
+                        aria-label={label} title={label} data-state={lists.align === value ? 'on' : 'off'}
+                        onClick={() => editor.chain().focus().setTextAlign(value).run()}><AlignIcon size={18} /></button>)}
+                <Tool label="行距"><RichTextLineHeight /></Tool>
+                <select className="editor-list-select" aria-label="项目符号样式" value={lists.bullet}
+                    onChange={event => setListStyle('bulletList', event.target.value)}>
+                    <option value="" disabled>项目符号</option>
+                    {BULLET_STYLES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    {lists.bullet && <option value="none">取消项目符号</option>}
+                </select>
+                <select className="editor-list-select" aria-label="编号样式" value={lists.ordered}
+                    onChange={event => setListStyle('orderedList', event.target.value)}>
+                    <option value="" disabled>编号样式</option>
+                    {NUMBER_STYLES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    {lists.ordered && <option value="none">取消编号</option>}
+                </select>
+                <Tool label="待办列表"><RichTextTaskList /></Tool>
+                <button type="button" className="editor-toolbar-btn" aria-label="增加缩进" title="增加缩进 (Tab)"
+                    onClick={() => editor.chain().focus().indent().run()}><IndentIncrease size={18} /></button>
+                <button type="button" className="editor-toolbar-btn" aria-label="减少缩进" title="减少缩进 (Shift+Tab)"
+                    onClick={() => editor.chain().focus().outdent().run()}><IndentDecrease size={18} /></button>
             </div>
-
-            <div className="editor-toolbar-group">
-                <ToolbarButton
-                    icon={List}
-                    title="无序列表"
-                    action={() => editor.chain().focus().toggleBulletList().run()}
-                    isActive={editor.isActive('bulletList')}
-                />
-                <ToolbarButton
-                    icon={ListOrdered}
-                    title="有序列表"
-                    action={() => editor.chain().focus().toggleOrderedList().run()}
-                    isActive={editor.isActive('orderedList')}
-                />
+            <div className="editor-toolbar-group" role="group" aria-label="插入">
+                <Tool label="插入链接"><RichTextLink /></Tool>
+                <Tool label="插入图片"><RichTextImage /></Tool>
+                <span onKeyDownCapture={event => {
+                    if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLButtonElement) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+                    }
+                }} title="选择表格大小；键盘 Enter 可插入 3×3 表格">
+                    <Tool label="插入表格"><RichTextTable /></Tool>
+                </span>
+                <select className="editor-list-select" aria-label="表格操作" value="" disabled={!lists.table}
+                    onChange={event => tableActions[Number(event.target.value)][1]()}>
+                    <option value="" disabled>表格操作</option>
+                    {tableActions.map(([label, , disabled], index) => <option key={label} value={index} disabled={disabled}>{label}</option>)}
+                </select>
+                {lists.image && <select className="editor-list-select" aria-label="图片宽度" value=""
+                    onChange={event => editor.chain().focus().updateImage({ width: event.target.value === 'auto' ? null
+                        : Math.round(editor.view.dom.clientWidth * Number.parseInt(event.target.value) / 100) }).run()}>
+                    <option value="" disabled>图片宽度</option>
+                    <option value="auto">原始宽度</option>
+                    {['25%', '50%', '75%', '100%'].map(width => <option key={width} value={width}>{width} 正文宽度</option>)}
+                </select>}
+                <Tool label="引用"><RichTextBlockquote /></Tool>
+                <Tool label="行内代码"><RichTextCode /></Tool>
+                <Tool label="代码块"><RichTextCodeBlock /></Tool>
+                <Tool label="分隔线"><RichTextHorizontalRule /></Tool>
             </div>
-
-            <div className="editor-toolbar-group">
-                <ToolbarButton
-                    icon={Quote}
-                    title="引用"
-                    action={() => editor.chain().focus().toggleBlockquote().run()}
-                    isActive={editor.isActive('blockquote')}
-                />
-                <ToolbarButton
-                    icon={Code2}
-                    title="代码块"
-                    action={() => editor.chain().focus().toggleCodeBlock().run()}
-                    isActive={editor.isActive('codeBlock')}
-                />
-            </div>
-
-            <div className="editor-toolbar-group">
-                <div className="editor-toolbar-select-wrapper" title="字体大小">
-                    <select
-                        className="editor-toolbar-select"
-                        aria-label="字体大小"
-                        onChange={(e) => editor.chain().focus().setFontSize(e.target.value).run()}
-                        value={editor.getAttributes('textStyle').fontSize || ''}
-                        onMouseDown={(e) => {
-                            // Don't prevent default on select as it needs to open options
-                            e.stopPropagation();
-                        }}
-                    >
-                        <option value="" disabled>字号</option>
-                        <option value="12px">12px</option>
-                        <option value="14px">14px</option>
-                        <option value="16px">16px</option>
-                        <option value="18px">18px</option>
-                        <option value="20px">20px</option>
-                        <option value="24px">24px</option>
-                        <option value="30px">30px</option>
-                    </select>
-                </div>
-            </div>
-
-            <div className="editor-toolbar-group">
-                <WordColorPicker
-                    icon={Palette}
-                    label="字体颜色"
-                    color={textColor}
-                    clearLabel="自动颜色"
-                    onApply={applyTextColor}
-                    onClear={() => editor.chain().focus().unsetColor().run()}
-                />
-                <WordColorPicker
-                    icon={Highlighter}
-                    label="背景颜色"
-                    color={highlightColor}
-                    clearLabel="无颜色"
-                    onApply={applyHighlightColor}
-                    onClear={() => editor.chain().focus().unsetHighlight().run()}
-                />
-            </div>
-
-            <div className="editor-toolbar-group">
-                <ToolbarButton
-                    icon={RemoveFormatting}
-                    title="清除所有格式"
-                    action={() => editor.chain().focus().unsetAllMarks().clearNodes().unsetFontSize().run()}
-                />
-            </div>
-
-            <div className="editor-toolbar-shim" />
         </div>
-    );
+        {searchOpen && <EditorSearch editor={editor} onClose={() => setSearchOpen(false)} />}
+    </>);
 }

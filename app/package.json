@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:notes": "node scripts/test-note-editor.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "npm run tauri -- dev",
@@ -24,27 +25,34 @@
     "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-shell": "^2.3.3",
-    "@tiptap/extension-color": "^3.15.1",
-    "@tiptap/extension-highlight": "^3.15.1",
-    "@tiptap/extension-image": "^3.15.1",
-    "@tiptap/extension-placeholder": "^3.15.1",
-    "@tiptap/extension-text-align": "^3.15.1",
-    "@tiptap/extension-text-style": "^3.15.1",
-    "@tiptap/extension-underline": "^3.15.1",
-    "@tiptap/react": "^3.15.1",
-    "@tiptap/starter-kit": "^3.15.1",
+    "@tiptap/core": "3.31.3",
+    "@tiptap/extension-placeholder": "3.31.3",
+    "@tiptap/extension-text-style": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/react": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3",
     "@types/react-window": "^1.8.8",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.19",
     "immer": "^10.2.0",
     "lucide-react": "^1.34.0",
-    "nanoid": "^5.1.6",
+    "nanoid": "^5.1.16",
     "papaparse": "^5.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-window": "^2.2.3",
     "react-window-infinite-loader": "^2.0.0",
+    "reactjs-tiptap-editor": "1.0.33",
     "zustand": "^5.0.8"
+  },
+  "overrides": {
+    "lodash-es": "4.18.1",
+    "@excalidraw/excalidraw": {
+      "nanoid": "3.3.18"
+    },
+    "@excalidraw/mermaid-to-excalidraw": {
+      "nanoid": "5.1.16"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
