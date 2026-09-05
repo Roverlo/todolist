@@ -545,6 +545,7 @@ export const useAppStore = create<AppStore>()(
           dueDate: rest.dueDate,
           createdAt: Date.now(),
           updatedAt: Date.now(),
+          owners: rest.owners,
           onsiteOwner: rest.onsiteOwner,
           lineOwner: rest.lineOwner,
           nextStep: rest.nextStep,

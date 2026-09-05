@@ -124,8 +124,8 @@ try {
 
     const initialTasks = (await store()).tasks.length;
     replies.push({ payload: { tasks: [
-        { title: '接口联调', dueDate: '2026-09-09', owner: '测试责任人', priority: 'high', subtasks: [{ title: '核对清单' }] },
-        { title: '每周日整理周报', isRecurring: true, recurringHint: '每周日', priority: 'unexpected' },
+        { title: '接口联调', dueDate: '2026-09-09', owner: '测试责任人', priority: 'high', notes: '联调说明', nextStep: '完成验收', subtasks: [{ title: '核对清单', owner: '子任务责任人', dueDate: '2026-09-08' }] },
+        { title: '每周日整理周报', owner: '周报责任人', isRecurring: true, recurringHint: '每周日', priority: 'unexpected' },
     ] } });
     await generate();
     await page.getByLabel('任务 1 标题', { exact: true }).waitFor();
@@ -144,7 +144,13 @@ try {
     await until(async () => (await store()).tasks.length === initialTasks + 1, 'Selected task was not saved');
     const saved = (await store()).tasks.find(task => task.title === '确认后的接口联调');
     assert.equal(saved.dueDate, '2026-09-09');
+    assert.equal(saved.owners, '测试责任人');
+    assert.equal(saved.priority, 'high');
+    assert.equal(saved.notes, '联调说明');
+    assert.equal(saved.nextStep, '完成验收');
     assert.equal(saved.subtasks.length, 1, 'An empty subtask must not be saved');
+    assert.equal(saved.subtasks[0].assignee, '子任务责任人');
+    assert.equal(saved.subtasks[0].dueDate, '2026-09-08');
     assert.equal(await panel.locator('.task-preview-card').count(), 1, 'Keep the unselected result');
     assert.equal(await panel.getByRole('button', { name: '展开任务 1 详情', exact: true }).count(), 1, 'Keep the remaining card collapsed after a partial save');
     await page.getByRole('checkbox', { name: '选择任务 1', exact: true }).check();
@@ -153,7 +159,8 @@ try {
     const recurring = (await store()).tasks.find(task => task.title === '每周日整理周报');
     assert.equal(new Date(recurring.dueDate + 'T12:00:00').getDay(), 0, 'Weekly Sunday must remain Sunday');
     assert.equal(recurring.priority, 'medium', 'Invalid model priority should use the default');
-    assert.ok((await store()).recurringTemplates.some(template => template.id === recurring.extras.recurrenceId));
+    assert.equal(recurring.owners, '周报责任人');
+    assert.equal((await store()).recurringTemplates.find(template => template.id === recurring.extras.recurrenceId).owners, '周报责任人');
     assert.equal(await panel.locator('.task-preview-card').count(), 0, 'Saved previews cannot be added twice');
 
     replies.push({ payload: { tasks: [{ title: '' }] } });
@@ -210,6 +217,11 @@ try {
     console.log('Passed: complete link dialog, image explanation, embedded copy' + (native ? ' and actual native file storage' : ''));
 
     await page.getByTitle('切换到待办事项', { exact: true }).click();
+    const taskRow = page.getByRole('row').filter({ has: page.getByText('确认后的接口联调', { exact: true }) });
+    assert.match(await taskRow.innerText(), /测试责任人/);
+    await taskRow.getByRole('button', { name: '复制任务: 确认后的接口联调', exact: true }).click();
+    await until(async () => (await store()).tasks.some(task => task.title === '确认后的接口联调 (副本)'), 'Task copy missing');
+    assert.equal((await store()).tasks.find(task => task.title === '确认后的接口联调 (副本)').owners, '测试责任人');
     const dashboard = page.locator('.dashboard-row');
     const geometry = () => dashboard.evaluate(el => {
         const rect = el.getBoundingClientRect();
@@ -242,6 +254,10 @@ try {
     await page.locator('.about-pill').hover();
     assert.match(await page.locator('.tooltip-names').innerText(), /桂树奇/);
     assert.deepEqual(errors, []);
+    if (native) {
+        const persisted = JSON.parse(await readFile(dataPath, 'utf8')).state;
+        assert.equal(persisted.tasks.find(task => task.title === '确认后的接口联调').owners, '测试责任人', 'Owner must reach the native data file');
+    }
     console.log(`Passed: fixed ${before.height}px filter row, keyboard dropdowns, icons and thanks`);
     console.log('Annotation workflow checks passed (' + (native ? 'packaged native transport' : 'isolated browser') + ')');
 } catch (error) {

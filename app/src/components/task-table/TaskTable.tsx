@@ -120,6 +120,7 @@ export const TaskTable = React.memo(({ onTaskFocus, activeTaskId }: TaskTablePro
       status: 'doing',
       priority: task.priority,
       dueDate: task.dueDate,
+      owners: task.owners,
       onsiteOwner: task.onsiteOwner,
       lineOwner: task.lineOwner,
       nextStep: task.nextStep,
