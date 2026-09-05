@@ -74,8 +74,8 @@ export interface AIMessage {
 }
 
 export interface AIProvider {
-    chat(messages: AIMessage[]): Promise<string>;
-    generateJson<T>(systemPrompt: string, userPrompt: string): Promise<T>;
+    chat(messages: AIMessage[], signal?: AbortSignal): Promise<string>;
+    generateJson<T>(systemPrompt: string, userPrompt: string, signal?: AbortSignal): Promise<T>;
 }
 
 class OpenAICompatibleProvider implements AIProvider {
@@ -94,10 +94,11 @@ class OpenAICompatibleProvider implements AIProvider {
         if (!this.model) throw new Error('模型名称未配置');
     }
 
-    async chat(messages: AIMessage[]): Promise<string> {
+    async chat(messages: AIMessage[], signal?: AbortSignal): Promise<string> {
         this.ensureConfigured();
 
         const response = await fetch(this.chatCompletionsUrl, {
+            signal,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -121,7 +122,7 @@ class OpenAICompatibleProvider implements AIProvider {
         return data.choices?.[0]?.message?.content || '';
     }
 
-    async generateJson<T>(systemPrompt: string, userPrompt: string): Promise<T> {
+    async generateJson<T>(systemPrompt: string, userPrompt: string, signal?: AbortSignal): Promise<T> {
         this.ensureConfigured();
         const messages: AIMessage[] = [
             {
@@ -132,6 +133,7 @@ class OpenAICompatibleProvider implements AIProvider {
         ];
 
         const response = await fetch(this.chatCompletionsUrl, {
+            signal,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

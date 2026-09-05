@@ -13,11 +13,13 @@ const compile = async (relativePath, replacements) => {
 };
 
 let requestBody;
+let requestSignal;
 let fetchHandler;
 globalThis.window = { fetch: async () => { throw new Error('WebView fetch must not be used'); } };
 globalThis.fetch = (...args) => fetchHandler(...args);
 fetchHandler = async (_url, init) => {
     requestBody = JSON.parse(init.body);
+    requestSignal = init.signal;
     return {
         ok: true,
         json: async () => ({
@@ -55,16 +57,18 @@ assert.equal(
     }),
     true,
 );
+const controller = new AbortController();
 assert.deepEqual(
     await ai.createAIProvider({
         apiKey: 'test-key',
         apiEndpoint: 'https://internal.example/v1/chat/completions',
         model: 'Qwen3-235B-A22B',
         type: 'custom',
-    }).generateJson('提取任务', '笔记正文'),
+    }).generateJson('提取任务', '笔记正文', controller.signal),
     { tasks: [] },
 );
 assert.equal(requestBody.messages.at(-1).content, '笔记正文');
+assert.equal(requestSignal, controller.signal, 'Native fetch must receive the cancellation signal');
 assert.equal(requestBody.max_tokens, 16384);
 assert.equal(requestBody.stream, false);
 assert.equal(requestBody.enable_thinking, undefined);

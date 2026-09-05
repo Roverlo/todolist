@@ -18,13 +18,14 @@ interface NoteEditorProps {
     note: Note | null;
     onSave: (title: string, content: string, tags?: string[]) => void;
     onCreate?: () => void;
+    onDraftChange?: (draft: Pick<Note, 'id' | 'title' | 'content'>) => void;
 }
 
 export function NoteEditor(props: NoteEditorProps) {
     return <NoteEditorContent key={props.note?.id} {...props} />;
 }
 
-function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
+function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditorProps) {
     const [title, setTitle] = useState(note?.title || '');
     const [tags, setTags] = useState<string[]>(note?.tags || []);
     const [contentHtml, setContentHtml] = useState(note?.content || '');
@@ -35,6 +36,11 @@ function NoteEditorContent({ note, onSave, onCreate }: NoteEditorProps) {
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
     const pendingSave = useRef(false);
     const draft = useRef({ title, tags, contentHtml, onSave });
+    const noteId = note?.id;
+
+    useEffect(() => {
+        if (noteId) onDraftChange?.({ id: noteId, title, content: contentHtml });
+    }, [noteId, title, contentHtml, onDraftChange]);
 
     useLayoutEffect(() => {
         draft.current = { title, tags, contentHtml, onSave };

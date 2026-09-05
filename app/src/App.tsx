@@ -32,6 +32,7 @@ import { CloseConfirmModal } from './components/ui/CloseConfirmModal';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import { exit } from '@tauri-apps/plugin-process';
+import { Search, ListFilter, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 
 const NotesMain = lazy(() => import('./components/notes/NotesMain').then(module => ({ default: module.NotesMain })));
 
@@ -254,68 +255,37 @@ function App() {
     return () => { };
   }, [drawerOpen]);
 
-  // 启动时检查到期任务并发送系统通知
+  // Only show the startup snapshot; adding a due task later must not open a dormant modal.
   useEffect(() => {
-    // 等待数据加载完成
-    if (!isHydrated) return;
+    if (!isHydrated || reminderShown || sessionStorage.getItem('sessionReminderShown')) return;
+    if (settings.dueReminderEnabled === false) return;
+    if (settings.dueReminderSnoozeUntil && dayjs().isBefore(dayjs(settings.dueReminderSnoozeUntil))) return;
 
-    const checkStartup = async () => {
-      const hasShown = sessionStorage.getItem('sessionReminderShown');
+    const timer = setTimeout(async () => {
+      setReminderShown(true);
+      sessionStorage.setItem('sessionReminderShown', 'true');
+      const today = dayjs();
+      const dueTasks = allTasks.filter(task => task.status !== 'done' && task.dueDate
+        && allProjectMap[task.projectId]?.name !== '回收站'
+        && !dayjs(task.dueDate).isAfter(today, 'day'));
+      setReminderOpen(dueTasks.length > 0);
 
-      // 检查是否禁用了提醒
-      if (settings.dueReminderEnabled === false) {
-        return;
-      }
-
-      // 检查是否在暂停期内
-      if (settings.dueReminderSnoozeUntil) {
-        const snoozeUntil = dayjs(settings.dueReminderSnoozeUntil);
-        if (dayjs().isBefore(snoozeUntil)) {
-          return;
-        }
-      }
-
-      if (!reminderShown && !hasShown && allTasks.length > 0) {
-        // 1. 显示应用内提醒 Modal
-        const timer = setTimeout(() => {
-          setReminderOpen(true);
-          setReminderShown(true);
-          sessionStorage.setItem('sessionReminderShown', 'true');
-        }, 500);
-
-        // 2. 发送系统通知 (仅在 Tauri 环境)
-        const today = dayjs();
-        const dueTasks = allTasks.filter(t => {
-          if (t.status === 'done' || !t.dueDate) return false;
-          const due = dayjs(t.dueDate);
-          return due.isBefore(today, 'day') || due.isSame(today, 'day');
-        });
-
-        if (dueTasks.length > 0 && typeof window !== 'undefined' && '__TAURI__' in window) {
-          try {
-            let permissionGranted = await isPermissionGranted();
-            if (!permissionGranted) {
-              const permission = await requestPermission();
-              permissionGranted = permission === 'granted';
-            }
-
-            if (permissionGranted) {
-              const count = dueTasks.length;
-              const title = `📅 ${count} 个任务待处理`;
-              const body = dueTasks.slice(0, 3).map(t => `• ${t.title}`).join('\n') + (count > 3 ? `\n...等 ${count} 个任务` : '');
-              sendNotification({ title, body });
-            }
-          } catch (error) {
-            console.error('Tauri notification error:', error);
+      if (dueTasks.length && '__TAURI__' in window) {
+        try {
+          let permissionGranted = await isPermissionGranted();
+          if (!permissionGranted) permissionGranted = await requestPermission() === 'granted';
+          if (permissionGranted) {
+            const count = dueTasks.length;
+            const title = `📅 ${count} 个任务待处理`;
+            const body = dueTasks.slice(0, 3).map(task => `• ${task.title}`).join('\n')
+              + (count > 3 ? `\n...等 ${count} 个任务` : '');
+            sendNotification({ title, body });
           }
-        }
-
-        return () => clearTimeout(timer);
+        } catch (error) { console.error('Tauri notification error:', error); }
       }
-    };
-
-    checkStartup();
-  }, [isHydrated, allTasks, reminderShown, settings.dueReminderEnabled, settings.dueReminderSnoozeUntil]);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [isHydrated, allTasks, allProjectMap, reminderShown, settings.dueReminderEnabled, settings.dueReminderSnoozeUntil]);
 
   return (
     <div className={`app theme-${colorScheme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
@@ -427,7 +397,7 @@ function App() {
 
               {/* 搜索框 */}
               <div className='search-box'>
-                <span className='search-icon'>🔍</span>
+                <Search className='search-icon' size={16} aria-hidden='true' />
                 <input
                   ref={searchInputRef}
                   type='text'
@@ -485,18 +455,13 @@ function App() {
                     </button>
                     <button
                       className='btn btn-light'
-                      onClick={() => {
-                        const el = document.getElementById('filters-panel');
-                        if (el) {
-                          const isOpen = el.style.display !== 'none';
-                          el.style.display = isOpen ? 'none' : 'flex';
-                          setFilterPanelOpen(!isOpen);
-                        }
-                      }}
+                      onClick={() => setFilterPanelOpen(value => !value)}
                       aria-label='展开/收起筛选'
+                      aria-expanded={filterPanelOpen}
+                      aria-controls='filters-panel'
                       title='展开/收起筛选'
                     >
-                      🔍 筛选 {filterPanelOpen ? '▲' : '▼'}
+                      <ListFilter size={16} aria-hidden='true' /> 筛选 {filterPanelOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     </button>
                     <button
                       className='btn btn-light'
@@ -504,19 +469,17 @@ function App() {
                       aria-label='设置'
                       title='设置'
                     >
-                      ⚙️ 设置
+                      <Settings size={16} aria-hidden='true' /> 设置
                     </button>
                   </>
                 )}
               </div>
             </div>
 
-            <PrimaryToolbar />
-
             {/* 统计仪表盘 */}
             {!isTrashView && (
               <div className='dashboard-row'>
-                <StatsCard
+                {filterPanelOpen ? <PrimaryToolbar /> : <StatsCard
                   tasks={projectTasks}
                   projectMap={projectMap}
                   activeFilter={filters.status}
@@ -529,7 +492,7 @@ function App() {
                       setFilters({ statuses: [], status: status });
                     }
                   }}
-                />
+                />}
               </div>
             )}
 

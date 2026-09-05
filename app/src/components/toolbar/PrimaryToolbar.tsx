@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
@@ -10,12 +9,7 @@ export const PrimaryToolbar = () => {
     dictionary: state.dictionary,
   }));
 
-  const [dueFrom, setDueFrom] = useState(filters.dueRange?.from ?? '');
-  const [dueTo, setDueTo] = useState(filters.dueRange?.to ?? '');
-
   const resetFilters = () => {
-    setDueFrom('');
-    setDueTo('');
     setFilters({
       statuses: [],
       status: 'all',
@@ -41,20 +35,11 @@ export const PrimaryToolbar = () => {
   ];
 
   return (
-    <div className='filters-card' id='filters-panel' style={{ display: 'none' }}>
-      <div className='filters-row-top'>
-        <div className='section-title' style={{ marginBottom: 0 }}>
-          筛选
-        </div>
-        <button className='btn btn-ghost' type='button' onClick={resetFilters}>
-          清空筛选
-        </button>
-      </div>
-
-      <div className='filters-row-bottom'>
+    <div className='filters-card' id='filters-panel' role='region' aria-label='任务筛选'>
         <div className='filter-item'>
           <span className='filter-label'>优先级</span>
           <CustomSelect
+            aria-label='筛选优先级'
             value={filters.priority ?? 'all'}
             options={priorityOptions}
             onChange={(val) =>
@@ -67,36 +52,37 @@ export const PrimaryToolbar = () => {
         <div className='filter-item'>
           <span className='filter-label'>责任人</span>
           <CustomSelect
+            aria-label='筛选责任人'
             value={filters.owner ?? ''}
             options={ownerOptions}
             onChange={(val) => setFilters({ owner: val || undefined })}
           />
         </div>
         <div className='filter-item'>
-          <span className='filter-label'>截止日期 起</span>
+          <span className='filter-label'>截止日期</span>
           <input
             type='date'
+            aria-label='截止日期起'
             className='filter-control'
-            value={dueFrom}
+            value={filters.dueRange?.from ?? ''}
             onChange={(event) => {
-              setDueFrom(event.target.value);
               setFilters({ dueRange: { ...filters.dueRange, from: event.target.value || undefined } });
             }}
           />
         </div>
         <div className='filter-item'>
-          <span className='filter-label'>截止日期 止</span>
+          <span className='filter-label'>至</span>
           <input
             type='date'
+            aria-label='截止日期止'
             className='filter-control'
-            value={dueTo}
+            value={filters.dueRange?.to ?? ''}
             onChange={(event) => {
-              setDueTo(event.target.value);
               setFilters({ dueRange: { ...filters.dueRange, to: event.target.value || undefined } });
             }}
           />
         </div>
-      </div>
+        <button className='btn btn-ghost' type='button' onClick={resetFilters}>清空筛选</button>
     </div>
   );
 };

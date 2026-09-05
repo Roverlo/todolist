@@ -1447,15 +1447,23 @@ body {
 /* Filters */
 
 .filters-card {
-  background: #ffffff;
-  border-radius: var(--radius-lg);
-  padding: 10px 14px;
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-soft);
+  height: 52px;
+  min-height: 52px;
+  background: var(--surface);
+  padding: 0;
+  border: 0;
+  box-shadow: none;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
 }
+.filters-card .filter-item { flex-direction: row; align-items: center; gap: 8px; flex: 0 0 auto; }
+.filters-card .filter-label { color: var(--text-secondary); white-space: nowrap; font-size: 12px; }
+.filters-card .custom-select-container { width: 112px; }
+.filters-card .custom-select-trigger, .filters-card .filter-control { height: 30px; border-radius: 6px; }
+.filters-card .filter-control { width: 134px; padding: 0 7px; }
+.filters-card > button { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
 
 .filters-row-top {
   display: flex;
@@ -6101,7 +6109,6 @@ body {
   border-bottom: 1px solid var(--border-subtle, #e2e8f0);
   padding: 0 24px;
   margin-bottom: 0;
-  animation: slideDown 0.3s ease-out;
 }
 
 @keyframes slideDown {

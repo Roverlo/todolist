@@ -5,7 +5,8 @@ import { NotesRecycleBin } from './NotesRecycleBin';
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { AISettingsModal } from './AISettingsModal';
 import { Icon } from '../ui/Icon';
-import { PanelRight, Settings2 } from 'lucide-react';
+import { PanelRight, Settings } from 'lucide-react';
+import type { Note } from '../../types';
 import './NotesCenter.css';
 
 export function NotesMain() {
@@ -25,6 +26,7 @@ export function NotesMain() {
 
     const [aiPanelOpen, setAiPanelOpen] = useState(true);
     const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+    const [draft, setDraft] = useState<Pick<Note, 'id' | 'title' | 'content'> | null>(null);
 
     const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId) || null, [notes, selectedNoteId]);
 
@@ -54,10 +56,10 @@ export function NotesMain() {
                         <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className="btn btn-light" aria-pressed={aiPanelOpen}
                             aria-label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} title={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}>
                             <PanelRight size={16} />
-                            <span>AI 助手</span>
+                            <span>AI助手：一键生成待办事项</span>
                         </button>
                         <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light notes-settings-btn" aria-label="AI 设置" title="AI 设置">
-                            <Settings2 size={16} />
+                            <Settings size={17} />
                         </button>
                     </div>
                 </div>
@@ -68,16 +70,14 @@ export function NotesMain() {
                     {noteViewMode === 'trash' ? (
                         <NotesRecycleBin />
                     ) : (
-                        <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} />
+                        <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={setDraft} />
                     )}
                 </main>
             </section>
 
-            {aiPanelOpen && (
-                <aside className="notes-center-ai-panel" aria-label="AI 助手面板">
-                    <AIAssistantPanel note={activeNote} />
+                <aside className="notes-center-ai-panel" aria-label="AI 助手面板" hidden={!aiPanelOpen}>
+                    <AIAssistantPanel key={activeNote?.id} note={activeNote && draft?.id === activeNote.id ? { ...activeNote, ...draft } : activeNote} />
                 </aside>
-            )}
 
             {aiSettingsOpen && <AISettingsModal onClose={() => setAiSettingsOpen(false)} />}
         </div>

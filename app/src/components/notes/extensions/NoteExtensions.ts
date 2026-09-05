@@ -28,6 +28,7 @@ import { Code } from 'reactjs-tiptap-editor/code';
 import { CodeBlock } from 'reactjs-tiptap-editor/codeblock';
 import { HorizontalRule } from 'reactjs-tiptap-editor/horizontalrule';
 import { useToastStore } from '../../../state/toastStore';
+import { readNoteImage, IMAGE_TYPES, MAX_IMAGE_BYTES } from '../../../utils/noteImages';
 
 export const BULLET_STYLES = [
     ['disc', '● 实心圆'], ['circle', '○ 空心圆'], ['square', '■ 方块'],
@@ -97,25 +98,9 @@ const NoteIndent = Indent.extend({
     },
 });
 
-const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-
-function readImage(file: File): Promise<string> {
-    if (!IMAGE_TYPES.includes(file.type)) return Promise.reject(new Error('请选择 PNG、JPEG、WebP 或 GIF 图片'));
-    if (file.size > MAX_IMAGE_BYTES) return Promise.reject(new Error('单张图片不能超过 2 MB，请缩小后再插入'));
-    // Embed local images in the existing note HTML; blob URLs do not survive restart.
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('图片读取失败'));
-        reader.onerror = () => reject(new Error('图片读取失败，请重试'));
-        reader.onabort = () => reject(new Error('图片读取已取消'));
-        reader.readAsDataURL(file);
-    });
-}
-
 export async function insertNoteImages(editor: Editor, files: File[]) {
     try {
-        const images = await Promise.all(files.map(async file => ({ src: await readImage(file), alt: file.name })));
+        const images = await Promise.all(files.map(async file => ({ src: await readNoteImage(file), alt: file.name })));
         if (!editor.isDestroyed) editor.chain().focus().insertContent(images.map(attrs => ({ type: 'imageBlock', attrs }))).run();
     } catch (error) {
         useToastStore.getState().addToast(error instanceof Error ? error.message : '图片插入失败', 'error');
@@ -171,7 +156,7 @@ export const noteExtensions = [
         allowBase64: true,
         acceptMimes: IMAGE_TYPES,
         maxSize: MAX_IMAGE_BYTES,
-        upload: readImage,
+        upload: readNoteImage,
         onError: error => useToastStore.getState().addToast(error.message, 'error'),
     }),
     Table.configure({ resizable: true }),

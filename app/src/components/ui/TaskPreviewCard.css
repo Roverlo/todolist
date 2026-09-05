@@ -423,3 +423,14 @@
     border-color: var(--primary);
     background: var(--primary-bg-subtle);
 }
+.ai-panel .task-preview-content { min-width: 0; }
+.ai-panel .task-preview-checkbox { appearance: auto; margin: 3px 0 0; accent-color: var(--primary); }
+.ai-panel .task-preview-expand { min-width: 24px; width: 24px; height: 26px; border: 0; background: transparent; cursor: pointer; }
+.ai-panel .task-preview-title-input { min-height: 24px; font-size: 13px; }
+.ai-panel .task-preview-body { padding: 2px 12px 12px; }
+.ai-panel .task-preview-priority { width: 56px; }
+.ai-panel .task-preview-priority .custom-select-trigger { height: 26px; padding: 0 5px; font-size: 12px; }
+.ai-panel .task-preview-chip.date .chip-input { width: 114px; min-height: 24px; font-size: 11px; }
+.ai-panel .task-preview-chip.owner .chip-input { width: 70px; min-height: 24px; font-size: 12px; }
+.ai-panel .task-preview-card { background: var(--surface); }
+.ai-panel .task-preview-card.selected { background: var(--bg); }

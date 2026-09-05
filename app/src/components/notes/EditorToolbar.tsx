@@ -1,17 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
-import { ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, MoreHorizontal, type LucideIcon } from 'lucide-react';
+import { ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, MoreHorizontal, Link, ImagePlus, FolderOpen, type LucideIcon } from 'lucide-react';
 import { RichTextBold } from 'reactjs-tiptap-editor/bold';
 import { RichTextItalic } from 'reactjs-tiptap-editor/italic';
 import { RichTextUnderline } from 'reactjs-tiptap-editor/textunderline';
 import { RichTextStrike } from 'reactjs-tiptap-editor/strike';
-import { RichTextFontSize } from 'reactjs-tiptap-editor/fontsize';
-import { RichTextHeading } from 'reactjs-tiptap-editor/heading';
 import { RichTextFormatPainter } from 'reactjs-tiptap-editor/formatpainter';
-import { RichTextLineHeight } from 'reactjs-tiptap-editor/lineheight';
 import { RichTextTaskList } from 'reactjs-tiptap-editor/tasklist';
-import { RichTextLink } from 'reactjs-tiptap-editor/link';
-import { RichTextImage } from 'reactjs-tiptap-editor/image';
 import { RichTextTable } from 'reactjs-tiptap-editor/table';
 import { RichTextClear } from 'reactjs-tiptap-editor/clear';
 import { RichTextUndo, RichTextRedo } from 'reactjs-tiptap-editor/history';
@@ -21,6 +16,10 @@ import { RichTextCodeBlock } from 'reactjs-tiptap-editor/codeblock';
 import { RichTextHorizontalRule } from 'reactjs-tiptap-editor/horizontalrule';
 import { BULLET_STYLES, NUMBER_STYLES, FONT_FAMILIES } from './extensions/NoteExtensions';
 import { EditorSearch } from './EditorSearch';
+import { CustomSelect } from '../ui/CustomSelect';
+import { EditorInsertDialog } from './EditorInsertDialog';
+import { openNoteImageFolder } from '../../utils/noteImages';
+import { useToastStore } from '../../state/toastStore';
 
 const COLOR_PALETTE = [
     ['黑色', '#000000'], ['深灰', '#595959'], ['灰色', '#a5a5a5'], ['浅灰', '#d9d9d9'], ['白色', '#ffffff'],
@@ -149,6 +148,7 @@ function Tool({ label, children }: { label: string; children: ReactNode }) {
 
 export function EditorToolbar({ editor }: { editor: Editor }) {
     const [searchOpen, setSearchOpen] = useState(false);
+    const [insertDialog, setInsertDialog] = useState<'link' | 'image' | null>(null);
     const [textColor, setTextColor] = useState('#000000');
     const [highlightColor, setHighlightColor] = useState('#fff200');
     const moreRef = useRef<HTMLDetailsElement>(null);
@@ -169,6 +169,9 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
             canSplit: editor.can().splitCell(),
             image: editor.isActive('imageBlock') || editor.isActive('image'),
             font: editor.getAttributes('textStyle').fontFamily || '',
+            size: editor.getAttributes('textStyle').fontSize || '',
+            heading: editor.getAttributes('heading').level || 0,
+            lineHeight: editor.getAttributes(editor.isActive('heading') ? 'heading' : 'paragraph').lineHeight || '',
             align: ['left', 'center', 'right', 'justify'].find(value => editor.isActive({ textAlign: value })),
         }),
     });
@@ -199,20 +202,24 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
     return (<>
         <div className="editor-toolbar reactjs-tiptap-editor" role="toolbar" aria-label="随记编辑工具"
             onMouseDown={event => {
-                if (event.target instanceof Element && event.target.closest('button, summary')) event.preventDefault();
+                if (event.target instanceof Element && event.target.closest('button, summary') && !event.target.closest('[role="combobox"]')) event.preventDefault();
             }}>
             <div className="editor-toolbar-group" role="group" aria-label="字体">
                 <span className="editor-group-label" aria-hidden="true">文字</span>
-                <Tool label="段落标题"><RichTextHeading /></Tool>
-                <select className="editor-list-select" aria-label="正文字体" value={lists.font}
-                    onChange={event => event.target.value
-                        ? editor.chain().focus().setFontFamily(event.target.value).run()
-                        : editor.chain().focus().unsetFontFamily().run()}>
-                    {FONT_FAMILIES.map(([value, name]) => <option key={value} value={value}>{name}</option>)}
-                    {!FONT_FAMILIES.some(([value]) => value === lists.font) && <option value={lists.font}>{lists.font}</option>}
-                </select>
-                <Tool label="字号"><RichTextFontSize /></Tool>
-                <span className="editor-toolbar-divider" aria-hidden="true" />
+                <div className="editor-toolbar-row">
+                <CustomSelect className="editor-heading-select" aria-label="段落标题" value={lists.heading}
+                    options={[{ value: '0', label: '段落' }, ...[1, 2, 3, 4, 5, 6].map(level => ({ value: String(level), label: `标题 ${level}` }))]}
+                    onChange={value => value === '0' ? editor.chain().focus().setParagraph().run()
+                        : editor.chain().focus().setHeading({ level: Number(value) as 1 | 2 | 3 | 4 | 5 | 6 }).run()} />
+                <CustomSelect className="editor-font-select" aria-label="正文字体" value={lists.font}
+                    options={[...FONT_FAMILIES.map(([value, label]) => ({ value, label })),
+                        ...(!FONT_FAMILIES.some(([value]) => value === lists.font) ? [{ value: lists.font, label: lists.font }] : [])]}
+                    onChange={value => value ? editor.chain().focus().setFontFamily(value).run() : editor.chain().focus().unsetFontFamily().run()} />
+                <CustomSelect className="editor-size-select" aria-label="字号" value={lists.size}
+                    options={[{ value: '', label: '默认' }, ...['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'].map(value => ({ value, label: value }))]}
+                    onChange={value => value ? editor.chain().focus().setFontSize(value).run() : editor.chain().focus().unsetFontSize().run()} />
+                </div>
+                <div className="editor-toolbar-row">
                 <Tool label="加粗"><RichTextBold /></Tool>
                 <Tool label="斜体"><RichTextItalic /></Tool>
                 <Tool label="下划线"><RichTextUnderline /></Tool>
@@ -223,49 +230,54 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                 <WordColorPicker icon={Highlighter} label="背景颜色" color={highlightColor} clearLabel="无颜色"
                     onApply={color => { setHighlightColor(color); editor.chain().focus().setHighlight({ color }).run(); }}
                     onClear={() => editor.chain().focus().unsetHighlight().run()} />
+                </div>
             </div>
             <div className="editor-toolbar-group" role="group" aria-label="编辑">
                 <span className="editor-group-label" aria-hidden="true">编辑</span>
+                <div className="editor-toolbar-row">
                 <Tool label="撤销"><RichTextUndo /></Tool>
                 <Tool label="重做"><RichTextRedo /></Tool>
-                <span className="editor-toolbar-divider" aria-hidden="true" />
+                </div>
+                <div className="editor-toolbar-row">
                 <Tool label="格式刷"><RichTextFormatPainter /></Tool>
                 <Tool label="清除格式"><RichTextClear /></Tool>
                 <button type="button" className="editor-toolbar-btn" aria-label="查找替换" title="查找替换"
                     data-state={searchOpen ? 'on' : 'off'} aria-pressed={searchOpen}
                     onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
+                </div>
             </div>
             <div className="editor-toolbar-group" role="group" aria-label="段落和列表">
                 <span className="editor-group-label" aria-hidden="true">段落</span>
+                <div className="editor-toolbar-row">
                 {([['left', '左对齐', AlignLeft], ['center', '居中对齐', AlignCenter], ['right', '右对齐', AlignRight], ['justify', '两端对齐', AlignJustify]] as const)
                     .map(([value, label, AlignIcon]) => <button key={value} type="button" className="editor-toolbar-btn"
                         aria-label={label} title={label} data-state={lists.align === value ? 'on' : 'off'} aria-pressed={lists.align === value}
                         onClick={() => editor.chain().focus().setTextAlign(value).run()}><AlignIcon size={18} /></button>)}
-                <Tool label="行距"><RichTextLineHeight /></Tool>
+                <CustomSelect className="editor-line-select" aria-label="行距" value={lists.lineHeight}
+                    options={[{ value: '', label: '行距' }, ...['1', '1.25', '1.5', '1.75', '2', '2.5', '3'].map(value => ({ value, label: `${value} 倍` }))]}
+                    onChange={value => value ? editor.chain().focus().setLineHeight(value).run() : editor.chain().focus().unsetLineHeight().run()} />
                 <button type="button" className="editor-toolbar-btn" aria-label="增加缩进" title="增加缩进 (Tab)"
                     onClick={() => editor.chain().focus().indent().run()}><IndentIncrease size={18} /></button>
                 <button type="button" className="editor-toolbar-btn" aria-label="减少缩进" title="减少缩进 (Shift+Tab)"
                     onClick={() => editor.chain().focus().outdent().run()}><IndentDecrease size={18} /></button>
-                <span className="editor-toolbar-divider" aria-hidden="true" />
-                <select className="editor-list-select" aria-label="项目符号样式" value={lists.bullet}
-                    onChange={event => setListStyle('bulletList', event.target.value)}>
-                    <option value="" disabled>项目符号</option>
-                    {BULLET_STYLES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                    {lists.bullet && <option value="none">取消项目符号</option>}
-                </select>
-                <select className="editor-list-select" aria-label="编号样式" value={lists.ordered}
-                    onChange={event => setListStyle('orderedList', event.target.value)}>
-                    <option value="" disabled>编号样式</option>
-                    {NUMBER_STYLES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                    {lists.ordered && <option value="none">取消编号</option>}
-                </select>
+                </div>
+                <div className="editor-toolbar-row">
+                <CustomSelect className="editor-list-select" aria-label="项目符号样式" value={lists.bullet} placeholder="项目符号"
+                    options={[...BULLET_STYLES.map(([value, label]) => ({ value, label })), ...(lists.bullet ? [{ value: 'none', label: '取消项目符号' }] : [])]}
+                    onChange={value => setListStyle('bulletList', value)} />
+                <CustomSelect className="editor-list-select" aria-label="编号样式" value={lists.ordered} placeholder="编号样式"
+                    options={[...NUMBER_STYLES.map(([value, label]) => ({ value, label })), ...(lists.ordered ? [{ value: 'none', label: '取消编号' }] : [])]}
+                    onChange={value => setListStyle('orderedList', value)} />
                 <Tool label="待办列表"><RichTextTaskList /></Tool>
+                </div>
             </div>
             <div className="editor-toolbar-group" role="group" aria-label="插入">
                 <span className="editor-group-label" aria-hidden="true">插入</span>
-                <Tool label="插入链接"><RichTextLink /></Tool>
-                <Tool label="插入图片"><RichTextImage /></Tool>
-                <span className="editor-toolbar-divider" aria-hidden="true" />
+                <div className="editor-toolbar-row">
+                <button type="button" className="editor-toolbar-btn" aria-label="插入链接" title="插入链接" onClick={() => setInsertDialog('link')}><Link size={18} /></button>
+                <button type="button" className="editor-toolbar-btn" aria-label="插入图片" title="插入图片" onClick={() => setInsertDialog('image')}><ImagePlus size={18} /></button>
+                </div>
+                <div className="editor-toolbar-row">
                 <span onKeyDownCapture={event => {
                     if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLButtonElement) {
                         event.preventDefault();
@@ -292,30 +304,29 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                         <Tool label="分隔线"><RichTextHorizontalRule /></Tool>
                     </div>
                 </details>
+                </div>
             </div>
             {(lists.table || lists.image) && <div className="editor-context-tools" role="group" aria-label="选中内容工具">
                 {lists.table && <>
                 <span className="editor-group-label">表格</span>
-                <select className="editor-list-select" aria-label="表格操作" value=""
-                    onChange={event => tableActions[Number(event.target.value)][1]()}>
-                    <option value="" disabled>行列与单元格</option>
-                    {tableActions.map(([label, , disabled], index) => <option key={label} value={index} disabled={disabled}>{label}</option>)}
-                </select>
+                <CustomSelect className="editor-list-select" aria-label="表格操作" value="" placeholder="行列与单元格"
+                    options={tableActions.map(([label, , disabled], index) => ({ value: String(index), label, disabled }))}
+                    onChange={value => tableActions[Number(value)][1]()} />
                 <span className="editor-context-hint">拖选多个单元格后可合并</span>
                 </>}
                 {lists.image && <>
                 <span className="editor-group-label">图片</span>
-                <select className="editor-list-select" aria-label="图片宽度" value=""
-                    onChange={event => editor.chain().focus().updateImage({ width: event.target.value === 'auto' ? null
-                        : Math.round(editor.view.dom.clientWidth * Number.parseInt(event.target.value) / 100) }).run()}>
-                    <option value="" disabled>图片宽度</option>
-                    <option value="auto">原始宽度</option>
-                    {['25%', '50%', '75%', '100%'].map(width => <option key={width} value={width}>{width} 正文宽度</option>)}
-                </select>
+                <CustomSelect className="editor-list-select" aria-label="图片宽度" value="" placeholder="图片宽度"
+                    options={[{ value: 'auto', label: '原始宽度' }, ...['25%', '50%', '75%', '100%'].map(value => ({ value, label: `${value} 正文宽度` }))]}
+                    onChange={value => editor.chain().focus().updateImage({ width: value === 'auto' ? null
+                        : Math.round(editor.view.dom.clientWidth * Number.parseInt(value) / 100) }).run()} />
+                <button type="button" className="editor-image-folder" onClick={() => void openNoteImageFolder(editor.getAttributes('imageBlock').src || editor.getAttributes('image').src)
+                    .catch(error => useToastStore.getState().addToast(error instanceof Error ? error.message : String(error), 'error'))}><FolderOpen size={15} />打开图片文件夹</button>
                 <span className="editor-context-hint">拖动图片四角可调整大小</span>
                 </>}
             </div>}
         </div>
         {searchOpen && <EditorSearch editor={editor} onClose={() => setSearchOpen(false)} />}
+        {insertDialog && <EditorInsertDialog editor={editor} kind={insertDialog} onClose={() => setInsertDialog(null)} />}
     </>);
 }

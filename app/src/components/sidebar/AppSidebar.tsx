@@ -128,7 +128,7 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: A
                                         本软件在测试与完善过程中，得到了以下领导和同事的大力支持与专业指导，在此一并表示诚挚感谢：
                                     </div>
                                     <div className="tooltip-names">
-                                        莫佳运、罗备、杨帅、李良泳、张夕淳、贾君、王阳、戈少贤
+                                        莫佳运、罗备、杨帅、李良泳、张夕淳、贾君、王阳、戈少贤、桂树奇
                                     </div>
                                 </div>
                             </div>,

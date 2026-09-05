@@ -9,11 +9,12 @@ import './AISettingsModal.css';
 
 interface AISettingsModalProps {
     onClose: () => void;
+    onSaved?: () => void;
 }
 
 const NEW_PROVIDER_ID = '__new__';
 
-export function AISettingsModal({ onClose }: AISettingsModalProps) {
+export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
     const aiSettings = useAppStore((state) => state.settings.ai);
     const updateAISettings = useAppStore((state) => state.updateAISettings);
     const providers = aiSettings?.providers ?? [];
@@ -131,6 +132,7 @@ export function AISettingsModal({ onClose }: AISettingsModalProps) {
         setSelectedProviderId(id);
         clearTestStatus();
         updateAISettings({ activeProviderId: id, providers: updatedProviders });
+        onSaved?.();
     };
 
     const handleDelete = () => {

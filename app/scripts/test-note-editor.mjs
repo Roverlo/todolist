@@ -78,10 +78,17 @@ try {
     assert.deepEqual((await storedNotes()).find(note => note.id === legacyId).tags, ['兼容测试']);
     console.log('Passed: legacy HTML marks, headings, font size/color, lists, alignment, code and tags');
 
+    const choose = async (label, value) => {
+        await page.getByRole('combobox', { name: label, exact: true }).click();
+        const menu = page.getByRole('listbox', { name: label, exact: true });
+        if (typeof value === 'object') await menu.getByRole('option', { name: value.label, exact: true }).click();
+        else await menu.locator('[role="option"][data-value="' + value + '"]').click();
+    };
+
     await openNote('<p>第一项</p><p>第二项</p>', '多种列表');
     await body.press('Control+A');
     for (const style of ['disc', 'circle', 'square']) {
-        await page.getByLabel('项目符号样式', { exact: true }).selectOption(style);
+        await choose('项目符号样式', style);
         assert.equal(await body.locator('ul').first().evaluate(el => el.style.listStyleType), style);
     }
     await body.locator('li').nth(1).click();
@@ -96,13 +103,13 @@ try {
     assert.equal(await body.locator('ul ul').count(), 0);
     await body.press('Control+A');
     for (const style of ['decimal', 'decimal-leading-zero', 'lower-alpha', 'upper-alpha', 'lower-roman', 'upper-roman', 'cjk-ideographic']) {
-        await page.getByLabel('编号样式', { exact: true }).selectOption(style);
+        await choose('编号样式', style);
         assert.equal(await body.locator('ol').first().evaluate(el => el.style.listStyleType), style);
         await saveAndReload();
         assert.equal(await body.locator('ol').first().evaluate(el => el.style.listStyleType), style);
         await body.press('Control+A');
     }
-    await page.getByLabel('编号样式', { exact: true }).selectOption('none');
+    await choose('编号样式', 'none');
     assert.equal(await body.locator('ol').count(), 0);
     await page.getByRole('button', { name: '待办列表', exact: true }).click();
     await body.locator('input[type="checkbox"]').first().check();
@@ -113,16 +120,13 @@ try {
 
     await openNote('<p>排版文字</p>', '排版工具');
     await body.press('Control+A');
-    await page.getByLabel('正文字体', { exact: true }).selectOption({ label: '宋体' });
-    await page.getByRole('button', { name: '字号', exact: true }).click();
-    await page.getByRole('menu').getByText('24px', { exact: true }).click();
+    await choose('正文字体', { label: '宋体' });
+    await choose('字号', '24px');
     await page.getByRole('button', { name: '加粗', exact: true }).click();
     await page.getByRole('button', { name: '斜体', exact: true }).click();
     await page.getByRole('button', { name: '下划线', exact: true }).click();
-    await page.getByRole('button', { name: '段落标题', exact: true }).click();
-    await page.getByRole('menu').getByText(/^标题\s*2$/).click();
-    await page.getByRole('button', { name: '行距', exact: true }).click();
-    await page.getByRole('menu').getByText('2', { exact: true }).click();
+    await choose('段落标题', '2');
+    await choose('行距', '2');
     await page.getByRole('button', { name: '两端对齐', exact: true }).click();
     await saveAndReload();
     const formatted = body.getByText('排版文字', { exact: true });
@@ -178,8 +182,8 @@ try {
     await openNote('<p>项目文档</p>', '链接编辑');
     await body.press('Control+A');
     await page.getByRole('button', { name: '插入链接', exact: true }).click();
-    await page.locator('input[type="url"]').fill('https://example.com/docs');
-    await page.getByRole('button', { name: '应用', exact: true }).click();
+    await page.getByLabel('链接地址', { exact: true }).fill('https://example.com/docs');
+    await page.getByRole('button', { name: '应用链接', exact: true }).click();
     await saveAndReload();
     assert.equal(await body.locator('a').innerText(), '项目文档');
     assert.equal(await body.locator('a').getAttribute('href'), 'https://example.com/docs');
@@ -203,8 +207,8 @@ try {
     assert.equal(await body.locator('tr').count(), 3);
     assert.equal(await body.locator('tr').first().locator('td, th').count(), 3);
     await body.locator('td, th').first().click();
-    await page.getByLabel('表格操作', { exact: true }).selectOption({ label: '下方插入行' });
-    await page.getByLabel('表格操作', { exact: true }).selectOption({ label: '右侧插入列' });
+    await choose('表格操作', { label: '下方插入行' });
+    await choose('表格操作', { label: '右侧插入列' });
     assert.equal(await body.locator('tr').count(), 4);
     assert.equal(await body.locator('tr').first().locator('td, th').count(), 4);
     await saveAndReload();
@@ -217,20 +221,19 @@ try {
         });
         root.editor.commands.setCellSelection({ anchorCell: positions[0], headCell: positions[1] });
     });
-    const tableActions = page.getByLabel('表格操作', { exact: true });
-    await tableActions.selectOption({ label: '合并单元格' });
+    await choose('表格操作', { label: '合并单元格' });
     assert.equal(await body.locator('td[colspan="2"]').count(), 1);
     await saveAndReload();
     await body.locator('td[colspan="2"]').click();
-    await tableActions.selectOption({ label: '拆分单元格' });
+    await choose('表格操作', { label: '拆分单元格' });
     assert.equal(await body.locator('td[colspan="2"]').count(), 0);
-    await tableActions.selectOption({ label: '切换表头行' });
+    await choose('表格操作', { label: '切换表头行' });
     assert.equal(await body.locator('th').count(), 4);
-    await tableActions.selectOption({ label: '删除当前行' });
-    await tableActions.selectOption({ label: '删除当前列' });
+    await choose('表格操作', { label: '删除当前行' });
+    await choose('表格操作', { label: '删除当前列' });
     assert.equal(await body.locator('tr').count(), 3);
     assert.equal(await body.locator('tr').first().locator('td, th').count(), 3);
-    await tableActions.selectOption({ label: '删除表格' });
+    await choose('表格操作', { label: '删除表格' });
     assert.equal(await body.locator('table').count(), 0);
     await page.getByRole('button', { name: '插入表格', exact: true }).press('Enter');
     await body.locator('table').waitFor();
@@ -253,13 +256,14 @@ try {
     await body.press('Control+End');
     await page.getByRole('button', { name: '插入图片', exact: true }).click();
     const chooser = page.waitForEvent('filechooser');
-    await page.getByRole('button', { name: '上传', exact: true }).click();
+    await page.getByRole('button', { name: '选择图片', exact: false }).click();
     await (await chooser).setFiles({ name: '本地图片.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+    await page.getByRole('dialog').getByRole('button', { name: '插入图片', exact: true }).click();
     await body.locator('img').waitFor();
     assert.match(await body.locator('img').getAttribute('src'), /^data:image\/png;base64,/);
     await body.locator('.image-view__body').click();
     const imageWidth = await body.evaluate(root => Math.round(root.clientWidth / 2));
-    await page.getByLabel('图片宽度', { exact: true }).selectOption('50%');
+    await choose('图片宽度', '50%');
     await saveAndReload();
     assert.equal(await body.locator('img').evaluate(img => img.style.width), `${imageWidth}px`);
     assert.ok(Math.abs((await body.locator('img').boundingBox()).width - imageWidth) <= 1);
@@ -286,7 +290,7 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('.ProseMirror img').length === 3);
     for (const [type, size, message] of [
         ['image/svg+xml', 10, '请选择 PNG、JPEG、WebP 或 GIF 图片'],
-        ['image/png', 2 * 1024 * 1024 + 1, '单张图片不能超过 2 MB，请缩小后再插入'],
+        ['image/png', 2 * 1024 * 1024 + 1, '请选择 2 MB 以内的图片'],
     ]) {
         await body.evaluate((root, { type, size }) => {
             const transfer = new DataTransfer();

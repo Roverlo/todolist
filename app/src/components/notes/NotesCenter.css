@@ -672,7 +672,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 24px 32px;
+  padding: 10px 24px 16px;
 }
 
 .note-editor-empty {
@@ -741,8 +741,8 @@
   outline: none;
   background: transparent;
   width: 100%;
-  padding: 8px 0;
-  margin-bottom: 16px;
+  padding: 4px 0;
+  margin-bottom: 6px;
   border-bottom: 2px solid var(--border);
   transition: border-color 0.2s;
 }
@@ -1389,71 +1389,6 @@
   box-shadow: none;
 }
 
-.ai-loading-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-
-.ai-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.ai-model-info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text-subtle);
-  margin: 8px 0;
-}
-
-.ai-model-info .ai-model-label {
-  color: var(--text-subtle);
-}
-
-.ai-model-info .ai-model-name {
-  color: var(--primary);
-  font-weight: 500;
-}
-
-.ai-loading-tip {
-  font-size: 12px;
-  color: var(--text-subtle);
-  animation: pulse 2s infinite;
-  border: none !important;
-  background: none !important;
-  box-shadow: none !important;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0.6;
-  }
-
-  50% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0.6;
-  }
-}
-
 .ai-results {
   display: flex;
   flex-direction: column;
@@ -1523,200 +1458,6 @@
 
 .ai-project-select:hover {
   border-color: var(--border-hover);
-}
-
-/* ==================== AI 加载进度条样式 ==================== */
-
-/* 阶段指示器 */
-.ai-stages-indicator {
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-start;
-  margin-bottom: 20px;
-  padding: 0 8px;
-  position: relative;
-  width: 100%;
-}
-
-.ai-stage-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  flex: 0 1 auto;
-  min-width: 55px;
-  max-width: 70px;
-  position: relative;
-}
-
-/* 连接线 */
-.ai-stage-item:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  top: 20px;
-  left: calc(50% + 28px);
-  width: 55px;
-  height: 2px;
-  background: #d1d5db;
-  z-index: 0;
-}
-
-.ai-stage-item.completed:not(:last-child)::after {
-  background: var(--primary);
-}
-
-/* 阶段图标 */
-.ai-stage-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface);
-  border: 2px solid #d1d5db;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 1;
-}
-
-.ai-stage-item.active .ai-stage-icon {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  animation: pulse 1.5s infinite;
-}
-
-.ai-stage-item.completed .ai-stage-icon {
-  border-color: var(--primary);
-  background: var(--primary);
-}
-
-.ai-stage-icon svg {
-  color: #9ca3af;
-  transition: color 0.3s ease;
-}
-
-.ai-stage-item.active .ai-stage-icon svg {
-  color: var(--primary);
-}
-
-.ai-stage-item.completed .ai-stage-icon svg {
-  color: white;
-}
-
-.ai-stage-name {
-  font-size: 10px;
-  color: var(--text-secondary);
-  text-align: center;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.ai-stage-item.active .ai-stage-name {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-/* 进度条容器 */
-.ai-progress-container {
-  margin: 16px 0 12px;
-  width: 100%;
-  position: relative;
-}
-
-/* 百分比显示在上方 */
-.ai-progress-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.ai-progress-text {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary);
-}
-
-.ai-progress-bar {
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-}
-
-.ai-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary), #8b5cf6);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-  position: relative;
-}
-
-/* 加载文本 */
-.ai-loading-text {
-  font-size: 15px;
-  font-weight: 500;
-  margin: 12px 0 8px;
-  color: var(--text-main);
-}
-
-/* 时间信息 */
-.ai-time-info {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin: 8px 0;
-}
-
-.ai-elapsed {
-  color: var(--text-subtle);
-}
-
-.ai-estimated {
-  color: var(--primary);
-  font-weight: 500;
-}
-
-/* 提示文字 */
-.ai-loading-tip {
-  font-size: 13px;
-  color: var(--text-subtle);
-  display: block;
-  margin-top: 12px;
-  padding: 0;
-  border: none;
-  background: transparent;
-}
-
-/* 取消按钮 */
-.ai-cancel-btn {
-  margin-top: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* 脉冲动画 */
-@keyframes pulse {
-
-  0%,
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
-  }
-
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 0 0 8px rgba(124, 58, 237, 0);
-  }
 }
 
 /* ==================== NoteTagSelector 笔记标签选择器样式 ==================== */
@@ -2187,3 +1928,34 @@
 .note-editor-actions .btn-light:hover { background: #f3f4f6; border-color: #cbd2df; }
 .note-editor-actions .btn-primary { background: #7c3aed; border: 1px solid #7c3aed; }
 .note-editor-actions .btn-primary:hover { background: #6d28d9; }
+
+.notes-main-root > .notes-center-ai-panel[hidden] { display: none; }
+.notes-center-header .btn:is(.active, [aria-pressed='true']) { background: var(--primary-soft); border-color: rgb(var(--primary-rgb)); color: rgb(var(--primary-rgb)); }
+.notes-center-header .notes-settings-btn { min-width: 32px; }
+.notes-main-root .ai-panel { min-height: 0; width: 100%; background: var(--surface); }
+.notes-main-root .ai-panel-body { min-height: 0; padding: 16px; gap: 16px; }
+.ai-intro { display: flex; flex-direction: column; gap: 12px; }
+.ai-intro h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-main); }
+.ai-intro > p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.ai-source-note { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 7px; background: var(--bg); border: 1px solid var(--border); }
+.ai-source-note span, .ai-model-line { font-size: 11px; color: var(--text-subtle); }
+.ai-source-note strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.ai-model-line { display: flex; justify-content: space-between; gap: 8px; }
+.ai-model-line > span:last-child { text-align: right; overflow-wrap: anywhere; }
+.notes-main-root .ai-panel-generate-btn { min-height: 36px; margin: 0; padding: 8px 12px; background: var(--primary); border: 1px solid var(--primary); font-size: 13px; font-weight: 500; }
+.notes-main-root .ai-panel-generate-btn:hover:not(:disabled) { background: var(--primary-hover); }
+.ai-spinner { animation: spin 1s linear infinite; }
+.ai-inline-tip { margin: 0; padding: 10px 12px; color: var(--text-secondary); background: var(--primary-soft); border-radius: 6px; font-size: 12px; line-height: 1.6; }
+.ai-request-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+.ai-request-status button, .ai-save-result button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; min-width: 0; border: 0; background: transparent; color: var(--primary); font: inherit; cursor: pointer; }
+.ai-save-result { padding: 12px; border: 1px solid #a7e3cb; border-radius: 7px; background: #f0fdf7; color: #116149; font-size: 12px; line-height: 1.6; }
+.ai-save-result p { display: flex; gap: 6px; align-items: flex-start; margin: 0 0 6px; }
+.ai-results-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 0; border: 0; font-size: 12px; }
+.ai-results-header label { display: flex; align-items: center; gap: 6px; }
+.ai-results-header > span { font-weight: 400; color: var(--text-subtle); }
+.ai-panel input[type=checkbox] { accent-color: var(--primary); }
+.ai-panel .ai-actions { margin: 0; padding: 12px 16px; flex-shrink: 0; }
+.ai-actions > button { width: 100%; justify-content: center; min-height: 36px; font-size: 13px; }
+.ai-panel .ai-error-banner { margin: 0; align-items: flex-start; overflow-wrap: anywhere; color: #b42318; font-size: 12px; }
+.ai-error-banner svg { flex-shrink: 0; }
+.ai-panel :is(button, input, textarea):focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }

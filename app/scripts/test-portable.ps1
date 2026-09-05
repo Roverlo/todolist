@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$Executable)
+param([Parameter(Mandatory = $true)][string]$Executable, [switch]$EditorWorkflow)
 $ErrorActionPreference = 'Stop'
 
 $source = (Get-Item -LiteralPath $Executable).FullName
@@ -10,6 +10,10 @@ try {
 $checkRoot = Join-Path (Split-Path -Parent $PSScriptRoot) ('ui-check.local\portable-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
 New-Item -ItemType Directory -Path $checkRoot | Out-Null
 $dataRoot = Join-Path $checkRoot 'data'
+if ($EditorWorkflow) {
+    # Keep native image writes inside the existing $HOME filesystem scope.
+    $dataRoot = Join-Path ([IO.Path]::GetTempPath()) ('ProjectTodo-native-check-' + [guid]::NewGuid().ToString('N'))
+}
 New-Item -ItemType Directory -Path $dataRoot | Out-Null
 $dataPath = Join-Path $dataRoot 'data.json'
 $sample = @{ version = 12; state = @{ activeView = 'notes'; selectedNoteId = 'portable-check'; notes = @(@{
@@ -37,10 +41,18 @@ $testExe = Join-Path $checkRoot 'ProjectTodo-check.exe'
 Copy-Item -LiteralPath $source -Destination $testExe
 $oldData = $env:PROJECTTODO_TEST_DATA_DIR
 $oldWebView = $env:WEBVIEW2_USER_DATA_FOLDER
+$oldWebViewArguments = $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
 $started = $null
 try {
     $env:PROJECTTODO_TEST_DATA_DIR = $dataRoot
     $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $checkRoot 'webview'
+    if ($EditorWorkflow) {
+        $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+        $probe.Start()
+        $nativeDebugPort = $probe.LocalEndpoint.Port
+        $probe.Stop()
+        $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=$nativeDebugPort"
+    }
     $started = Start-Process -FilePath $testExe -WorkingDirectory $checkRoot -WindowStyle Hidden -PassThru
     Start-Sleep -Seconds 8
     $started.Refresh()
@@ -49,11 +61,18 @@ try {
     if ((Get-FileHash -LiteralPath $dataPath -Algorithm SHA256).Hash -eq $sampleHash) { throw 'Frontend did not persist the isolated test data' }
     $saved = Get-Content -LiteralPath $dataPath -Raw | ConvertFrom-Json
     if ($saved.state.notes.Count -ne 1 -or $saved.state.notes[0].id -ne 'portable-check') { throw 'Wrong data loaded in portable check' }
+    if ($EditorWorkflow) {
+        Push-Location (Split-Path -Parent $PSScriptRoot)
+        try {
+            & node (Join-Path $PSScriptRoot 'test-note-workflow.mjs') --cdp $nativeDebugPort --data $dataPath
+            if ($LASTEXITCODE -ne 0) { throw 'Packaged note workflow failed' }
+        } finally { Pop-Location }
+    }
     foreach ($relative in $before.Keys) {
         if ((Get-FileHash -LiteralPath (Join-Path $userRoot $relative) -Algorithm SHA256).Hash -ne $before[$relative]) { throw 'Existing user data changed during the check; backup retained' }
     }
     [ordered]@{
-        result = 'PASS'; runningSeconds = 8; isolatedData = $dataPath; existingDataUnchanged = $true
+        result = 'PASS'; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; isolatedData = $dataPath; existingDataUnchanged = $true
         executable = $source; bytes = (Get-Item -LiteralPath $source).Length
         sha256 = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
     } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $checkRoot 'result.json')
@@ -61,4 +80,5 @@ try {
     if ($started -and -not $started.HasExited) { Stop-Process -Id $started.Id }
     $env:PROJECTTODO_TEST_DATA_DIR = $oldData
     $env:WEBVIEW2_USER_DATA_FOLDER = $oldWebView
+    $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = $oldWebViewArguments
 }

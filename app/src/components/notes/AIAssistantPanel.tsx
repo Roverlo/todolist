@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { LoaderCircle, Settings, ArrowRight } from 'lucide-react';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
-import { Icon, type IconName } from '../ui/Icon';
+import { Icon } from '../ui/Icon';
 import type { Note, AIGeneratedTask, Subtask, RecurringTemplate } from '../../types';
 import { useAppStore } from '../../state/appStore';
-import { getNoteDate } from '../../utils/noteDate';
+import { getNoteDate, isNoteDate } from '../../utils/noteDate';
 import { createAIProvider } from '../../services/ai';
 import { SYSTEM_PROMPT_TASK_EXTRACTION } from '../../services/ai/prompts';
 import { TaskPreviewCard } from './TaskPreviewCard';
 import { AISettingsModal } from './AISettingsModal';
+import { noteTextForAI, parseGeneratedTasks } from '../../utils/noteAI';
 
 // 解析周期提示为 schedule 对象
 function parseRecurringHint(hint: string | undefined): RecurringTemplate['schedule'] | null {
@@ -69,14 +71,6 @@ function parseRecurringHint(hint: string | undefined): RecurringTemplate['schedu
     return null;
 }
 
-// AI 生成阶段配置
-const AI_STAGES = [
-    { id: 'connect', name: '连接服务', icon: 'send' as IconName, progress: 10 },
-    { id: 'analyze', name: '分析内容', icon: 'search' as IconName, progress: 30 },
-    { id: 'process', name: 'AI 处理', icon: 'refresh' as IconName, progress: 90 },
-    { id: 'complete', name: '生成完成', icon: 'check' as IconName, progress: 100 }
-] as const;
-
 interface AIAssistantPanelProps {
     note: Note | null;
 }
@@ -98,12 +92,11 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-    // 进度状态
-    const [currentStage, setCurrentStage] = useState(0);
-    const [progress, setProgress] = useState(0);
-    const [startTime, setStartTime] = useState(0);
+    const request = useRef<AbortController | null>(null);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
-    const [estimatedRemaining, setEstimatedRemaining] = useState(0);
+    const [hasGenerated, setHasGenerated] = useState(false);
+    const [generatedFrom, setGeneratedFrom] = useState('');
+    const plainText = useMemo(() => noteTextForAI(note?.content || ''), [note?.content]);
 
     // 可用项目列表（排除回收站）
     const availableProjects = projects.filter(p => p.name !== '回收站');
@@ -131,137 +124,54 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
         return availableProjects[0]?.id || '';
     };
 
-    // 计时器 Effect
     useEffect(() => {
-        let timer: number;
+        if (!loading) return;
+        const started = Date.now();
+        const timer = window.setInterval(() => setElapsedSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
+        return () => window.clearInterval(timer);
+    }, [loading]);
 
-        if (loading && startTime > 0) {
-            // 立即执行一次
-            const updateTime = () => {
-                const elapsed = Math.floor((Date.now() - startTime) / 1000);
-                setElapsedSeconds(elapsed);
+    useEffect(() => () => { request.current?.abort(); }, []);
 
-                // 预估剩余时间
-                if (progress > 0 && progress < 100) {
-                    const totalEstimate = (elapsed / progress) * 100;
-                    const remaining = Math.max(0, Math.ceil(totalEstimate - elapsed));
-                    setEstimatedRemaining(remaining);
-                }
-            };
-
-            // 立即执行一次
-            updateTime();
-
-            // 然后每秒更新
-            timer = window.setInterval(updateTime, 1000);
-        }
-
-        return () => {
-            if (timer) window.clearInterval(timer);
-        };
-    }, [loading, startTime, progress]);
+    const cancelGeneration = () => {
+        request.current?.abort();
+        request.current = null;
+        setLoading(false);
+    };
 
     const handleGenerate = async () => {
-        if (!note?.content) return;
-
-        let apiProgressInterval: number | undefined;
-
-        if (!activeProviderConfig || !hasAIConfig) {
-            setSettingsOpen(true);
-            return;
-        }
-
-        // 初始化状态
+        if (!note || !plainText || request.current) return;
+        if (!activeProviderConfig || !hasAIConfig) { setSettingsOpen(true); return; }
+        const controller = new AbortController();
+        request.current = controller;
+        const timeout = window.setTimeout(() => controller.abort('timeout'), 120000);
         setLoading(true);
         setError(null);
-        setTasks([]);
         setSuccessMsg(null);
-        setCurrentStage(0);
-        setProgress(0);
-        setStartTime(Date.now());
         setElapsedSeconds(0);
-        setEstimatedRemaining(0);
-
         try {
-            // 阶段 1: 连接服务 (0-10%)
-            setCurrentStage(0);
-            setProgress(10);
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // 阶段 2: 分析内容 (10-30%)
-            setCurrentStage(1);
-            let analysisProgress = 10;
-            const analysisInterval = setInterval(() => {
-                analysisProgress += 2;
-                if (analysisProgress <= 30) {
-                    setProgress(analysisProgress);
-                }
-            }, 150);
-
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            clearInterval(analysisInterval);
-            setProgress(30);
-
-            // 阶段 3: AI 处理 (30-90%)
-            setCurrentStage(2);
-
-            // 模拟进度增长（在实际 API 调用期间）
-            apiProgressInterval = window.setInterval(() => {
-                setProgress(prev => {
-                    if (prev < 90) {
-                        return Math.min(prev + 1, 90);
-                    }
-                    return prev;
-                });
-            }, 100);
-
-            const provider = createAIProvider({
-                ...activeProviderConfig,
-                apiKey: activeProviderConfig.apiKey!
-            });
-
-            const referenceDate = getNoteDate(note);
-            const userPrompt = `上下文信息：
-参考日期：${referenceDate}
-笔记标题：${note?.title || '无标题'}
-可用项目：${availableProjects.map(p => p.name).join('、')}
-
-笔记正文：
-${note.content}`;
-
-            const response = await provider.generateJson<{ tasks: AIGeneratedTask[] }>(
-                SYSTEM_PROMPT_TASK_EXTRACTION,
-                userPrompt
-            );
-
-            clearInterval(apiProgressInterval);
-            apiProgressInterval = undefined;
-
-            // 阶段 4: 完成 (90-100%)
-            setCurrentStage(3);
-            setProgress(95);
-            await new Promise(resolve => setTimeout(resolve, 200));
-
-            if (response && Array.isArray(response.tasks)) {
-                // Initialize with selected state and matched projectId
-                const initializedTasks = response.tasks.map(t => ({
-                    ...t,
-                    selected: true,
-                    projectId: matchProjectId(t.suggestedProject)
-                }));
-                setTasks(initializedTasks);
-                setProgress(100);
-            } else {
-                throw new Error('AI 返回的数据格式不正确');
-            }
-        } catch (err: unknown) {
-            console.error('AI Generation Error:', err);
-            setError(err instanceof Error ? err.message : '生成失败，请重试');
+            const provider = createAIProvider({ ...activeProviderConfig, apiKey: activeProviderConfig.apiKey! });
+            const userPrompt = [
+                '上下文信息：',
+                '参考日期：' + getNoteDate(note),
+                '笔记标题：' + (note.title || '无标题'),
+                '可用项目：' + availableProjects.map(p => p.name).join('、'),
+                '',
+                '笔记正文：',
+                plainText,
+            ].join('\n');
+            const response = await provider.generateJson<unknown>(SYSTEM_PROMPT_TASK_EXTRACTION, userPrompt, controller.signal);
+            if (controller.signal.aborted || request.current !== controller) return;
+            setTasks(parseGeneratedTasks(response).map(task => ({ ...task, selected: true, projectId: matchProjectId(task.suggestedProject) })));
+            setGeneratedFrom(plainText);
+            setHasGenerated(true);
+        } catch (error) {
+            if (request.current !== controller) return;
+            if (controller.signal.reason === 'timeout') setError('生成超时，请重试，或在设置中检查模型与接口。');
+            else if (!controller.signal.aborted) setError(error instanceof Error ? error.message : '生成失败，请重试');
         } finally {
-            if (apiProgressInterval) window.clearInterval(apiProgressInterval);
-            setLoading(false);
-            setCurrentStage(0);
-            setProgress(0);
+            window.clearTimeout(timeout);
+            if (request.current === controller) { request.current = null; setLoading(false); }
         }
     };
 
@@ -275,7 +185,12 @@ ${note.content}`;
 
     const handleSave = () => {
         const selectedTasks = tasks.filter(t => t.selected);
-        if (selectedTasks.length === 0) return;
+        if (selectedTasks.length === 0 || loading) return;
+        const invalid = selectedTasks.find(task => !task.title.trim()
+            || (task.dueDate && !isNoteDate(task.dueDate))
+            || !availableProjects.some(project => project.id === task.projectId));
+        if (invalid) { setError('请检查选中任务的标题、截止日期和所属项目。'); return; }
+        setError(null);
 
         let count = 0;
         let recurringCount = 0;
@@ -290,9 +205,9 @@ ${note.content}`;
                 projectNames.push(project.name);
             }
 
-            const subtasks: Subtask[] = (aiTask.subtasks || []).map(st => ({
+            const subtasks: Subtask[] = (aiTask.subtasks || []).filter(st => st.title.trim()).map(st => ({
                 id: nanoid(8),
-                title: st.title,
+                title: st.title.trim(),
                 completed: false,
                 createdAt: Date.now(),
                 dueDate: st.dueDate,
@@ -319,7 +234,7 @@ ${note.content}`;
                     periodKey = startOfWeek.format('YYYY-MM-DD');
                     if (!dateStr) {
                         const weekday = (schedule.daysOfWeek ?? [1])[0];
-                        let target = startOfWeek.add((weekday + 7) % 7, 'day');
+                        let target = startOfWeek.add((weekday + 6) % 7, 'day');
                         if (target.isBefore(now.startOf('day'))) target = target.add(7, 'day');
                         dateStr = target.format('YYYY-MM-DD');
                     }
@@ -338,6 +253,11 @@ ${note.content}`;
                         dateStr = target.format('YYYY-MM-DD');
                     }
                 }
+
+                const occurrence = dayjs(dateStr);
+                periodKey = schedule.type === 'daily' ? occurrence.format('YYYY-MM-DD')
+                    : schedule.type === 'monthly' ? occurrence.format('YYYY-MM')
+                    : occurrence.subtract((occurrence.day() + 6) % 7, 'day').format('YYYY-MM-DD');
 
                 // 保存周期任务模板
                 addRecurringTemplate({
@@ -402,9 +322,7 @@ ${note.content}`;
             ? `已将 ${count} 个任务保存到 ${projectStr}（含 ${recurringCount} 个周期任务模板）`
             : `已将 ${count} 个任务保存到 ${projectStr}`;
         setSuccessMsg(msg);
-        setTasks([]);
-
-        setTimeout(() => setSuccessMsg(null), 3000);
+        setTasks(previous => previous.filter(task => !task.selected));
     };
 
     const selectedCount = tasks.filter(t => t.selected).length;
@@ -412,162 +330,50 @@ ${note.content}`;
     return (
         <div className="ai-panel">
             <div className="ai-panel-header">
-                <div className="ai-panel-title">
-                    <span>AI 助手</span>
-                </div>
+                <div className="ai-panel-title">待办生成</div>
+                <button type="button" className="ai-panel-settings-btn" aria-label="配置生成接口" title="配置生成接口" onClick={() => setSettingsOpen(true)}><Settings size={16} /></button>
             </div>
-
             <div className="ai-panel-body">
-                {error && (
-                    <div className="ai-error-banner">
-                        <Icon name="warning" size={14} />
-                        {error}
+                <div className="ai-intro">
+                    <h3>从当前随记生成待办</h3>
+                    <p>识别任务、截止日期和负责人，确认后加入待办。</p>
+                    <div className="ai-source-note"><span>当前随记</span><strong>{note?.title || '尚未选择随记'}</strong></div>
+                    <div className="ai-model-line"><span>生成模型</span><span>{hasAIConfig ? activeProviderConfig?.model : '尚未配置'}</span></div>
+                    <button className="ai-panel-generate-btn" type="button" disabled={loading || !plainText}
+                        onClick={() => void handleGenerate()}>
+                        {loading && <LoaderCircle size={16} className="ai-spinner" />}
+                        {loading ? '正在生成待办…' : !hasAIConfig ? '配置 AI' : error ? '重试生成' : tasks.length ? '重新生成' : '生成待办事项'}
+                    </button>
+                    {!plainText && <p className="ai-inline-tip">先在左侧写下要做的事情，即可开始生成。</p>}
+                    {loading && <div className="ai-request-status" role="status">
+                        <span>已等待 {elapsedSeconds} 秒</span>
+                        <button type="button" onClick={cancelGeneration}>取消生成</button>
+                    </div>}
+                </div>
+                {error && <div className="ai-error-banner" role="alert"><Icon name="warning" size={15} /><span>{error}</span></div>}
+                {successMsg && <div className="ai-save-result" role="status">
+                    <p><Icon name="check" size={15} />{successMsg}</p>
+                    <button type="button" onClick={() => useAppStore.getState().setActiveView('tasks')}>查看待办事项<ArrowRight size={14} /></button>
+                </div>}
+                {hasGenerated && !tasks.length && !loading && !error && !successMsg && <p className="ai-inline-tip">没有识别到待办。可以补充具体行动后重新生成。</p>}
+                {tasks.length > 0 && <>
+                    {generatedFrom !== plainText && <p className="ai-inline-tip">随记内容已修改，下方结果来自上一次生成；需要时可重新生成。</p>}
+                    <div className="ai-results-header">
+                        <label><input type="checkbox" checked={selectedCount === tasks.length}
+                            onChange={event => setTasks(previous => previous.map(task => ({ ...task, selected: event.target.checked })))} />
+                            已选 {selectedCount} / {tasks.length} 项</label>
+                        <span>可直接修改</span>
                     </div>
-                )}
-
-                {successMsg && (
-                    <div className="ai-success-banner">
-                        <Icon name="check" size={14} />
-                        {successMsg}
+                    <div className="ai-tasks-list">
+                        {tasks.map((task, index) => <TaskPreviewCard key={index} task={task} index={index} projects={availableProjects}
+                            onToggle={handleToggleTask} onUpdate={handleUpdateTask} />)}
                     </div>
-                )}
-
-                {tasks.length === 0 && !loading && (
-                    <div className="ai-panel-empty">
-                        <p>从笔记中提取待办事项</p>
-                        <p className="ai-subtext">AI 将分析您的笔记内容，自动识别任务、截止日期、子任务和负责人。</p>
-
-                        {!note?.content ? (
-                            <div className="ai-tip">请输入笔记内容后开始</div>
-                        ) : (
-                            <button
-                                className="ai-panel-generate-btn"
-                                onClick={handleGenerate}
-                                disabled={!note?.content}
-                            >
-                                <span>{hasAIConfig ? '生成任务' : '配置 AI 并生成'}</span>
-                            </button>
-                        )}
-                    </div>
-                )}
-
-                {loading && (
-                    <div className="ai-loading-state">
-                        {/* 阶段指示器 */}
-                        <div className="ai-stages-indicator">
-                            {AI_STAGES.map((stage, index) => (
-                                <div
-                                    key={stage.id}
-                                    className={`ai-stage-item ${index === currentStage ? 'active' : ''
-                                        } ${index < currentStage ? 'completed' : ''}`}
-                                >
-                                    <div className="ai-stage-icon">
-                                        <Icon
-                                            name={stage.icon}
-                                            size={20}
-                                        />
-                                    </div>
-                                    <span className="ai-stage-name">{stage.name}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* 进度条 */}
-                        <div className="ai-progress-container">
-                            <div className="ai-progress-info">
-                                <span className="ai-progress-text">{progress}%</span>
-                            </div>
-                            <div className="ai-progress-bar">
-                                <div
-                                    className="ai-progress-fill"
-                                    style={{ width: `${progress}%` }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* 当前阶段文本 */}
-                        <p className="ai-loading-text">
-                            {AI_STAGES[currentStage].name}中...
-                        </p>
-
-                        {/* 时间信息 */}
-                        <div className="ai-time-info">
-                            <span className="ai-elapsed">
-                                已用时: {elapsedSeconds}s
-                            </span>
-                            {estimatedRemaining > 0 && progress < 90 && (
-                                <span className="ai-estimated">
-                                    预计剩余: {estimatedRemaining}s
-                                </span>
-                            )}
-                        </div>
-
-                        {/* 当前模型信息 */}
-                        {aiSettings?.activeProviderId && (
-                            <div className="ai-model-info">
-                                <span className="ai-model-label">当前模型：</span>
-                                <span className="ai-model-name">
-                                    {aiSettings.providers.find(p => p.id === aiSettings.activeProviderId)?.model || '未知'}
-                                </span>
-                            </div>
-                        )}
-
-                        {/* 提示文字 */}
-                        <span className="ai-loading-tip">
-                            {currentStage === 0 && '正在建立连接...'}
-                            {currentStage === 1 && '正在解析笔记内容...'}
-                            {currentStage === 2 && 'AI 正在生成任务，请稍候...'}
-                            {currentStage === 3 && '即将完成...'}
-                        </span>
-
-                        {/* 取消按钮 */}
-                        <button
-                            className="btn btn-light ai-cancel-btn"
-                            onClick={() => {
-                                setLoading(false);
-                                setCurrentStage(0);
-                                setProgress(0);
-                            }}
-                        >
-                            <Icon name="close" size={14} />
-                            <span>取消</span>
-                        </button>
-                    </div>
-                )}
-
-                {tasks.length > 0 && (
-                    <div className="ai-results">
-                        <div className="ai-results-header">
-                            <span>识别到 {tasks.length} 个任务</span>
-                        </div>
-                        <div className="ai-tasks-list">
-                            {tasks.map((task, index) => (
-                                <TaskPreviewCard
-                                    key={index}
-                                    task={task}
-                                    index={index}
-                                    projects={availableProjects}
-                                    onToggle={handleToggleTask}
-                                    onUpdate={handleUpdateTask}
-                                />
-                            ))}
-                        </div>
-                        <div className="ai-actions">
-                            <button className="btn btn-light" onClick={() => setTasks([])}>取消</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleSave}
-                                disabled={selectedCount === 0}
-                            >
-                                保存选中任务 ({selectedCount})
-                            </button>
-                        </div>
-                    </div>
-                )}
+                </>}
             </div>
-
-            {settingsOpen && <AISettingsModal onClose={() => setSettingsOpen(false)} />}
+            {tasks.length > 0 && <div className="ai-actions">
+                <button className="btn btn-primary" type="button" onClick={handleSave} disabled={selectedCount === 0 || loading}>加入待办（{selectedCount}）</button>
+            </div>}
+            {settingsOpen && <AISettingsModal onClose={() => setSettingsOpen(false)} onSaved={() => setSettingsOpen(false)} />}
         </div>
     );
 }
-

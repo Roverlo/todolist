@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import type { AIGeneratedTask, AIGeneratedSubtask, Project } from '../../types';
 import '../ui/TaskPreviewCard.css';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface TaskPreviewCardProps {
     task: AIGeneratedTask;
@@ -12,13 +13,7 @@ interface TaskPreviewCardProps {
 }
 
 export function TaskPreviewCard({ task, index, projects, onToggle, onUpdate }: TaskPreviewCardProps) {
-    const [expanded, setExpanded] = useState(true);
-
-    const handlePriorityClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const nextPriority = task.priority === 'high' ? 'low' : task.priority === 'medium' ? 'high' : 'medium';
-        onUpdate(index, { priority: nextPriority });
-    };
+    const [expanded, setExpanded] = useState(false);
 
     // 判断是否为 AI 推荐的项目
     const isRecommendedProject = () => {
@@ -49,17 +44,9 @@ export function TaskPreviewCard({ task, index, projects, onToggle, onUpdate }: T
     return (
         <div className={`task-preview-card ${task.selected ? 'selected' : ''}`}>
             <div className="task-preview-header">
-                <div
-                    className={`task-preview-checkbox ${task.selected ? 'checked' : ''}`}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onToggle(index);
-                    }}
-                >
-                    {task.selected && <Icon name="check" size={12} />}
-                </div>
+                <input type="checkbox" className="task-preview-checkbox" aria-label={`选择任务 ${index + 1}`} checked={Boolean(task.selected)} onChange={() => onToggle(index)} />
 
-                <div className="task-preview-content" onClick={() => setExpanded(!expanded)}>
+                <div className="task-preview-content">
                     <div className="task-preview-title-row">
                         <input
                             className="task-preview-title-input"
@@ -67,6 +54,7 @@ export function TaskPreviewCard({ task, index, projects, onToggle, onUpdate }: T
                             onChange={(e) => onUpdate(index, { title: e.target.value })}
                             onClick={(e) => e.stopPropagation()}
                             placeholder="输入任务标题"
+                            aria-label={`任务 ${index + 1} 标题`}
                         />
                         {task.isRecurring && (
                             <span className="task-preview-recurring-badge" title={task.recurringHint || '周期任务'}>
@@ -82,19 +70,17 @@ export function TaskPreviewCard({ task, index, projects, onToggle, onUpdate }: T
                         >
                             <Icon name="calendar" size={10} />
                             <input
-                                type="text"
+                                type="date"
+                                aria-label={`任务 ${index + 1} 截止日期`}
                                 className="chip-input"
                                 value={task.dueDate || ''}
                                 placeholder="无截止日期"
                                 onChange={(e) => onUpdate(index, { dueDate: e.target.value })}
                             />
                         </div>
-                        <span
-                            className={`task-preview-chip priority ${task.priority || 'medium'}`}
-                            onClick={handlePriorityClick}
-                        >
-                            {task.priority === 'high' ? '高' : task.priority === 'low' ? '低' : '中'}
-                        </span>
+                        <CustomSelect className="task-preview-priority" aria-label={`任务 ${index + 1} 优先级`} value={task.priority || 'medium'}
+                            options={[{ value: 'high', label: '高' }, { value: 'medium', label: '中' }, { value: 'low', label: '低' }]}
+                            onChange={value => onUpdate(index, { priority: value as 'high' | 'medium' | 'low' })} />
                         <div
                             className="task-preview-chip owner editable"
                             onClick={(e) => e.stopPropagation()}
@@ -105,18 +91,21 @@ export function TaskPreviewCard({ task, index, projects, onToggle, onUpdate }: T
                                 className="chip-input"
                                 value={task.owner || ''}
                                 placeholder="负责人"
+                                aria-label={`任务 ${index + 1} 负责人`}
                                 onChange={(e) => onUpdate(index, { owner: e.target.value })}
                             />
                         </div>
                     </div>
                 </div>
 
-                <div
+                <button type="button"
                     className="task-preview-expand"
+                    aria-expanded={expanded}
+                    aria-label={`${expanded ? '收起' : '展开'}任务 ${index + 1} 详情`}
                     onClick={() => setExpanded(!expanded)}
                 >
                     <Icon name={expanded ? 'chevronDown' : 'chevronRight'} size={14} />
-                </div>
+                </button>
             </div>
 
             {expanded && (
@@ -130,16 +119,11 @@ export function TaskPreviewCard({ task, index, projects, onToggle, onUpdate }: T
                                 <span className="task-preview-ai-badge">AI 推荐</span>
                             )}
                         </label>
-                        <select
-                            className="task-preview-project-select"
+                        <CustomSelect
+                            aria-label={`任务 ${index + 1} 所属项目`}
                             value={task.projectId || ''}
-                            onChange={(e) => onUpdate(index, { projectId: e.target.value })}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {projects.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                        </select>
+                            onChange={value => onUpdate(index, { projectId: value })}
+                            options={projects.map(project => ({ value: project.id, label: project.name }))} />
                     </div>
 
                     {/* 周期提示 */}
@@ -147,7 +131,7 @@ export function TaskPreviewCard({ task, index, projects, onToggle, onUpdate }: T
                         <div className="task-preview-recurring-hint">
                             <Icon name="refresh" size={12} />
                             <span>检测到周期任务：{task.recurringHint}</span>
-                            <span className="task-preview-recurring-tip">（保存后可转为周期模板）</span>
+                            <span className="task-preview-recurring-tip">（加入待办时同时创建周期规则）</span>
                         </div>
                     )}
 
