@@ -4,27 +4,35 @@
 }
 
 .editor-toolbar.reactjs-tiptap-editor {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(254px, 3fr) minmax(110px, 1.2fr) minmax(253px, 3fr) minmax(141px, 1.65fr);
     gap: 8px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     background: #fafbfc;
     border-bottom: 1px solid #e5e7eb;
     color: #475467;
     font-size: 13px;
 }
 
-.editor-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .editor-toolbar-group {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    align-content: start;
     gap: 2px;
-    flex-shrink: 0;
+    min-width: 0;
 }
 
 .editor-toolbar-group + .editor-toolbar-group { padding-left: 8px; border-left: 1px solid #e1e5eb; }
 .editor-group-label { flex: 0 0 auto; margin-right: 6px; color: #667085; font-size: 11px; font-weight: 500; white-space: nowrap; }
-.editor-toolbar-divider { width: 1px; height: 18px; margin: 0 5px; background: #e1e5eb; }
+.editor-toolbar-group > .editor-group-label { flex-basis: 100%; order: 1; margin: 2px 0 0; line-height: 12px; }
+.editor-toolbar-divider { flex-basis: 100%; height: 0; }
+.editor-toolbar-group > :is(button, select, .editor-tool, .word-color-picker, .editor-more) { flex-shrink: 0; }
+.editor-context-tools { grid-column: 1 / -1; }
+@container note-document (max-width: 810px) {
+    .editor-toolbar.reactjs-tiptap-editor { grid-template-columns: minmax(0, 1fr) 150px; }
+    .editor-toolbar-group[aria-label='段落和列表'] { padding-left: 0; border-left: 0; }
+}
 .editor-tool { display: inline-flex; align-items: center; }
 .editor-sr-only {
     position: absolute;
@@ -41,6 +49,7 @@
 .editor-toolbar .editor-more > summary {
     display: inline-flex;
     width: 32px;
+    min-width: 0;
     height: 32px;
     align-items: center;
     justify-content: center;
@@ -60,7 +69,7 @@
 .editor-toolbar-btn svg { width: 17px; height: 17px; stroke-width: 1.75; }
 .editor-toolbar .editor-tool > button svg.lucide-chevron-down { width: 12px; }
 .editor-toolbar .editor-tool[data-tool='段落标题'] > button { width: 82px; justify-content: space-between; padding: 0 8px; }
-.editor-toolbar .editor-tool[data-tool='字号'] > button { width: 66px; justify-content: space-between; padding: 0 8px; }
+.editor-toolbar .editor-tool[data-tool='字号'] > button { width: 64px; justify-content: space-between; padding: 0 8px; }
 .editor-toolbar .editor-tool[data-tool='行距'] > button { width: 40px; gap: 2px; }
 .editor-toolbar .editor-tool:is([data-tool='段落标题'], [data-tool='字号']) > button { border-color: #e1e5eb; background: #fff; }
 .editor-toolbar.reactjs-tiptap-editor button:hover:not(:disabled),
@@ -88,7 +97,7 @@
     font-size: 12px;
     cursor: pointer;
 }
-.editor-toolbar .editor-list-select[aria-label='正文字体'] { width: 112px; }
+.editor-toolbar .editor-list-select[aria-label='正文字体'] { width: 104px; }
 .editor-toolbar .editor-list-select[aria-label='编号样式'] { width: 96px; }
 .editor-toolbar .editor-list-select:hover { border-color: #b9c1d1; }
 .editor-more { position: relative; }

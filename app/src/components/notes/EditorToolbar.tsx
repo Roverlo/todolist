@@ -201,7 +201,6 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
             onMouseDown={event => {
                 if (event.target instanceof Element && event.target.closest('button, summary')) event.preventDefault();
             }}>
-            <div className="editor-toolbar-row">
             <div className="editor-toolbar-group" role="group" aria-label="字体">
                 <span className="editor-group-label" aria-hidden="true">文字</span>
                 <Tool label="段落标题"><RichTextHeading /></Tool>
@@ -229,14 +228,13 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                 <span className="editor-group-label" aria-hidden="true">编辑</span>
                 <Tool label="撤销"><RichTextUndo /></Tool>
                 <Tool label="重做"><RichTextRedo /></Tool>
+                <span className="editor-toolbar-divider" aria-hidden="true" />
                 <Tool label="格式刷"><RichTextFormatPainter /></Tool>
                 <Tool label="清除格式"><RichTextClear /></Tool>
                 <button type="button" className="editor-toolbar-btn" aria-label="查找替换" title="查找替换"
                     data-state={searchOpen ? 'on' : 'off'} aria-pressed={searchOpen}
                     onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
             </div>
-            </div>
-            <div className="editor-toolbar-row">
             <div className="editor-toolbar-group" role="group" aria-label="段落和列表">
                 <span className="editor-group-label" aria-hidden="true">段落</span>
                 {([['left', '左对齐', AlignLeft], ['center', '居中对齐', AlignCenter], ['right', '右对齐', AlignRight], ['justify', '两端对齐', AlignJustify]] as const)
@@ -244,6 +242,10 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                         aria-label={label} title={label} data-state={lists.align === value ? 'on' : 'off'} aria-pressed={lists.align === value}
                         onClick={() => editor.chain().focus().setTextAlign(value).run()}><AlignIcon size={18} /></button>)}
                 <Tool label="行距"><RichTextLineHeight /></Tool>
+                <button type="button" className="editor-toolbar-btn" aria-label="增加缩进" title="增加缩进 (Tab)"
+                    onClick={() => editor.chain().focus().indent().run()}><IndentIncrease size={18} /></button>
+                <button type="button" className="editor-toolbar-btn" aria-label="减少缩进" title="减少缩进 (Shift+Tab)"
+                    onClick={() => editor.chain().focus().outdent().run()}><IndentDecrease size={18} /></button>
                 <span className="editor-toolbar-divider" aria-hidden="true" />
                 <select className="editor-list-select" aria-label="项目符号样式" value={lists.bullet}
                     onChange={event => setListStyle('bulletList', event.target.value)}>
@@ -258,15 +260,12 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                     {lists.ordered && <option value="none">取消编号</option>}
                 </select>
                 <Tool label="待办列表"><RichTextTaskList /></Tool>
-                <button type="button" className="editor-toolbar-btn" aria-label="增加缩进" title="增加缩进 (Tab)"
-                    onClick={() => editor.chain().focus().indent().run()}><IndentIncrease size={18} /></button>
-                <button type="button" className="editor-toolbar-btn" aria-label="减少缩进" title="减少缩进 (Shift+Tab)"
-                    onClick={() => editor.chain().focus().outdent().run()}><IndentDecrease size={18} /></button>
             </div>
             <div className="editor-toolbar-group" role="group" aria-label="插入">
                 <span className="editor-group-label" aria-hidden="true">插入</span>
                 <Tool label="插入链接"><RichTextLink /></Tool>
                 <Tool label="插入图片"><RichTextImage /></Tool>
+                <span className="editor-toolbar-divider" aria-hidden="true" />
                 <span onKeyDownCapture={event => {
                     if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLButtonElement) {
                         event.preventDefault();
@@ -293,7 +292,6 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                         <Tool label="分隔线"><RichTextHorizontalRule /></Tool>
                     </div>
                 </details>
-            </div>
             </div>
             {(lists.table || lists.image) && <div className="editor-context-tools" role="group" aria-label="选中内容工具">
                 {lists.table && <>

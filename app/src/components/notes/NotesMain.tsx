@@ -41,46 +41,43 @@ export function NotesMain() {
     };
 
     return (
-        <div className="notes-main-root" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
-            {/* Header / Toolbar */}
-            <div className="notes-center-header">
-                <div className="notes-center-title">
-                    <Icon name="note" size={18} />
-                    <span className="notes-center-title-text">随记编辑器</span>
+        <div className="notes-main-root">
+            <section className="notes-document" aria-label="随记编辑区">
+                {/* Header / Toolbar */}
+                <div className="notes-center-header">
+                    <div className="notes-center-title">
+                        <Icon name="note" size={18} />
+                        <span className="notes-center-title-text">随记编辑器</span>
+                    </div>
+
+                    <div className="notes-center-actions">
+                        <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className="btn btn-light" aria-pressed={aiPanelOpen}
+                            aria-label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} title={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}>
+                            <PanelRight size={16} />
+                            <span>AI 助手</span>
+                        </button>
+                        <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light notes-settings-btn" aria-label="AI 设置" title="AI 设置">
+                            <Settings2 size={16} />
+                        </button>
+                    </div>
                 </div>
 
-                <div className="notes-center-actions">
-                    <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className="btn btn-light" aria-pressed={aiPanelOpen}
-                        aria-label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} title={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}>
-                        <PanelRight size={16} />
-                        <span>AI 助手</span>
-                    </button>
-                    <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light notes-settings-btn" aria-label="AI 设置" title="AI 设置">
-                        <Settings2 size={16} />
-                    </button>
-                </div>
-            </div>
+                <div id="editor-toolbar-portal" />
 
-            <div id="editor-toolbar-portal" />
-
-            {/* Main Content Area */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                {/* Editor or Recycle Bin */}
-                <main className="notes-center-editor" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, borderRight: aiPanelOpen ? '1px solid var(--border)' : 'none' }}>
+                <main className="notes-center-editor">
                     {noteViewMode === 'trash' ? (
                         <NotesRecycleBin />
                     ) : (
                         <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} />
                     )}
                 </main>
+            </section>
 
-                {/* AI Panel */}
-                {aiPanelOpen && (
-                    <aside className="notes-center-ai-panel" style={{ width: '320px', flexShrink: 0, background: 'var(--bg-secondary)', borderLeft: '1px solid var(--border)' }}>
-                        <AIAssistantPanel note={activeNote} />
-                    </aside>
-                )}
-            </div>
+            {aiPanelOpen && (
+                <aside className="notes-center-ai-panel" aria-label="AI 助手面板">
+                    <AIAssistantPanel note={activeNote} />
+                </aside>
+            )}
 
             {aiSettingsOpen && <AISettingsModal onClose={() => setAiSettingsOpen(false)} />}
         </div>

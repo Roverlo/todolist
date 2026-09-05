@@ -312,18 +312,34 @@ try {
     await page.getByLabel('更多插入工具', { exact: true }).press('Enter');
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.editor-more').evaluate(el => el.open), false);
-    for (const width of [1100, 1280, 1500]) {
+    for (const width of [1100, 1280, 1536, 1920]) {
         await page.setViewportSize({ width, height: 840 });
-        assert.ok(await page.locator('.editor-toolbar-row').evaluateAll(rows => rows.length === 2 && rows.every(row => row.getBoundingClientRect().height <= 34)),
-            `Formatting and paragraph rows must keep a stable layout at ${width}px`);
-        assert.ok(await page.getByRole('toolbar').evaluate(el => {
-            const bounds = el.getBoundingClientRect();
-            return [...el.querySelectorAll('button, select')].every(control => {
-                const rect = control.getBoundingClientRect();
-                if (!rect.width || !rect.height) return true;
-                return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
-            });
-        }), `Toolbar must fit the supported ${width}px desktop window`);
+        for (const panelOpen of [false, true]) {
+            const toggle = page.getByRole('button', { name: panelOpen ? '显示 AI 助手' : '隐藏 AI 助手', exact: true });
+            if (await toggle.isVisible()) await toggle.click();
+            assert.ok(await page.locator('.notes-main-root').evaluate(el =>
+                el.getBoundingClientRect().left >= document.querySelector('.sidebar').getBoundingClientRect().right),
+                'The navigation sidebar must not overlap the document workspace');
+            assert.ok(await page.getByRole('toolbar').evaluate(el => {
+                const bounds = el.getBoundingClientRect();
+                return [...el.querySelectorAll('button, select, summary')].every(control => {
+                    if (control.closest('details:not([open])') && control.tagName !== 'SUMMARY') return true;
+                    const rect = control.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return true;
+                    return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1
+                        && rect.top >= bounds.top && rect.bottom <= bounds.bottom;
+                });
+            }), `Toolbar controls must remain reachable at ${width}px with AI panel ${panelOpen}`);
+            if (panelOpen) {
+                assert.ok(await page.locator('.notes-main-root').evaluate(el => {
+                    const panel = el.querySelector('.notes-center-ai-panel').getBoundingClientRect();
+                    const document = el.querySelector('.notes-document').getBoundingClientRect();
+                    const toolbar = el.querySelector('[role="toolbar"]').getBoundingClientRect();
+                    return Math.abs(panel.top - document.top) < 1 && Math.abs(panel.left - toolbar.right) < 1;
+                }), 'AI panel must start at the top and formatting tools must stay inside the document column');
+            }
+            assert.equal(await body.locator('hr').count(), 1, 'Toggling the sidebar must preserve the editor content');
+        }
     }
     assert.deepEqual(errors, []);
     await page.setViewportSize({ width: 1280, height: 840 });

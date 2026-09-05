@@ -24,6 +24,18 @@
 
 /* ==================== 随记标题栏 ==================== */
 
+.notes-main-root { display: flex; height: 100%; width: 100%; overflow: hidden; background: var(--bg); }
+.notes-document { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; container: note-document / inline-size; }
+.notes-document .notes-center-editor { min-width: 0; min-height: 0; }
+.notes-main-root > .notes-center-ai-panel { border-left: 1px solid #e5e7eb; }
+.notes-main-root .ai-panel { border-left: 0; background: #fafbfc; }
+.notes-main-root .ai-panel-header { background: #fff; border-color: #e5e7eb; }
+.notes-main-root .ai-panel-empty { flex: 0; align-items: stretch; justify-content: flex-start; text-align: left; gap: 12px; padding: 4px 0 0; }
+.notes-main-root .ai-panel-empty > p:first-child { margin: 0; color: #344054; font-size: 14px; font-weight: 600; }
+.notes-main-root .ai-subtext { max-width: none; color: #667085; }
+.notes-main-root .ai-panel-generate-btn { justify-content: center; width: 100%; margin-top: 8px; border-radius: 6px; background: #7c3aed; box-shadow: none; }
+.notes-main-root .ai-panel-generate-btn:hover:not(:disabled) { background: #6d28d9; box-shadow: none; transform: none; }
+
 .notes-center-header {
   height: 48px;
   position: relative;
