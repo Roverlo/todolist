@@ -236,14 +236,14 @@ try {
         await dropdown.press('Home');
         await dropdown.press('ArrowDown');
         await dropdown.press('Enter');
-        assert.equal((await store()).filters.priority, 'high');
+        await until(async () => (await store()).filters.priority === 'high', 'Priority filter was not persisted');
         await dropdown.click();
         await dropdown.press('Escape');
         assert.equal(await page.getByRole('listbox').count(), 0);
         assert.equal(await page.getByRole('region', { name: '任务筛选' }).isVisible(), true);
         await page.getByLabel('截止日期起', { exact: true }).fill('2026-09-01');
         await page.getByRole('button', { name: '清空筛选', exact: true }).click();
-        assert.equal((await store()).filters.priority, 'all');
+        await until(async () => (await store()).filters.priority === 'all', 'Cleared filter was not persisted');
         assert.equal(await page.getByLabel('截止日期起', { exact: true }).inputValue(), '');
         await page.screenshot({ path: join(output, 'filters.png') });
         await page.getByRole('button', { name: '展开/收起筛选', exact: true }).click();
@@ -257,6 +257,7 @@ try {
     if (native) {
         const persisted = JSON.parse(await readFile(dataPath, 'utf8')).state;
         assert.equal(persisted.tasks.find(task => task.title === '确认后的接口联调').owners, '测试责任人', 'Owner must reach the native data file');
+        assert.equal(persisted.filters.priority, 'all', 'Cleared filters must reach the native data file');
     }
     console.log(`Passed: fixed ${before.height}px filter row, keyboard dropdowns, icons and thanks`);
     console.log('Annotation workflow checks passed (' + (native ? 'packaged native transport' : 'isolated browser') + ')');
