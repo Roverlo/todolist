@@ -146,6 +146,7 @@ try {
     assert.equal(saved.dueDate, '2026-09-09');
     assert.equal(saved.subtasks.length, 1, 'An empty subtask must not be saved');
     assert.equal(await panel.locator('.task-preview-card').count(), 1, 'Keep the unselected result');
+    assert.equal(await panel.getByRole('button', { name: '展开任务 1 详情', exact: true }).count(), 1, 'Keep the remaining card collapsed after a partial save');
     await page.getByRole('checkbox', { name: '选择任务 1', exact: true }).check();
     await panel.getByRole('button', { name: '加入待办（1）', exact: true }).click();
     await until(async () => (await store()).tasks.length === initialTasks + 2, 'Recurring task was not saved');

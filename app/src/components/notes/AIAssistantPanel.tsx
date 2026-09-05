@@ -81,7 +81,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
     const addRecurringTemplate = useAppStore((state) => state.addRecurringTemplate);
     const projects = useAppStore((state) => state.projects);
     const [loading, setLoading] = useState(false);
-    const [tasks, setTasks] = useState<AIGeneratedTask[]>([]);
+    const [tasks, setTasks] = useState<(AIGeneratedTask & { previewId: string })[]>([]);
     const [error, setError] = useState<string | null>(null);
     const activeProviderConfig = aiSettings?.providers.find(provider => provider.id === aiSettings.activeProviderId);
     const hasAIConfig = Boolean(
@@ -162,7 +162,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
             ].join('\n');
             const response = await provider.generateJson<unknown>(SYSTEM_PROMPT_TASK_EXTRACTION, userPrompt, controller.signal);
             if (controller.signal.aborted || request.current !== controller) return;
-            setTasks(parseGeneratedTasks(response).map(task => ({ ...task, selected: true, projectId: matchProjectId(task.suggestedProject) })));
+            setTasks(parseGeneratedTasks(response).map(task => ({ ...task, previewId: nanoid(8), selected: true, projectId: matchProjectId(task.suggestedProject) })));
             setGeneratedFrom(plainText);
             setHasGenerated(true);
         } catch (error) {
@@ -365,7 +365,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
                         <span>可直接修改</span>
                     </div>
                     <div className="ai-tasks-list">
-                        {tasks.map((task, index) => <TaskPreviewCard key={index} task={task} index={index} projects={availableProjects}
+                        {tasks.map((task, index) => <TaskPreviewCard key={task.previewId} task={task} index={index} projects={availableProjects}
                             onToggle={handleToggleTask} onUpdate={handleUpdateTask} />)}
                     </div>
                 </>}
