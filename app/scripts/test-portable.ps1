@@ -17,7 +17,7 @@ if ($EditorWorkflow) {
 New-Item -ItemType Directory -Path $dataRoot | Out-Null
 $dataPath = Join-Path $dataRoot 'data.json'
 $sample = @{ version = 12; state = @{ activeView = 'notes'; selectedNoteId = 'portable-check'; notes = @(@{
-    id = 'portable-check'; title = 'Portable editor check'; content = '<p>Packaged editor</p>'; date = '2026-09-06'; tags = @(); createdAt = 1788624000000; updatedAt = 1788624000000
+    id = 'portable-check'; title = ''; content = '<p>Packaged editor</p>'; date = '2026-09-06'; tags = @(); createdAt = 1788624000000; updatedAt = 1788624000000
 }) } } | ConvertTo-Json -Depth 8 -Compress
 [IO.File]::WriteAllText($dataPath, $sample)
 $sampleHash = (Get-FileHash -LiteralPath $dataPath -Algorithm SHA256).Hash

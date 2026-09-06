@@ -77,13 +77,20 @@ try {
     if (await reminder.isVisible()) await reminder.click();
     if (!await page.getByRole('textbox', { name: '随记正文', exact: true }).isVisible()) {
         await page.getByTitle('切换到随记中心', { exact: true }).click();
+        assert.equal(await page.locator('.ai-source-note strong').innerText(), '尚未选择随记');
         await page.getByRole('button', { name: '创建新随记' }).click();
     }
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     const panel = page.getByRole('complementary', { name: 'AI 助手面板' });
     await body.waitFor();
-    await page.getByPlaceholder('标题（可选）').fill('批注回归验证');
     await body.fill('刚输入：周三完成接口联调，每周日整理周报。');
+    for (const title of ['', '   ', '批注回归验证', '']) {
+        await page.getByPlaceholder('标题（可选）').fill(title);
+        await until(async () => await panel.locator('.ai-source-note strong').innerText() === (title.trim() || '未命名随记'),
+            'A selected note without a title must remain selected; its label must follow the current draft');
+    }
+    assert.equal(await panel.locator('.ai-panel-generate-btn').isEnabled(), true, 'Untitled notes with content can generate tasks');
+    await page.screenshot({ path: join(output, 'ai-untitled-note.png') });
     assert.equal(await page.getByRole('button', { name: '隐藏 AI 助手', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).locator('svg.lucide-settings').count(), 1);
     assert.match(await page.getByRole('button', { name: '隐藏 AI 助手', exact: true }).innerText(), /AI助手：一键生成待办事项/);
@@ -116,6 +123,7 @@ try {
     await until(() => requests.length === 1, 'Generation did not start immediately');
     assert.ok(requests[0].at - clickedAt < 1800, 'No artificial wait before the request');
     const prompt = requests[0].body.messages.at(-1).content;
+    assert.match(prompt, /笔记标题：无标题/);
     assert.match(prompt, /最新输入：周三完成接口联调/);
     assert.doesNotMatch(prompt, /<p>|data:image/);
     await panel.getByRole('button', { name: '取消生成', exact: true }).click();

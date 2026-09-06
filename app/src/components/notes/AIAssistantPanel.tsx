@@ -337,7 +337,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
                 <div className="ai-intro">
                     <h3>从当前随记生成待办</h3>
                     <p>识别任务、截止日期和负责人，确认后加入待办。</p>
-                    <div className="ai-source-note"><span>当前随记</span><strong>{note?.title || '尚未选择随记'}</strong></div>
+                    <div className="ai-source-note"><span>当前随记</span><strong>{note ? note.title?.trim() || '未命名随记' : '尚未选择随记'}</strong></div>
                     <div className="ai-model-line"><span>生成模型</span><span>{hasAIConfig ? activeProviderConfig?.model : '尚未配置'}</span></div>
                     <button className="ai-panel-generate-btn" type="button" disabled={loading || !plainText}
                         onClick={() => void handleGenerate()}>
