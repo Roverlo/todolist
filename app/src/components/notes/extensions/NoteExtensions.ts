@@ -124,7 +124,11 @@ export const noteExtensions = [
     NoteIndent,
     LineHeight.configure({ lineHeights: ['Default', '1', '1.25', '1.5', '1.75', '2', '2.5', '3'] }),
     ListStyles,
-    TaskList.configure({ taskItem: { nested: true } }),
+    TaskList.configure({ taskItem: {
+        nested: true,
+        HTMLAttributes: { 'data-type': 'taskItem' },
+        a11y: { checkboxLabel: node => `${node.attrs.checked ? '标记为未完成' : '标记为已完成'}：${node.firstChild?.textContent || '待办'}` },
+    } }),
     Link.configure({ openOnClick: false }),
     Image.extend<IImageOptions & { allowBase64: boolean }>({
         addProseMirrorPlugins() {

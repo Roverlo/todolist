@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
-import { ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, MoreHorizontal, Link, ImagePlus, FolderOpen, type LucideIcon } from 'lucide-react';
+import { ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, MoreHorizontal, Link, ImagePlus, FolderOpen, ListTodo, type LucideIcon } from 'lucide-react';
 import { RichTextBold } from 'reactjs-tiptap-editor/bold';
 import { RichTextItalic } from 'reactjs-tiptap-editor/italic';
 import { RichTextUnderline } from 'reactjs-tiptap-editor/textunderline';
 import { RichTextStrike } from 'reactjs-tiptap-editor/strike';
 import { RichTextFormatPainter } from 'reactjs-tiptap-editor/formatpainter';
-import { RichTextTaskList } from 'reactjs-tiptap-editor/tasklist';
 import { RichTextTable } from 'reactjs-tiptap-editor/table';
 import { RichTextClear } from 'reactjs-tiptap-editor/clear';
 import { RichTextUndo, RichTextRedo } from 'reactjs-tiptap-editor/history';
@@ -164,6 +163,7 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
         selector: ({ editor }) => ({
             bullet: editor.isActive('bulletList') ? editor.getAttributes('bulletList').listStyle || 'disc' : '',
             ordered: editor.isActive('orderedList') ? editor.getAttributes('orderedList').listStyle || 'decimal' : '',
+            task: editor.isActive('taskList'),
             table: editor.isActive('table'),
             canMerge: editor.can().mergeCells(),
             canSplit: editor.can().splitCell(),
@@ -270,7 +270,9 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                     <CustomSelect className="editor-list-select" aria-label="编号样式" value={lists.ordered} placeholder="编号样式"
                         options={[...NUMBER_STYLES.map(([value, label]) => ({ value, label })), ...(lists.ordered ? [{ value: 'none', label: '取消编号' }] : [])]}
                         onChange={value => setListStyle('orderedList', value)} />
-                    <Tool label="待办列表"><RichTextTaskList /></Tool>
+                    <button type="button" className="editor-toolbar-btn editor-todo-btn" aria-label="待办列表"
+                        title="待办：回车新增一项，空行回车结束" data-state={lists.task ? 'on' : 'off'} aria-pressed={lists.task}
+                        onClick={() => editor.chain().focus().toggleTaskList().run()}><ListTodo size={17} aria-hidden="true" /><span>待办</span></button>
                 </div>
                 <div className="editor-toolbar-group" role="group" aria-label="插入">
                     <button type="button" className="editor-toolbar-btn" aria-label="插入链接" title="插入链接" onClick={() => setInsertDialog('link')}><Link size={18} /></button>

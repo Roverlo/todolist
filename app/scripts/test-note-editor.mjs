@@ -118,6 +118,54 @@ try {
     assert.ok(await body.locator('input[type="checkbox"]').first().isChecked());
     console.log('Passed: 10 list styles, nested Tab/buttons, checkbox save/reload');
 
+    const tasksBeforeChecklist = await page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.tasks);
+    const checklistId = await openNote('<p></p>', '随记待办清单');
+    const checklistButton = page.getByRole('button', { name: '待办列表', exact: true });
+    assert.equal((await checklistButton.innerText()).trim(), '待办', 'The checklist entry must have a visible label');
+    await checklistButton.click();
+    const items = body.locator('li[data-type="taskItem"]');
+    assert.equal(await checklistButton.getAttribute('aria-pressed'), 'true');
+    assert.equal(await items.first().locator('p').evaluate(el => getComputedStyle(el, '::before').content), '"输入待办，回车继续添加"');
+    await page.keyboard.insertText('整理会议纪要');
+    assert.equal(await items.first().locator('p').evaluate(el => getComputedStyle(el, '::before').content), 'none', 'The hint must disappear after typing');
+    await body.press('Enter');
+    await page.keyboard.insertText('发送评审材料');
+    assert.equal(await items.count(), 2, 'Enter must continue the checklist');
+    await body.getByRole('checkbox', { name: '标记为已完成：整理会议纪要', exact: true }).check();
+    assert.equal(await items.first().locator('p').evaluate(el => getComputedStyle(el).color), 'rgb(107, 114, 128)');
+    assert.notEqual(await items.nth(1).locator('p').evaluate(el => getComputedStyle(el).color), 'rgb(107, 114, 128)');
+    await page.waitForFunction(id => JSON.parse(localStorage.getItem('project-todo-app')).state.notes
+        .find(note => note.id === id)?.content.includes('data-checked="true"'), checklistId);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await body.waitFor();
+    assert.ok(await items.first().getByRole('checkbox').isChecked(), 'Autosave must preserve completion');
+    await items.nth(1).getByRole('checkbox').check();
+    // Let the checkbox's scheduled focus finish before moving the caret for typing.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await items.nth(1).locator('p').click();
+    await body.press('Control+End');
+    await body.press('Enter');
+    assert.equal(await items.nth(2).getAttribute('data-checked'), 'false', 'New items must start unchecked even after a completed item');
+    await page.keyboard.insertText('下次会议安排');
+    await body.press('Tab');
+    assert.equal(await body.locator('ul ul li').count(), 1);
+    assert.notEqual(await items.nth(2).locator('p').evaluate(el => getComputedStyle(el).color), 'rgb(107, 114, 128)',
+        'Completing a parent must not gray an unchecked child');
+    await body.press('Shift+Tab');
+    await body.press('Enter');
+    await body.press('Enter');
+    await page.keyboard.insertText('普通补充说明');
+    assert.equal(await items.count(), 3, 'Enter on an empty item must end the checklist');
+    assert.equal(await body.locator(':scope > p').last().innerText(), '普通补充说明');
+    await body.getByRole('checkbox', { name: '标记为未完成：整理会议纪要', exact: true }).uncheck();
+    await saveAndReload();
+    assert.notEqual(await items.first().locator('p').evaluate(el => getComputedStyle(el).color), 'rgb(107, 114, 128)');
+    assert.deepEqual(await items.evaluateAll(nodes => nodes.map(node => node.dataset.checked)), ['false', 'true', 'false']);
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.tasks), tasksBeforeChecklist,
+        'Note checklists must not create or alter task-board records');
+    await page.screenshot({ path: 'ui-check.local/note-checklist.png' });
+    console.log('Passed: checklist entry, Enter, completion/reopen, nested states, autosave/reload and task-board isolation');
+
     await openNote('<p>排版文字</p>', '排版工具');
     await body.press('Control+A');
     await choose('正文字体', { label: '宋体' });
