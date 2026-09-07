@@ -295,6 +295,51 @@ try {
     assert.equal((await body.innerText()).trim(), '', 'Previous draft must not leak into the new note');
     console.log('Passed: search/replace, undo/redo, immediate navigation flush');
 
+    // Legacy tables can have only some columns sized; shrinking must not stretch the remaining column.
+    await page.setViewportSize({ width: 1538, height: 840 });
+    await openNote('<table style="width: 100%; min-width: 744px"><tbody>'
+        + '<tr><td><p></p></td><td colwidth="243"><p>会议记录</p></td><td colwidth="196"><p></p></td><td colwidth="280"><p></p></td></tr>'
+        + '<tr><td><p></p></td><td colwidth="243"><p>保留表格内容</p></td><td colwidth="196"><p></p></td><td colwidth="280"><p></p></td></tr>'
+        + '</tbody></table>', '表格横向缩放');
+    const hideAssistant = page.getByRole('button', { name: '隐藏 AI 助手', exact: true });
+    if (await hideAssistant.isVisible()) await hideAssistant.click();
+    const resizeTable = body.locator('table');
+    const dragColumn = async (column, delta) => {
+        const cell = await resizeTable.locator('tr').first().locator('td').nth(column).boundingBox();
+        const x = cell.x + cell.width - 2;
+        const y = cell.y + cell.height / 2;
+        await page.mouse.move(x, y);
+        await body.locator('.column-resize-handle').first().waitFor();
+        await page.mouse.down();
+        await page.mouse.move(x + delta, y, { steps: 8 });
+        await page.mouse.up();
+    };
+    const beforeResize = await resizeTable.boundingBox();
+    await dragColumn(3, -120);
+    assert.equal(await resizeTable.locator('tr').first().locator('td').last().getAttribute('colwidth'), '160');
+    const afterResize = await resizeTable.boundingBox();
+    assert.ok(beforeResize.width - afterResize.width >= 100, 'Dragging the right border left must shrink the whole table, not redistribute its width');
+    assert.equal(afterResize.x, beforeResize.x, 'Resizing must keep the left edge in place');
+    await page.getByRole('button', { name: '撤销', exact: true }).click();
+    assert.equal(await resizeTable.locator('tr').first().locator('td').last().getAttribute('colwidth'), '280');
+    await page.getByRole('button', { name: '重做', exact: true }).click();
+    assert.ok(Math.abs((await resizeTable.boundingBox()).width - afterResize.width) < 2);
+    await dragColumn(1, 40);
+    assert.equal(await resizeTable.locator('tr').first().locator('td').nth(1).getAttribute('colwidth'), '283', 'Internal column borders must remain resizable');
+    const savedWidth = (await resizeTable.boundingBox()).width;
+    await saveAndReload();
+    if (await hideAssistant.isVisible()) await hideAssistant.click();
+    assert.ok(Math.abs((await resizeTable.boundingBox()).width - savedWidth) < 2, 'Saved table widths must survive reload');
+    assert.equal(await resizeTable.locator('tr').count(), 2);
+    assert.equal(await resizeTable.getByText('保留表格内容', { exact: true }).count(), 1);
+    const tableDownload = page.waitForEvent('download');
+    await page.getByTitle('导出为 HTML', { exact: true }).click();
+    const tableHTML = await readFile(await (await tableDownload).path(), 'utf8');
+    assert.equal(await page.evaluate(html => new DOMParser().parseFromString(html, 'text/html').querySelector('table').style.width === '100%', tableHTML), false,
+        'Exported tables must not regain forced full width');
+    console.log(`Passed: right-edge table shrink (${Math.round(beforeResize.width)} to ${Math.round(afterResize.width)}px), column resizing, undo/redo, reload and export`);
+    await page.setViewportSize({ width: 1280, height: 840 });
+
     await openNote('<p>表格操作示例</p>', '表格编辑');
     await body.press('Control+End');
     await body.press('Enter');

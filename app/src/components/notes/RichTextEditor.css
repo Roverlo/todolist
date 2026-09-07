@@ -165,6 +165,8 @@ div[data-richtext-portal] { z-index: 1200; }
 .note-editor .ProseMirror hr { border: 0; border-top: 1px solid #d1d5db; margin: 1.5em 0; }
 .note-editor .ProseMirror img { max-width: 100%; height: auto; }
 .note-editor .ProseMirror table { border-collapse: collapse; table-layout: fixed; margin: 1em 0; }
+/* Respect resizable column widths instead of the library's full-width table rule. */
+.note-editor .ProseMirror.ProseMirror.ProseMirror .tableWrapper table { width: auto; }
 .note-editor .ProseMirror :is(td,th) { position: relative; min-width: 60px; border: 1px solid #cbd5e1; padding: 6px 8px; vertical-align: top; }
 .note-editor .ProseMirror th { font-weight: 600; background: #f5f3ff; }
 .note-editor .ProseMirror .tableWrapper { overflow-x: auto; }

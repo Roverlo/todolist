@@ -181,7 +181,7 @@ export const noteExtensions = [
         upload: readNoteImage,
         onError: error => useToastStore.getState().addToast(error.message, 'error'),
     }),
-    Table.configure({ resizable: true }),
+    Table.configure({ resizable: true, HTMLAttributes: { style: 'border: 1px solid #000; border-collapse: collapse;' } }),
     SearchAndReplace.configure({ disableRegex: true }),
     Clear, History, Blockquote, Code, CodeBlock.configure({ enableTabIndentation: true }), HorizontalRule,
 ];
