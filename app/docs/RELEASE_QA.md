@@ -63,6 +63,7 @@ node scripts/test-ai-compat.mjs
 npm run test:notes
 node scripts/test-progress-save.mjs
 node scripts/test-backup.mjs
+node scripts/test-task-workflow.mjs
 node scripts/test-ui-regressions.mjs
 node scripts/test-note-workflow.mjs
 ./scripts/test-portable.ps1 -Executable '<交付 EXE 绝对路径>' -EditorWorkflow

@@ -553,8 +553,8 @@ export const useAppStore = create<AppStore>()(
           notes: rest.notes,
           dependencies: rest.dependencies ?? [],
           attachments: rest.attachments ?? [],
-          history: [],
-          progress: [],
+          history: Array.isArray(rest.history) ? rest.history : [],
+          progress: Array.isArray(rest.progress) ? rest.progress : [],
           subtasks: rest.subtasks ?? [],
           extras: rest.extras ?? {},
         };
