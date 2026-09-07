@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { LoaderCircle, Settings, ArrowRight } from 'lucide-react';
+import { LoaderCircle, ArrowRight } from 'lucide-react';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
 import { Icon } from '../ui/Icon';
@@ -329,10 +329,6 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
 
     return (
         <div className="ai-panel">
-            <div className="ai-panel-header">
-                <div className="ai-panel-title">待办生成</div>
-                <button type="button" className="ai-panel-settings-btn" aria-label="配置生成接口" title="配置生成接口" onClick={() => setSettingsOpen(true)}><Settings size={16} /></button>
-            </div>
             <div className="ai-panel-body">
                 <div className="ai-intro">
                     <h3>从当前随记生成待办</h3>

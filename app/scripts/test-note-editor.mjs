@@ -316,11 +316,25 @@ try {
     await page.getByLabel('更多插入工具', { exact: true }).press('Enter');
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.editor-more').evaluate(el => el.open), false);
-    for (const width of [1100, 1280, 1536, 1920]) {
+    await body.press('Control+End');
+    await page.getByRole('button', { name: '插入表格', exact: true }).press('Enter');
+    await body.locator('table').waitFor();
+    assert.equal(await page.locator('.ai-panel-header').count(), 0, 'Do not add a second title bar for the assistant');
+    for (const width of [1100, 1186, 1280, 1536, 1920]) {
         await page.setViewportSize({ width, height: 840 });
-        for (const panelOpen of [false, true]) {
+        let closedLayout;
+        for (const panelOpen of [false, true, false]) {
             const toggle = page.getByRole('button', { name: panelOpen ? '显示 AI 助手' : '隐藏 AI 助手', exact: true });
             if (await toggle.isVisible()) await toggle.click();
+            const layout = await page.locator('.notes-main-root').evaluate(el => ({
+                topBars: ['.notes-center-header', '.notes-center-actions', '#editor-toolbar-portal'].map(selector => {
+                    const rect = el.querySelector(selector).getBoundingClientRect();
+                    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+                }),
+                titleTop: el.querySelector('.note-editor-title').getBoundingClientRect().top,
+            }));
+            closedLayout ??= layout;
+            assert.deepEqual(layout, closedLayout, `Header, toolbar and note top must not jump when toggling AI at ${width}px`);
             assert.ok(await page.locator('.notes-main-root').evaluate(el =>
                 el.getBoundingClientRect().left >= document.querySelector('.sidebar').getBoundingClientRect().right),
                 'The navigation sidebar must not overlap the document workspace');
@@ -339,10 +353,13 @@ try {
                     const panel = el.querySelector('.notes-center-ai-panel').getBoundingClientRect();
                     const document = el.querySelector('.notes-document').getBoundingClientRect();
                     const toolbar = el.querySelector('[role="toolbar"]').getBoundingClientRect();
-                    return Math.abs(panel.top - document.top) < 1 && Math.abs(panel.left - toolbar.right) < 1;
-                }), 'AI panel must start at the top and formatting tools must stay inside the document column');
+                    return Math.abs(panel.top - document.top) < 1 && Math.abs(panel.top - toolbar.bottom) < 1
+                        && Math.abs(panel.right - toolbar.right) < 1;
+                }), 'AI panel and document must start below the full-width toolbar');
             }
             assert.equal(await body.locator('hr').count(), 1, 'Toggling the sidebar must preserve the editor content');
+            assert.equal(await body.locator('table').count(), 1, 'Toggling the sidebar must preserve the table');
+            if (width === 1186) await page.screenshot({ path: `ui-check.local/ai-layout-${panelOpen ? 'open' : 'closed'}.png` });
         }
     }
     assert.deepEqual(errors, []);
