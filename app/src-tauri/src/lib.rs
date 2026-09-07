@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::net::TcpStream;
 use std::io::{Read, Write};
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 use tauri_plugin_log::Builder as LogBuilder;
 use ssh2::Session;
 
@@ -366,6 +366,14 @@ fn ssh_download(host: String, port: u16, username: String, password: String, rem
     }
 }
 
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // 动态查找 webview2 目录下的任意版本运行时
@@ -391,7 +399,13 @@ pub fn run() {
         }
     }
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+        show_main_window(app);
+    }));
+
+    builder
         .plugin(tauri_plugin_process::init())
         .plugin(LogBuilder::default().level(log::LevelFilter::Info).build())
         .plugin(tauri_plugin_dialog::init())
@@ -423,12 +437,7 @@ pub fn run() {
                 .menu(&menu)
                 .tooltip("ProjectTodo - 任务管理")
                 .on_menu_event(|app_handle, event| match event.id().as_ref() {
-                    "show" => {
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
+                    "show" => show_main_window(app_handle),
                     "quit" => {
                         app_handle.exit(0);
                     }
@@ -441,10 +450,7 @@ pub fn run() {
                         ..
                     } = event
                     {
-                        if let Some(window) = tray.app_handle().get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
+                        show_main_window(tray.app_handle());
                     }
                 })
                 .build(app)?;
@@ -458,19 +464,6 @@ pub fn run() {
             }
             log::info!("Tauri app setup complete");
             Ok(())
-        })
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                log::info!("[CloseHandler] CloseRequested event received!");
-                // 阻止默认关闭行为
-                api.prevent_close();
-                // 发送事件到前端，让前端显示确认弹窗
-                log::info!("[CloseHandler] Emitting close-requested event to frontend");
-                match window.emit("close-requested", ()) {
-                    Ok(_) => log::info!("[CloseHandler] Event emitted successfully"),
-                    Err(e) => log::error!("[CloseHandler] Failed to emit event: {:?}", e),
-                }
-            }
         })
         .invoke_handler(tauri::generate_handler![
             frontend_log, load_data, save_data, get_data_directory, open_data_directory,

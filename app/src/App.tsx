@@ -30,7 +30,7 @@ import { DueReminderModal } from './components/ui/DueReminderModal';
 import { StatsCard } from './components/ui/StatsCard';
 import { CloseConfirmModal } from './components/ui/CloseConfirmModal';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen } from '@tauri-apps/api/event';
+import { isTauri } from '@tauri-apps/api/core';
 import { exit } from '@tauri-apps/plugin-process';
 import { Search, ListFilter, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -88,39 +88,33 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [colorScheme]);
 
-  // 窗口关闭事件拦截 - 监听来自 Rust 的 close-requested 事件
+  // Register only after the frontend is ready; an uninitialized window must remain closable.
   useEffect(() => {
-    console.log('[CloseHandler] Setting up close event listener...');
+    if (!isTauri()) return;
+    let disposed = false;
     let unlisten: (() => void) | undefined;
-
-    const setup = async () => {
-      const appWindow = getCurrentWindow();
-      console.log('[CloseHandler] Listening for close-requested event');
-
-      unlisten = await listen('close-requested', async () => {
-        console.log('[CloseHandler] Received close-requested event!');
-        // 检查是否有保存的偏好
+    const appWindow = getCurrentWindow();
+    void appWindow.onCloseRequested(async event => {
+      event.preventDefault();
+      try {
         const savedChoice = localStorage.getItem('closeAction');
-        console.log('[CloseHandler] savedChoice:', savedChoice);
-
         if (savedChoice === 'minimize') {
-          console.log('[CloseHandler] Hiding window');
           await appWindow.hide();
         } else if (savedChoice === 'exit') {
-          console.log('[CloseHandler] Exiting application');
           await exit(0);
         } else {
-          console.log('[CloseHandler] Showing modal');
           setCloseConfirmOpen(true);
         }
-      });
-      console.log('[CloseHandler] Listener registered');
-    };
-
-    setup().catch(err => console.error('[CloseHandler] Setup error:', err));
-
+      } catch (error) {
+        console.error('关闭操作失败:', error);
+        setCloseConfirmOpen(true);
+      }
+    }).then(stop => {
+      if (disposed) stop();
+      else unlisten = stop;
+    }).catch(error => console.error('关闭事件注册失败:', error));
     return () => {
-      console.log('[CloseHandler] Cleaning up listener');
+      disposed = true;
       unlisten?.();
     };
   }, []);

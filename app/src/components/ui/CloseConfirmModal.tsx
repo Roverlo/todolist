@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { exit } from '@tauri-apps/plugin-process';
+import { useToastStore } from '../../state/toastStore';
 
 interface CloseConfirmModalProps {
     open: boolean;
@@ -27,11 +28,12 @@ export const CloseConfirmModal = ({ open, onClose }: CloseConfirmModalProps) => 
             } else {
                 await exit(0);
             }
+            onClose();
         } catch (err) {
             console.error('关闭操作失败:', err);
+            useToastStore.getState().addToast('关闭失败，请重试或从托盘菜单退出程序', 'error');
         } finally {
             setIsProcessing(false);
-            onClose();
         }
     };
 
