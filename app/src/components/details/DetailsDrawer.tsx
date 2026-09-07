@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useLayoutEffect, useCallback } from 'react';
 import dayjs from 'dayjs';
 import { useAppStoreShallow } from '../../state/appStore';
+import { useToastStore } from '../../state/toastStore';
 import type { Priority, ProgressEntry, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
 import { SubtaskList } from '../ui/SubtaskList';
@@ -83,15 +84,19 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
       const sorted = [...(task.progress ?? [])].sort((a, b) => a.at - b.at);
       setProgress(sorted);
       setSubtasks(task.subtasks ?? []);
-      setProgressNote('');
-      setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
-      setEditingProgressId(null);
 
       resize(notesRef.current);
       resize(nextRef.current);
       resize(progressRef.current);
     }
   }, [task]);
+
+  // A task update (including field autosave) must not discard pending progress.
+  useEffect(() => {
+    setProgressNote('');
+    setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
+    setEditingProgressId(null);
+  }, [task?.id]);
 
   // 防抖自动保存函数 - 必须在 early return 之前定义
   const debouncedSave = useCallback(() => {
@@ -180,32 +185,44 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
     }
   };
 
-  const handleAddOrUpdateProgress = () => {
-    if (!progressNote.trim()) return;
+  const handleSave = () => {
+    if (!title.trim()) return;
+    const pendingNote = progressNote.trim();
     const at = dayjs(progressTime).valueOf();
-    const nextList: ProgressEntry[] = editingProgressId
+    if (pendingNote && !Number.isFinite(at)) {
+      useToastStore.getState().addToast('请填写有效的进展记录时间', 'error');
+      return;
+    }
+    const nextList: ProgressEntry[] = !pendingNote ? progress : editingProgressId
       ? progress
-        .map((p): ProgressEntry => (p.id === editingProgressId ? { ...p, note: progressNote.trim(), at } : p))
+        .map((p): ProgressEntry => (p.id === editingProgressId ? { ...p, note: pendingNote, at } : p))
         .sort((a, b) => a.at - b.at)
-      : [...progress, { id: `${Date.now()}`, at, status: 'doing' as const, note: progressNote.trim() }].sort(
+      : [...progress, { id: `${Date.now()}`, at, status: 'doing' as const, note: pendingNote }].sort(
         (a, b) => a.at - b.at,
       );
 
-    setProgress(nextList);
-    setEditingProgressId(null);
-    setProgressNote('');
-    setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
-
-    // 立即持久化到 store，但不关闭抽屉，方便继续填写
-    updateTask(task!.id, {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    setSaveStatus('saving');
+    // Save fields and pending progress together, then clear only the submitted draft.
+    updateTask(task.id, {
+      title: title.trim(),
+      projectId,
       status,
       priority,
       dueDate: dueDate || undefined,
       owners: owners || undefined,
       notes,
       nextStep,
-      progress: nextList,
+      ...(pendingNote ? { progress: nextList } : {}),
     });
+    if (pendingNote) {
+      setProgress(nextList);
+      setEditingProgressId(null);
+      setProgressNote('');
+      setProgressTime(dayjs().format('YYYY-MM-DDTHH:mm'));
+    }
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
   };
 
   const handleDeleteProgress = (id: string) => {
@@ -498,7 +515,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
                 />
               </div>
               <div className='footer-actions' style={{ justifyContent: 'flex-end', marginBottom: 10 }}>
-                <button className='btn btn-primary-outline' type='button' onClick={handleAddOrUpdateProgress}>
+                <button className='btn btn-primary-outline' type='button' onClick={() => { if (progressNote.trim()) handleSave(); }}>
                   {editingProgressId ? '更新进展' : '添加该进展到记录'}
                 </button>
               </div>
@@ -554,22 +571,7 @@ export const DetailsDrawer = ({ open, taskId, onClose }: DetailsDrawerProps) => 
             )}
           </div>
           <div className='footer-actions'>
-            <button className='btn btn-primary' type='button' onClick={() => {
-              if (!task || !title.trim()) return;
-              setSaveStatus('saving');
-              updateTask(task.id, {
-                title: title.trim(),
-                projectId,
-                status,
-                priority,
-                dueDate: dueDate || undefined,
-                owners: owners || undefined,
-                notes,
-                nextStep,
-              });
-              setSaveStatus('saved');
-              setTimeout(() => setSaveStatus('idle'), 3000);
-            }}>
+            <button className='btn btn-primary' type='button' onClick={handleSave}>
               保存
             </button>
           </div>
