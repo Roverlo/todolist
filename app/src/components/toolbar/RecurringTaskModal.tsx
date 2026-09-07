@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
 import { useAppStoreShallow } from '../../state/appStore';
 import type { Priority, RecurringTemplate, Status, Subtask } from '../../types';
 import { CustomSelect } from '../ui/CustomSelect';
 import { SubtaskList } from '../ui/SubtaskList';
 import { mergeOwners } from '../../utils/taskUtils';
+import { recurringPeriodStart, upcomingRecurringDate } from '../../utils/recurring';
 
 const WEEK_OPTIONS = [
   { value: '1', label: '周一' },
@@ -67,7 +67,7 @@ export const RecurringTaskModal = ({ open, onClose, editingTemplate }: Recurring
     // 编辑模式：加载现有模板
     if (editingTemplate) {
       setTpl({ ...editingTemplate });
-      setAutoRenew(true);
+      setAutoRenew(editingTemplate.active);
       setSubtasks(editingTemplate.subtasks ?? []);
       setIsSubtasksExpanded(true);
       setError('');
@@ -132,6 +132,7 @@ export const RecurringTaskModal = ({ open, onClose, editingTemplate }: Recurring
       const finalOwners = subtasks.length > 0 ? mergeOwners(tpl.owners, subtasks) : tpl.owners;
       updateRecurringTemplate(editingTemplate.id, {
         ...tpl,
+        active: autoRenew,
         owners: finalOwners,
         subtasks: subtasks.length > 0 ? subtasks : undefined,
       });
@@ -140,44 +141,22 @@ export const RecurringTaskModal = ({ open, onClose, editingTemplate }: Recurring
     }
 
     // 新建模式：创建任务和模板
-    const now = dayjs();
-    const startOfWeek = now.subtract((now.day() + 6) % 7, 'day');
-    const startOfMonth = now.startOf('month');
-    const endOfMonth = now.endOf('month');
-    let dateStr = '';
-
-    if (tpl.schedule.type === 'daily') {
-      // 每日任务：截止日期就是今天
-      dateStr = now.format('YYYY-MM-DD');
-    } else if (tpl.schedule.type === 'weekly') {
-      const weekday = (tpl.schedule.daysOfWeek ?? [1])[0];
-      let target = startOfWeek.add((weekday + 7) % 7, 'day');
-      if (target.isBefore(now.startOf('day'))) target = target.add(7, 'day');
-      dateStr = target.format('YYYY-MM-DD');
-    } else {
-      const dom = tpl.schedule.dayOfMonth ?? 1;
-      let target = startOfMonth.date(Math.min(dom, endOfMonth.date()));
-      if (target.isBefore(now.startOf('day'))) {
-        const nextStart = startOfMonth.add(1, 'month');
-        const nextEnd = nextStart.endOf('month');
-        target = nextStart.date(Math.min(dom, nextEnd.date()));
-      }
-      dateStr = target.format('YYYY-MM-DD');
-    }
+    const date = upcomingRecurringDate(tpl.schedule);
+    const dateStr = date.format('YYYY-MM-DD');
 
     // 在生成任务时合并子任务责任人
     const finalOwners = subtasks.length > 0 ? mergeOwners(tpl.owners, subtasks) : tpl.owners;
 
     // 生成模板 ID 并保存模板
     const templateId = nanoid(12);
-    const periodKey = tpl.schedule.type === 'weekly'
-      ? startOfWeek.format('YYYY-MM-DD')
-      : startOfMonth.format('YYYY-MM');
+    const periodKey = recurringPeriodStart(date, tpl.schedule.type)
+      .format(tpl.schedule.type === 'monthly' ? 'YYYY-MM' : 'YYYY-MM-DD');
 
     // 保存周期任务模板
     addRecurringTemplate({
       ...tpl,
       id: templateId,
+      active: autoRenew,
       owners: finalOwners,
       subtasks: subtasks.length > 0 ? subtasks : undefined,
     });

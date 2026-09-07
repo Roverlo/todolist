@@ -27,6 +27,7 @@ import type {
 } from '../types';
 import { toCustomAISettings } from '../services/aiConfig';
 import { getNoteDate, isNoteDate } from '../utils/noteDate';
+import { nextRecurringTask } from '../utils/recurring';
 
 const CORE_COLUMNS = [
   'project',
@@ -572,10 +573,14 @@ export const useAppStore = create<AppStore>()(
           Object.assign(task, updates);
           task.updatedAt = Date.now();
           rebuildDictionary(state);
+          if (prevStatus !== 'done' && updates.status === 'done') {
+            const next = nextRecurringTask(task, state.recurringTemplates, state.tasks);
+            if (next) state.tasks.push(next);
+          }
           const recurringRaw = (task.extras?.recurring ?? '') as string;
           let recurring: { type: 'daily' | 'weekly' | 'monthly'; dueWeekday?: number; dueDom?: number; day?: number; dueStrategy?: 'sameDay' | 'endOfWeek' | 'endOfMonth' | 'none'; autoRenew?: boolean } | null = null;
           try { recurring = recurringRaw ? JSON.parse(recurringRaw) : null; } catch { recurring = null; }
-          if (recurring?.autoRenew && prevStatus !== 'done' && updates.status === 'done') {
+          if (!task.extras?.recurrenceId && recurring?.autoRenew && prevStatus !== 'done' && updates.status === 'done') {
             const now = dayjs();
             let due = '';
             let visibleFrom = '';
@@ -587,7 +592,7 @@ export const useAppStore = create<AppStore>()(
             } else if (recurring.type === 'weekly') {
               const nextWeekStart = now.add(1, 'week').subtract((now.day() + 6) % 7, 'day');
               const d = (recurring.dueWeekday ?? recurring.day ?? 5);
-              due = nextWeekStart.add(((d + 7) % 7), 'day').format('YYYY-MM-DD');
+              due = nextWeekStart.add(((d + 6) % 7), 'day').format('YYYY-MM-DD');
               visibleFrom = nextWeekStart.format('YYYY-MM-DD'); // 下周一开始显示
             } else if (recurring.type === 'monthly') {
               const nextMonthStart = now.startOf('month').add(1, 'month');
@@ -758,15 +763,15 @@ export const useAppStore = create<AppStore>()(
       },
       bulkUpdateTasks: (ids, updates) => {
         withHistory(set, (state) => {
-          state.tasks = state.tasks.map((task) =>
-            ids.includes(task.id)
-              ? (() => {
-                const updated = { ...task, ...updates, updatedAt: Date.now() };
-                rebuildDictionary(state);
-                return updated;
-              })()
-              : task,
-          );
+          for (const task of state.tasks.filter(task => ids.includes(task.id))) {
+            const previousStatus = task.status;
+            Object.assign(task, updates, { updatedAt: Date.now() });
+            if (previousStatus !== 'done' && updates.status === 'done') {
+              const next = nextRecurringTask(task, state.recurringTemplates, state.tasks);
+              if (next) state.tasks.push(next);
+            }
+          }
+          rebuildDictionary(state);
         });
       },
       bulkDeleteTasks: (ids) => {
@@ -1086,7 +1091,7 @@ export const useAppStore = create<AppStore>()(
                 dates.push(startOfWeek.format('YYYY-MM-DD'));
               } else {
                 (tpl.schedule.daysOfWeek ?? []).forEach((d) => {
-                  const date = startOfWeek.add(((d + 7) % 7), 'day').format('YYYY-MM-DD');
+                  const date = startOfWeek.add(((d + 6) % 7), 'day').format('YYYY-MM-DD');
                   dates.push(date);
                 });
               }
