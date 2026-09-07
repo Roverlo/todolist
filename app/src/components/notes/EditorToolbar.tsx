@@ -27,6 +27,24 @@ const COLOR_PALETTE = [
     ['深蓝', '#002060'], ['紫色', '#7030a0'], ['品红', '#c000c0'], ['棕色', '#7f6000'], ['米色', '#f4b183'],
 ] as const;
 
+const COLOR_SHADES = [
+    ['灰', '#f3f4f6', '#d1d5db', '#9ca3af', '#4b5563', '#1f2937'],
+    ['红', '#fee2e2', '#fca5a5', '#f87171', '#dc2626', '#991b1b'],
+    ['橙', '#ffedd5', '#fdba74', '#fb923c', '#ea580c', '#9a3412'],
+    ['金', '#fef3c7', '#fcd34d', '#fbbf24', '#d97706', '#92400e'],
+    ['黄', '#fef9c3', '#fef08a', '#fde047', '#ca8a04', '#854d0e'],
+    ['绿', '#dcfce7', '#86efac', '#4ade80', '#16a34a', '#166534'],
+    ['青', '#ccfbf1', '#5eead4', '#2dd4bf', '#0d9488', '#115e59'],
+    ['蓝', '#dbeafe', '#93c5fd', '#60a5fa', '#2563eb', '#1e40af'],
+    ['紫', '#ede9fe', '#c4b5fd', '#a78bfa', '#7c3aed', '#5b21b6'],
+    ['粉', '#fce7f3', '#f9a8d4', '#f472b6', '#db2777', '#9d174d'],
+] as const;
+const COLOR_GROUPS = [
+    { label: '常用颜色', colors: COLOR_PALETTE },
+    { label: '浅色与深色', colors: ([1, 2, 3, 4, 5] as const).flatMap(level =>
+        COLOR_SHADES.map(shades => [`${shades[0]}色 ${level}`, shades[level]] as const)) },
+];
+
 function WordColorPicker({
     icon: PickerIcon,
     label,
@@ -43,16 +61,23 @@ function WordColorPicker({
     onClear: () => void;
 }) {
     const [open, setOpen] = useState(false);
+    const [customColor, setCustomColor] = useState(color);
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLButtonElement>(null);
+    const validCustomColor = /^#?[\da-f]{6}$/i.test(customColor.trim());
+    const customHex = '#' + customColor.trim().replace(/^#/, '');
 
     useEffect(() => {
         if (!open) return;
 
+        const swatch = wrapperRef.current?.querySelector<HTMLButtonElement>('.word-color-option[aria-pressed="true"]')
+            || wrapperRef.current?.querySelector<HTMLButtonElement>('.word-color-option');
+        swatch?.focus();
         const closeOutside = (event: PointerEvent) => {
             if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
         };
         const closeOnEscape = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setOpen(false);
+            if (event.key === 'Escape') { setOpen(false); menuRef.current?.focus(); }
         };
 
         document.addEventListener('pointerdown', closeOutside);
@@ -83,39 +108,65 @@ function WordColorPicker({
             </button>
             <button
                 type="button"
+                ref={menuRef}
                 className="word-color-menu"
                 title={`选择${label}`}
                 aria-label={`${label}菜单`}
-                aria-haspopup="menu"
+                aria-haspopup="dialog"
                 aria-expanded={open}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => setOpen(value => !value)}
+                onClick={() => { setCustomColor(color); setOpen(value => !value); }}
             >
                 <ChevronDown size={12} strokeWidth={2.5} aria-hidden="true" />
             </button>
 
             {open && (
-                <div className="word-color-popover" role="menu" aria-label={`选择${label}`}>
-                    <div className="word-color-popover-title">主题颜色</div>
-                    <div className="word-color-grid">
-                        {COLOR_PALETTE.map(([name, value]) => (
-                            <button
-                                type="button"
-                                role="menuitem"
-                                key={value}
-                                className="word-color-option"
-                                style={{ backgroundColor: value }}
-                                title={name}
-                                aria-label={`${label}：${name}`}
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => chooseColor(value)}
-                            />
-                        ))}
-                    </div>
+                <div className="word-color-popover" role="dialog" aria-label={`选择${label}`}
+                    onKeyDown={event => {
+                        if (!(event.target instanceof Element) || !event.target.matches('.word-color-option')) return;
+                        const steps: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -10, ArrowDown: 10 };
+                        const swatches = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('.word-color-option'));
+                        const index = swatches.indexOf(event.target as HTMLButtonElement);
+                        const next = event.key === 'Home' ? 0 : event.key === 'End' ? swatches.length - 1
+                            : event.key in steps ? (index + steps[event.key] + swatches.length) % swatches.length : -1;
+                        if (next >= 0) { event.preventDefault(); swatches[next].focus(); }
+                    }}>
+                    {COLOR_GROUPS.map(group => <div className="word-color-section" key={group.label}>
+                        <div className="word-color-popover-title">{group.label}</div>
+                        <div className="word-color-grid" role="group" aria-label={group.label}>
+                            {group.colors.map(([name, value]) => (
+                                <button
+                                    type="button"
+                                    key={value}
+                                    tabIndex={-1}
+                                    className="word-color-option"
+                                    style={{ backgroundColor: value }}
+                                    title={`${name} ${value.toUpperCase()}`}
+                                    aria-label={`${label}：${name}`}
+                                    aria-pressed={value.toLowerCase() === color.toLowerCase()}
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => chooseColor(value)}
+                                />
+                            ))}
+                        </div>
+                    </div>)}
+                    <form className="word-color-custom" onSubmit={event => {
+                        event.preventDefault();
+                        if (validCustomColor) chooseColor(customHex);
+                    }}>
+                        <label className="word-color-popover-title">
+                            自定义颜色
+                            <input type="text" value={customColor} maxLength={7} spellCheck={false}
+                                aria-label={`${label}色号`} aria-invalid={!validCustomColor}
+                                placeholder="#RRGGBB" onChange={event => setCustomColor(event.target.value)} />
+                        </label>
+                        <input type="color" value={validCustomColor ? customHex : color}
+                            aria-label={`${label}其他颜色`} onChange={event => setCustomColor(event.target.value)} />
+                        <button type="submit" className="word-color-confirm" disabled={!validCustomColor}>应用</button>
+                    </form>
                     <div className="word-color-popover-footer">
                         <button
                             type="button"
-                            role="menuitem"
                             className="word-color-clear"
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={() => {
@@ -125,15 +176,6 @@ function WordColorPicker({
                         >
                             {clearLabel}
                         </button>
-                        <label className="word-color-custom">
-                            其他颜色
-                            <input
-                                type="color"
-                                value={color}
-                                aria-label={`${label}其他颜色`}
-                                onChange={(event) => chooseColor(event.target.value)}
-                            />
-                        </label>
                     </div>
                 </div>
             )}

@@ -87,6 +87,74 @@ try {
         else await menu.locator('[role="option"][data-value="' + value + '"]').click();
     };
 
+    // Highlights must decorate text without adding the dependency's padded, rounded block.
+    await openNote('<p>普通文字 <span style="color:#008000"><mark data-color="#ff0000" style="background-color:#ff0000">哇水水水水</mark></span></p>'
+        + '<p><mark>默认高亮</mark></p>', '文字颜色与高亮');
+    const mark = body.locator('mark').first();
+    const assertHighlight = async background => {
+        assert.deepEqual(await mark.evaluate(el => {
+            const style = getComputedStyle(el);
+            return [style.backgroundColor, style.color, style.padding, style.borderRadius];
+        }), [background, 'rgb(0, 128, 0)', '0px', '0px']);
+    };
+    await assertHighlight('rgb(255, 0, 0)');
+    assert.equal(await body.locator('mark').nth(1).evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 242, 0)');
+    await body.evaluate(root => root.editor.commands.setTextSelection({ from: 6, to: 11 }));
+    await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
+    const backgroundPalette = page.getByRole('dialog', { name: '选择背景颜色', exact: true });
+    assert.equal(await backgroundPalette.locator('.word-color-option').count(), 70, 'Both palettes must provide standard colors and light/dark shades');
+    assert.notEqual(await backgroundPalette.getByRole('button', { name: '应用', exact: true }).evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'Editor theme variables must not make the white Apply button invisible');
+    assert.ok(await backgroundPalette.getByRole('textbox', { name: '背景颜色色号', exact: true }).evaluate(el => parseFloat(getComputedStyle(el).borderTopWidth) > 0));
+    await backgroundPalette.getByRole('button', { name: '背景颜色：黄色 1', exact: true }).click();
+    await assertHighlight('rgb(254, 249, 195)');
+    await page.getByRole('button', { name: '撤销', exact: true }).click();
+    await assertHighlight('rgb(255, 0, 0)');
+    await page.getByRole('button', { name: '重做', exact: true }).click();
+    await assertHighlight('rgb(254, 249, 195)');
+    await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
+    const hexInput = backgroundPalette.getByRole('textbox', { name: '背景颜色色号', exact: true });
+    await hexInput.fill('badhex');
+    assert.ok(await backgroundPalette.getByRole('button', { name: '应用', exact: true }).isDisabled());
+    assert.equal(await hexInput.getAttribute('aria-invalid'), 'true');
+    await hexInput.fill('#d8eaff');
+    await hexInput.press('Enter');
+    await assertHighlight('rgb(216, 234, 255)');
+    assert.ok(await body.evaluate(el => document.activeElement === el), 'Custom color must return focus to the original selection');
+    await saveAndReload();
+    await assertHighlight('rgb(216, 234, 255)');
+    await body.evaluate(root => root.editor.commands.setTextSelection({ from: 6, to: 11 }));
+    await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
+    await backgroundPalette.getByRole('button', { name: '无颜色', exact: true }).click();
+    assert.equal(await body.getByText('哇水水水水', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(0, 128, 0)', 'Clearing background must preserve text color');
+    assert.equal(await body.locator('mark').count(), 1);
+    await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
+    const textPalette = page.getByRole('dialog', { name: '选择字体颜色', exact: true });
+    assert.equal(await textPalette.locator('.word-color-option').count(), 70);
+    await page.keyboard.press('End');
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), '字体颜色：粉色 5');
+    await page.keyboard.press('Enter');
+    assert.equal(await body.getByText('哇水水水水', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(157, 23, 77)');
+    await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
+    await textPalette.getByLabel('字体颜色其他颜色', { exact: true }).fill('#123456');
+    await textPalette.getByRole('button', { name: '应用', exact: true }).click();
+    assert.equal(await body.getByText('哇水水水水', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(18, 52, 86)');
+    await saveAndReload();
+    assert.equal(await body.getByText('哇水水水水', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(18, 52, 86)');
+    await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
+    await page.keyboard.press('Escape');
+    assert.ok(await page.getByRole('button', { name: '字体颜色菜单', exact: true }).evaluate(el => document.activeElement === el));
+    assert.equal(await textPalette.count(), 0);
+
+    await openNote('<p><span style="font-size:32px;color:#008000"><mark data-color="#fef9c3" style="background-color:#fef9c3">大字高亮，自动换行后也应保持自然的文字背景。'
+        + '继续输入一段长文字检查换行效果。'.repeat(7) + '</mark></span></p><p>下一段不应被高亮色块遮挡。</p>', '色盘与多行高亮');
+    assert.ok(await body.locator('mark').evaluate(el => el.getClientRects().length > 1), 'The test must cover a wrapping highlight');
+    await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
+    const paletteBox = await backgroundPalette.boundingBox();
+    assert.ok(paletteBox.x >= 0 && paletteBox.x + paletteBox.width <= 1280 && paletteBox.y + paletteBox.height <= 840, 'Expanded palette must fit the viewport');
+    await page.screenshot({ path: 'ui-check.local/note-colors.png' });
+    await page.keyboard.press('Escape');
+    console.log('Passed: unpadded inline highlights, 70-color palettes, custom HEX/native colors, keyboard, undo/redo, independent clearing and save/reload');
+
     const aiContent = await page.evaluate(async () => {
         const { noteContentForAI } = await import('/src/utils/noteAI.ts');
         const samples = {
@@ -223,7 +291,14 @@ try {
     // Let the checkbox's scheduled focus finish before moving the caret for typing.
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await items.nth(1).locator('p').click();
+    await page.waitForFunction(() => document.querySelectorAll('.ProseMirror li[data-type="taskItem"] > div > p')[1]
+        ?.contains(window.getSelection()?.anchorNode));
     await page.keyboard.press('Control+End');
+    // Native selection changes reach ProseMirror asynchronously; type only once its caret has caught up.
+    await page.waitForFunction(() => {
+        const caret = document.querySelector('.ProseMirror')?.editor.state.selection.$from;
+        return caret?.parent.textContent === '发送评审材料' && caret.parentOffset === caret.parent.content.size;
+    });
     await page.keyboard.press('Enter');
     assert.equal(await items.nth(2).getAttribute('data-checked'), 'false', 'New items must start unchecked even after a completed item');
     await page.keyboard.insertText('下次会议安排');
