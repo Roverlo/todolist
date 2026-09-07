@@ -1,4 +1,4 @@
-import type { AppData, Project, Task, RecurringTemplate, Settings, Dictionary, SortScheme, Filters, GroupBy, SortRule, SavedFilter, ColumnConfig, Note } from '../types';
+import type { AppData, Project, Task, RecurringTemplate, Settings, Dictionary, SortScheme, Filters, GroupBy, SortRule, SavedFilter, ColumnConfig, Note, NoteTag } from '../types';
 
 // 统一版本号
 export const BACKUP_VERSION = '1.2';
@@ -21,6 +21,7 @@ export interface BackupFile {
         savedFilters?: SavedFilter[];
         columnConfig?: ColumnConfig;
         notes?: Note[];
+        tags?: NoteTag[];
     };
 }
 
@@ -87,6 +88,12 @@ export const validateBackupFile = (content: string): ValidationResult => {
             };
         }
 
+        if ((parsed.data.notes !== undefined && !Array.isArray(parsed.data.notes)) ||
+            (parsed.data.tags !== undefined && !Array.isArray(parsed.data.tags)) ||
+            (parsed.data.settings !== undefined && (!parsed.data.settings || typeof parsed.data.settings !== 'object' || Array.isArray(parsed.data.settings)))) {
+            return { valid: false, error: '备份中的笔记、标签或设置格式错误', errorType: 'data' };
+        }
+
         // 验证校验和（如果存在）
         if (parsed.checksum) {
             // 从文件中提取校验和，然后计算数据部分的校验和
@@ -129,7 +136,7 @@ export const validateBackupFile = (content: string): ValidationResult => {
 /**
  * 创建带校验和的备份数据
  */
-export const createBackupData = (appData: Partial<AppData>): BackupFile => {
+export const createBackupData = (appData: AppData): BackupFile => {
     const data = {
         projects: appData.projects ?? [],
         tasks: appData.tasks ?? [],
@@ -143,6 +150,7 @@ export const createBackupData = (appData: Partial<AppData>): BackupFile => {
         savedFilters: appData.savedFilters,
         columnConfig: appData.columnConfig,
         notes: appData.notes ?? [],
+        tags: appData.tags ?? [],
     };
 
     const dataString = JSON.stringify(data);
@@ -160,7 +168,7 @@ export const createBackupData = (appData: Partial<AppData>): BackupFile => {
  * 自动备份当前数据到临时文件
  * 返回备份文件路径
  */
-export const createAutoBackup = async (appData: Partial<AppData>, retentionCount: number = 5): Promise<string | null> => {
+export const createAutoBackup = async (appData: AppData, retentionCount: number = 5): Promise<string | null> => {
     try {
         const { appDataDir, join } = await import('@tauri-apps/api/path');
         const { writeTextFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');

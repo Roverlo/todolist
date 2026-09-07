@@ -1,5 +1,5 @@
 import fs from 'fs';
-import path from 'path';
+import { execFileSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 if (args.length < 3) {
@@ -9,13 +9,13 @@ if (args.length < 3) {
 
 const [filePath, version, timestamp] = args;
 
-const content = `版本: ${version}
-时间: ${timestamp}
-更新内容:
-- 【新功能】添加自动更新检查功能，支持启动时检查和定时检查。
-- 【新设置】在"设置 → 关于"中新增更新设置区块，可配置检查间隔（10分钟~每天）。
-- 【用户体验】支持"此版本不再提醒"功能，跳过特定版本的更新提示。
-- 【数据修复】修复云同步不包含 Notes 和 Tags 数据的问题。`;
+const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', windowsHide: true }).trim();
+const content = `ProjectTodo 免安装版
+应用版本: ${version}
+构建版本: ${timestamp}
+源码提交: ${commit}
+双击 EXE 即可运行，无需安装。
+本次功能及验证结果请参阅随包验收报告。`;
 
 try {
     fs.writeFileSync(filePath, content, 'utf8');

@@ -17,6 +17,12 @@ else {
 }
 $portableDir = Join-Path (Split-Path -Parent $rootDir) "portable\01_Offline_Portable"
 $timestamp = Get-Date -Format "yyyyMMdd_HHmm"
+$buildInfoPath = Join-Path $rootDir 'dist\build-info.json'
+if (Test-Path -LiteralPath $buildInfoPath) {
+    $buildInfo = Get-Content -LiteralPath $buildInfoPath -Raw | ConvertFrom-Json
+    if ($buildInfo.version -notmatch '^\d{8}_\d{4}$') { throw 'Invalid build version' }
+    $timestamp = $buildInfo.version
+}
 $outputName = "ProjectTodo_$timestamp.exe"
 $outputPath = Join-Path $portableDir $outputName
 $logName = "ProjectTodo_$timestamp.txt"
@@ -44,8 +50,6 @@ if (!(Test-Path $exePath)) {
 Write-Host "Copying executable..." -ForegroundColor Yellow
 Copy-Item $exePath $outputPath -Force
 
-# Create Changelog
-Write-Host "Creating changelog..." -ForegroundColor Yellow
 # Create Changelog
 Write-Host "Creating changelog..." -ForegroundColor Yellow
 $changeLogScript = Join-Path $scriptDir "create-changelog.js"

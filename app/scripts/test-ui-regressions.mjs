@@ -36,8 +36,8 @@ try {
     browser = await chromium.launch({ channel: 'msedge', headless: true });
     const page = await browser.newPage({ viewport: { width: 1500, height: 900 }, timezoneId: 'Asia/Shanghai' });
     await page.clock.setFixedTime(new Date('2026-09-05T04:00:00Z'));
-    await page.goto(server.resolvedUrls.local[0]);
-    await page.waitForTimeout(700);
+    await page.goto(server.resolvedUrls.local[0], { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.locator('[title="切换到随记中心"]').waitFor();
 
     const dismissReminder = page.getByRole('button', { name: '我知道了' });
     if (await dismissReminder.isVisible()) await dismissReminder.click();
@@ -50,12 +50,12 @@ try {
     assert.equal(await page.getByLabel('所属日期', { exact: true }).count(), 0, '编辑区不应显示所属日期');
     await editor.press('Control+A');
     await page.getByRole('button', { name: '字体颜色菜单' }).click();
-    await page.getByRole('menuitem', { name: '字体颜色：绿色' }).click();
+    await page.getByRole('button', { name: '字体颜色：绿色', exact: true }).click();
     assert.match(await editor.locator('span').getAttribute('style'), /112, 173, 71/);
 
     await editor.press('Control+A');
     await page.getByRole('button', { name: '背景颜色菜单' }).click();
-    await page.getByRole('menuitem', { name: '背景颜色：黄色' }).click();
+    await page.getByRole('button', { name: '背景颜色：黄色', exact: true }).click();
     await editor.press('Control+A');
     await page.getByRole('button', { name: '应用背景颜色' }).click();
     assert.equal(await editor.locator('mark').count(), 1, '重复应用背景色不应取消高亮');
@@ -63,7 +63,7 @@ try {
 
     await editor.press('Control+A');
     await page.getByRole('button', { name: '背景颜色菜单' }).click();
-    await page.getByRole('menuitem', { name: '无颜色' }).click();
+    await page.getByRole('button', { name: '无颜色', exact: true }).click();
     assert.equal(await editor.locator('mark').count(), 0);
 
     await page.getByRole('button', { name: '保存', exact: true }).click();

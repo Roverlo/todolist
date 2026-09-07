@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useAppStoreShallow } from '../../state/appStore';
-import { checkForUpdate, CURRENT_VERSION } from '../../utils/updateChecker';
+import { checkForUpdate, CURRENT_VERSION, BUILD_TIME } from '../../utils/updateChecker';
 import type { UpdateInfo } from '../../utils/updateChecker';
 import { UpdateModal } from './UpdateModal';
 import { VersionListModal } from './VersionListModal';
@@ -484,13 +484,13 @@ export const SettingsPanel = ({
                             <SettingCard
                                 icon="📥"
                                 title="导入任务"
-                                description="从 CSV 文件导入任务数据"
+                                description="从导出的 JSON 文件导入任务和周期任务"
                                 onClick={() => handleAction(onImport)}
                             />
                             <SettingCard
                                 icon="📤"
                                 title="导出任务"
-                                description="将任务导出为 CSV 或 Markdown 文件"
+                                description="将任务导出为 CSV、Markdown 或 JSON 文件"
                                 onClick={() => handleAction(onExport)}
                             />
 
@@ -823,7 +823,7 @@ export const SettingsPanel = ({
                                         {CURRENT_VERSION}
                                     </div>
                                     <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginBottom: 12 }}>
-                                        更新于 2025.12.28 18:16
+                                        构建于 {new Date(BUILD_TIME).toLocaleString('zh-CN', { hour12: false })}
                                     </div>
                                     {/* 检查更新按钮 */}
                                     <button

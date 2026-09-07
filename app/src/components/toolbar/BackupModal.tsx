@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAppStoreShallow, useAppStore } from '../../state/appStore';
+import { useAppStore } from '../../state/appStore';
 import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { ConfirmRestoreModal } from './ConfirmRestoreModal';
@@ -31,31 +31,7 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
     } | null>(null);
     const [autoBackupPath, setAutoBackupPath] = useState<string | null>(null);
 
-    const {
-        projects,
-        tasks,
-        settings,
-        recurringTemplates,
-        sortSchemes,
-        dictionary,
-        filters,
-        groupBy,
-        sortRules,
-        savedFilters,
-        columnConfig,
-    } = useAppStoreShallow((state) => ({
-        projects: state.projects,
-        tasks: state.tasks,
-        settings: state.settings,
-        recurringTemplates: state.recurringTemplates,
-        sortSchemes: state.sortSchemes,
-        dictionary: state.dictionary,
-        filters: state.filters,
-        groupBy: state.groupBy,
-        sortRules: state.sortRules,
-        savedFilters: state.savedFilters,
-        columnConfig: state.columnConfig,
-    }));
+    const settings = useAppStore(state => state.settings);
 
     // 动态获取备份路径
     const [backupFullPath, setBackupFullPath] = useState<string>('');
@@ -89,19 +65,7 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
             }
 
             // 使用新的工具函数创建带校验和的备份数据
-            const backupData = createBackupData({
-                projects,
-                tasks,
-                settings,
-                recurringTemplates,
-                sortSchemes,
-                dictionary,
-                filters,
-                groupBy,
-                sortRules,
-                savedFilters,
-                columnConfig,
-            });
+            const backupData = createBackupData(useAppStore.getState());
 
             await writeTextFile(filePath, JSON.stringify(backupData, null, 2));
             setStatus('success');
@@ -145,19 +109,10 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
             // 验证通过，准备自动备份当前数据
             setMessage('正在备份当前数据...');
 
-            const autoBackup = await createAutoBackup({
-                projects,
-                tasks,
-                settings,
-                recurringTemplates,
-                sortSchemes,
-                dictionary,
-                filters,
-                groupBy,
-                sortRules,
-                savedFilters,
-                columnConfig,
-            });
+            const autoBackup = await createAutoBackup(useAppStore.getState());
+            if (!autoBackup) {
+                throw new Error('无法备份当前数据，已停止恢复；请检查备份目录后重试');
+            }
 
             setAutoBackupPath(autoBackup);
 
@@ -188,7 +143,7 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
             useAppStore.setState({
                 projects: backupData.data.projects,
                 tasks: backupData.data.tasks,
-                settings: backupData.data.settings,
+                ...(backupData.data.settings && { settings: backupData.data.settings }),
                 recurringTemplates: backupData.data.recurringTemplates || [],
                 sortSchemes: backupData.data.sortSchemes || [],
                 dictionary: backupData.data.dictionary || {
@@ -203,7 +158,13 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
                 ...(backupData.data.sortRules && { sortRules: backupData.data.sortRules }),
                 ...(backupData.data.savedFilters && { savedFilters: backupData.data.savedFilters }),
                 ...(backupData.data.columnConfig && { columnConfig: backupData.data.columnConfig }),
-                notes: backupData.data.notes || [],
+                // 旧的纯任务备份不包含随记或标签时，保留当前内容。
+                ...(backupData.data.notes !== undefined && {
+                    notes: backupData.data.notes,
+                    selectedNoteId: backupData.data.notes.find(note => note.id === useAppStore.getState().selectedNoteId && !note.deletedAt)?.id
+                        ?? backupData.data.notes.find(note => !note.deletedAt)?.id ?? null,
+                }),
+                ...(backupData.data.tags !== undefined && { tags: backupData.data.tags }),
             });
 
             setStatus('success');
@@ -502,14 +463,14 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
             </div>
 
             {/* 确认恢复对话框 */}
-            <ConfirmRestoreModal
+            {confirmOpen && <ConfirmRestoreModal
                 open={confirmOpen}
                 onClose={handleCancelRestore}
                 onConfirm={handleConfirmRestore}
                 preview={pendingRestore?.preview ?? undefined}
                 autoBackupPath={autoBackupPath}
                 isProcessing={isProcessing}
-            />
+            />}
         </>
     );
 };
