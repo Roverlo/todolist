@@ -258,9 +258,9 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                     <CustomSelect className="editor-line-select" aria-label="行距" value={lists.lineHeight}
                         options={[{ value: '', label: '行距' }, ...['1', '1.25', '1.5', '1.75', '2', '2.5', '3'].map(value => ({ value, label: `${value} 倍` }))]}
                         onChange={value => value ? editor.chain().focus().setLineHeight(value).run() : editor.chain().focus().unsetLineHeight().run()} />
-                    <button type="button" className="editor-toolbar-btn" aria-label="增加缩进" title="增加缩进 (Tab)"
+                    <button type="button" className="editor-toolbar-btn" aria-label="增加缩进" title="增加缩进（列表中可用 Tab）"
                         onClick={() => editor.chain().focus().indent().run()}><IndentIncrease size={18} /></button>
-                    <button type="button" className="editor-toolbar-btn" aria-label="减少缩进" title="减少缩进 (Shift+Tab)"
+                    <button type="button" className="editor-toolbar-btn" aria-label="减少缩进" title="减少缩进（列表中可用 Shift+Tab）"
                         onClick={() => editor.chain().focus().outdent().run()}><IndentDecrease size={18} /></button>
                 </div>
                 <div className="editor-toolbar-group" role="group" aria-label="列表">

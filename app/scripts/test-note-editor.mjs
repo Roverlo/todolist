@@ -85,6 +85,51 @@ try {
         else await menu.locator('[role="option"][data-value="' + value + '"]').click();
     };
 
+    await openNote('<p data-indent="7">正文对齐</p>', 'Tab 对齐');
+    await body.press('Control+Home');
+    await body.press('Tab');
+    assert.ok(await body.evaluate(el => document.activeElement === el), 'Tab must not move focus to the note tags at the indent limit');
+    assert.equal(await body.textContent(), '\u00a0'.repeat(4) + '正文对齐');
+    await body.press('Shift+Tab');
+    assert.equal(await body.textContent(), '正文对齐', 'Shift+Tab must remove the inserted spacing');
+    await body.evaluate(root => root.editor.commands.setTextSelection(3));
+    await body.press('Tab');
+    assert.equal(await body.textContent(), '正文' + '\u00a0'.repeat(4) + '对齐', 'Tab must insert spacing at the caret, not move the whole paragraph');
+    await saveAndReload();
+    assert.equal(await body.textContent(), '正文' + '\u00a0'.repeat(4) + '对齐', 'Alignment spaces must survive save/reload');
+    await body.press('Control+Home');
+    await body.press('Escape');
+    await page.waitForFunction(() => document.activeElement !== document.querySelector('.ProseMirror'));
+    await page.keyboard.press('Tab');
+    assert.ok(await page.locator('.note-editor-footer').evaluate(el => el.contains(document.activeElement)),
+        'Escape then Tab must still let keyboard users leave the editor');
+
+    await openNote('<p>第一段</p><p>第二段</p>', '选区缩进');
+    await body.press('Control+A');
+    await body.press('Tab');
+    assert.equal(await body.locator('p[data-indent="1"]').count(), 2, 'Tab on a selection must indent without replacing text');
+    await body.press('Shift+Tab');
+    assert.equal(await body.locator('p[data-indent]').count(), 0);
+    await body.press('Shift+Tab');
+    assert.ok(await body.evaluate(el => document.activeElement === el), 'Shift+Tab at the first indent level must stay in the editor');
+    assert.deepEqual(await body.locator('p').allTextContents(), ['第一段', '第二段']);
+
+    await openNote('<ul><li><p>首项</p></li></ul>', '首项缩进');
+    await body.press('Control+Home');
+    await body.press('Tab');
+    assert.ok(await body.evaluate(el => document.activeElement === el), 'A first list item must not send Tab to the footer');
+    assert.equal((await body.innerText()).trim(), '首项');
+
+    await openNote('<pre><code>const value = 1;</code></pre>', '代码 Tab');
+    await body.press('Control+Home');
+    await body.press('Tab');
+    assert.equal(await body.locator('code').textContent(), '    const value = 1;');
+    await body.press('Shift+Tab');
+    await body.press('Shift+Tab');
+    assert.equal(await body.locator('code').textContent(), 'const value = 1;');
+    assert.ok(await body.evaluate(el => document.activeElement === el));
+    console.log('Passed: caret spacing, reverse Tab, selection/list boundaries, code indentation and keyboard escape');
+
     await openNote('<p>第一项</p><p>第二项</p>', '多种列表');
     await body.press('Control+A');
     for (const style of ['disc', 'circle', 'square']) {
@@ -255,6 +300,12 @@ try {
     assert.equal(await body.locator('tr').count(), 3);
     assert.equal(await body.locator('tr').first().locator('td, th').count(), 3);
     await body.locator('td, th').first().click();
+    await body.press('Shift+Tab');
+    assert.ok(await body.evaluate(el => document.activeElement === el), 'Reverse Tab in the first cell must not jump to the footer');
+    await body.press('Tab');
+    assert.ok(await body.locator('td, th').nth(1).evaluate(el => el.contains(window.getSelection()?.anchorNode)), 'Tab in a table must move to the next cell');
+    await body.press('Shift+Tab');
+    assert.ok(await body.locator('td, th').first().evaluate(el => el.contains(window.getSelection()?.anchorNode)));
     await choose('表格操作', { label: '下方插入行' });
     await choose('表格操作', { label: '右侧插入列' });
     assert.equal(await body.locator('tr').count(), 4);

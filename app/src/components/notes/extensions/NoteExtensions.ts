@@ -14,7 +14,7 @@ import { FontSize } from 'reactjs-tiptap-editor/fontsize';
 import { Heading } from 'reactjs-tiptap-editor/heading';
 import { FormatPainter } from 'reactjs-tiptap-editor/formatpainter';
 import { TextAlign } from 'reactjs-tiptap-editor/textalign';
-import { Indent } from 'reactjs-tiptap-editor/indent';
+import { Indent, type IndentOptions } from 'reactjs-tiptap-editor/indent';
 import { LineHeight } from 'reactjs-tiptap-editor/lineheight';
 import { TaskList } from 'reactjs-tiptap-editor/tasklist';
 import { Link } from 'reactjs-tiptap-editor/link';
@@ -73,7 +73,9 @@ const ListStyles = Extension.create({
     },
 });
 
-const NoteIndent = Indent.extend({
+const NoteIndent = Indent.extend<IndentOptions>({
+    // Let list, table and code-block shortcuts run before the editor fallback.
+    priority: 90,
     addCommands() {
         const parent = this.parent?.();
         const listItem = (editor: Editor) => editor.isActive('taskItem') ? 'taskItem'
@@ -91,9 +93,25 @@ const NoteIndent = Indent.extend({
         };
     },
     addKeyboardShortcuts() {
+        const editor = this.editor;
         return {
-            Tab: () => !this.editor.isActive('table') && this.editor.commands.indent(),
-            'Shift-Tab': () => !this.editor.isActive('table') && this.editor.commands.outdent(),
+            Tab: () => {
+                if (editor.isActive('table') || editor.isActive('codeBlock')) return true;
+                const { empty, $from } = editor.state.selection;
+                if (!empty || editor.isActive('listItem') || editor.isActive('taskItem')) editor.commands.indent();
+                else if ($from.parent.isTextblock) editor.commands.insertContent('\u00a0'.repeat(4));
+                return true;
+            },
+            'Shift-Tab': () => {
+                if (editor.isActive('table') || editor.isActive('codeBlock')) return true;
+                const { empty, from, $from } = editor.state.selection;
+                const spaces = empty && $from.parent.isTextblock
+                    ? editor.state.doc.textBetween(Math.max($from.start(), from - 4), from, '', '\ufffc').match(/[ \u00a0]+$/)?.[0].length || 0 : 0;
+                if (spaces) editor.commands.deleteRange({ from: from - spaces, to: from });
+                else editor.commands.outdent();
+                return true;
+            },
+            Escape: () => editor.commands.blur(),
         };
     },
 });
@@ -165,5 +183,5 @@ export const noteExtensions = [
     }),
     Table.configure({ resizable: true }),
     SearchAndReplace.configure({ disableRegex: true }),
-    Clear, History, Blockquote, Code, CodeBlock, HorizontalRule,
+    Clear, History, Blockquote, Code, CodeBlock.configure({ enableTabIndentation: true }), HorizontalRule,
 ];
