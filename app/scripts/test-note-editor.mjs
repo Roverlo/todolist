@@ -33,6 +33,8 @@ try {
     const reminder = page.getByRole('button', { name: '我知道了' });
     if (await reminder.isVisible()) await reminder.click();
     await page.getByTitle('切换到随记中心', { exact: true }).click();
+    await page.getByRole('button', { name: 'AI 设置', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'Settings must remain available without a selected note');
     await page.getByRole('button', { name: '创建新随记' }).click();
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     await body.waitFor();
@@ -188,8 +190,8 @@ try {
     // Let the checkbox's scheduled focus finish before moving the caret for typing.
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await items.nth(1).locator('p').click();
-    await body.press('Control+End');
-    await body.press('Enter');
+    await page.keyboard.press('Control+End');
+    await page.keyboard.press('Enter');
     assert.equal(await items.nth(2).getAttribute('data-checked'), 'false', 'New items must start unchecked even after a completed item');
     await page.keyboard.insertText('下次会议安排');
     await body.press('Tab');
@@ -253,6 +255,7 @@ try {
     console.log('Passed: format painter copies text styling through mouse selection');
 
     await openNote('<p>苹果 苹果 香蕉</p>', '查找替换');
+    await page.getByLabel('更多工具', { exact: true }).click();
     await page.getByRole('button', { name: '查找替换', exact: true }).click();
     const searchDialog = page.getByRole('search', { name: '查找替换' });
     await searchDialog.getByLabel('查找内容').fill('苹果');
@@ -264,6 +267,7 @@ try {
     assert.equal((await body.innerText()).trim(), '苹果 苹果 香蕉');
     await page.getByRole('button', { name: '重做', exact: true }).click();
     assert.equal((await body.innerText()).trim(), '橙子 橙子 香蕉');
+    await page.getByLabel('更多工具', { exact: true }).click();
     await page.getByRole('button', { name: '查找替换', exact: true }).click();
     await searchDialog.getByLabel('查找内容').fill('橙子');
     await searchDialog.getByLabel('替换内容').fill('临时替换');
@@ -362,6 +366,7 @@ try {
     assert.match(await body.locator('img').getAttribute('src'), /^data:image\/png;base64,/);
     await body.locator('.image-view__body').click();
     const imageWidth = await body.evaluate(root => Math.round(root.clientWidth / 2));
+    await page.getByLabel('更多工具', { exact: true }).click();
     await choose('图片宽度', '50%');
     await saveAndReload();
     assert.equal(await body.locator('img').evaluate(img => img.style.width), `${imageWidth}px`);
@@ -409,12 +414,14 @@ try {
     await openNote('<p>工具栏布局检查</p>', '工具栏布局');
     const toolbarHeight = (await page.getByRole('toolbar').boundingBox()).height;
     assert.ok(toolbarHeight <= 82, 'The toolbar should occupy only two compact rows');
+    assert.equal(await page.locator('.notes-center-header').count(), 0, 'Editing must not reserve a separate title bar');
+    assert.equal(await page.getByRole('toolbar').getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'AI actions must be integrated into the toolbar');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
-    await page.getByLabel('更多插入工具', { exact: true }).click();
+    await page.getByLabel('更多工具', { exact: true }).click();
     await page.getByRole('button', { name: '分隔线', exact: true }).click();
     await body.locator('hr').waitFor();
     assert.equal(await page.locator('.editor-more').evaluate(el => el.open), false);
-    await page.getByLabel('更多插入工具', { exact: true }).press('Enter');
+    await page.getByLabel('更多工具', { exact: true }).press('Enter');
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.editor-more').evaluate(el => el.open), false);
     await body.press('Control+End');
@@ -428,7 +435,9 @@ try {
     await (await tableImageChooser).setFiles({ name: '表格图片.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
     await page.getByRole('dialog').getByRole('button', { name: '插入图片', exact: true }).click();
     await body.locator('table .image-view__body').click();
+    await page.getByLabel('更多工具', { exact: true }).click();
     await page.getByRole('combobox', { name: '图片宽度', exact: true }).waitFor();
+    await page.getByLabel('更多工具', { exact: true }).press('Escape');
     await page.getByRole('combobox', { name: '表格操作', exact: true }).waitFor();
     assert.equal(await page.locator('.ai-panel-header').count(), 0, 'Do not add a second title bar for the assistant');
     for (const width of [1100, 1186, 1280, 1538, 1920]) {
@@ -438,21 +447,25 @@ try {
             const toggle = page.getByRole('button', { name: panelOpen ? '显示 AI 助手' : '隐藏 AI 助手', exact: true });
             if (await toggle.isVisible()) await toggle.click();
             const layout = await page.locator('.notes-main-root').evaluate(el => ({
-                topBars: ['.notes-center-header', '.notes-center-actions', '#editor-toolbar-portal'].map(selector => {
+                topBars: ['.notes-center-actions', '#editor-toolbar-portal'].map(selector => {
                     const rect = el.querySelector(selector).getBoundingClientRect();
                     return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
                 }),
                 titleTop: el.querySelector('.note-editor-title').getBoundingClientRect().top,
             }));
             closedLayout ??= layout;
-            assert.equal(layout.topBars[2].height, toolbarHeight, `Image and table tools must stay within two rows at ${width}px`);
+            assert.equal(layout.topBars[1].height, toolbarHeight, `Image and table tools must stay within two rows at ${width}px`);
             assert.deepEqual(layout, closedLayout, `Header, toolbar and note top must not jump when toggling AI at ${width}px`);
             assert.ok(await page.locator('.notes-main-root').evaluate(el =>
                 el.getBoundingClientRect().left >= document.querySelector('.sidebar').getBoundingClientRect().right),
                 'The navigation sidebar must not overlap the document workspace');
             assert.ok(await page.getByRole('toolbar').evaluate(el => {
                 const bounds = el.getBoundingClientRect();
-                return [...el.querySelectorAll('button, select, summary')].every(control => {
+                const groupsFit = [...el.querySelectorAll('.editor-toolbar-row')].every(row => {
+                    const groups = [...row.children].map(group => group.getBoundingClientRect());
+                    return groups.every((group, i) => !i || group.left >= groups[i - 1].right);
+                });
+                return groupsFit && [...el.querySelectorAll('button, select, summary')].every(control => {
                     if (control.closest('details:not([open])') && control.tagName !== 'SUMMARY') return true;
                     const rect = control.getBoundingClientRect();
                     if (!rect.width || !rect.height) return true;
@@ -475,7 +488,18 @@ try {
             if ([1186, 1538].includes(width)) await page.screenshot({ path: `ui-check.local/compact-toolbar-${width}-${panelOpen ? 'open' : 'closed'}.png` });
         }
     }
-    console.log(`Passed: two-row toolbar (${toolbarHeight}px), image/table controls and stable AI toggle at five desktop widths`);
+    await page.getByLabel('更多工具', { exact: true }).click();
+    const menuBox = await page.locator('.editor-more-menu').boundingBox();
+    assert.ok(menuBox.y + menuBox.height <= 698, 'Expanded tools must remain within the viewport');
+    assert.equal(await page.getByRole('button', { name: '打开图片文件夹', exact: true }).isVisible(), true);
+    await page.getByLabel('更多工具', { exact: true }).press('Escape');
+    await page.getByRole('button', { name: /^回收站/ }).click();
+    await page.locator('.notes-center-header').waitFor();
+    assert.equal(await page.getByRole('toolbar').count(), 0, 'Trash must not retain editing tools');
+    assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'Trash must retain settings access');
+    await page.evaluate(async () => (await import('/src/state/appStore.ts')).useAppStore.getState().setNoteViewMode('tree'));
+    await body.waitFor();
+    console.log(`Passed: integrated two-row toolbar (${toolbarHeight}px), empty/trash views, image/table controls and stable AI toggle at five desktop widths`);
     assert.deepEqual(errors, []);
     await page.setViewportSize({ width: 1280, height: 840 });
     await page.screenshot({ path: 'ui-check.local/note-editor.png' });

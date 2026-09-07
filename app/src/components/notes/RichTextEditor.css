@@ -7,7 +7,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 6px 8px;
+    padding: 6px 10px;
     background: #fafbfc;
     border-bottom: 1px solid #e5e7eb;
     color: #475467;
@@ -23,7 +23,12 @@
 
 .editor-toolbar-group + .editor-toolbar-group { padding-left: 6px; border-left: 1px solid #e1e5eb; }
 .editor-toolbar-group > * { flex-shrink: 0; }
-.editor-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 32px; }
+.editor-toolbar-row { display: flex; align-items: center; gap: 6px; min-height: 32px; }
+.editor-toolbar .notes-center-actions,
+.editor-toolbar .editor-context-tools { margin-left: auto; flex-shrink: 0; }
+@container note-document (max-width: 900px) {
+    .editor-toolbar .notes-ai-description { display: none; }
+}
 @container note-document (max-width: 800px) {
     .editor-toolbar-row { flex-wrap: wrap; justify-content: flex-start; }
 }
@@ -62,7 +67,8 @@
 .editor-toolbar .editor-tool > button svg,
 .editor-toolbar-btn svg { width: 17px; height: 17px; stroke-width: 1.75; }
 .editor-toolbar .editor-tool > button svg.lucide-chevron-down { width: 12px; }
-.editor-toolbar .editor-todo-btn { width: auto; gap: 4px; padding: 0 7px; }
+.editor-toolbar .editor-todo-btn,
+.editor-toolbar .editor-more > summary { width: auto; gap: 4px; padding: 0 7px; }
 .editor-toolbar .editor-tool[data-tool='段落标题'] > button { width: 82px; justify-content: space-between; padding: 0 8px; }
 .editor-toolbar .editor-tool[data-tool='字号'] > button { width: 64px; justify-content: space-between; padding: 0 8px; }
 .editor-toolbar .editor-tool[data-tool='行距'] > button { width: 40px; gap: 2px; }
@@ -77,6 +83,7 @@
 .editor-toolbar .editor-more > summary:focus-visible { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 2px; }
 .editor-toolbar .custom-select-trigger { height: 30px; padding: 0 6px; gap: 3px; font-size: 12px; font-weight: 400; color: #344054; border-color: #dce1e9; }
 .editor-toolbar .custom-select-container { width: 92px; }
+.editor-toolbar .editor-list-select { width: 84px; }
 .editor-toolbar .editor-heading-select { width: 76px; }
 .editor-toolbar .editor-size-select { width: 64px; }
 .editor-toolbar .editor-line-select { width: 54px; }
@@ -85,10 +92,11 @@
 .editor-more { position: relative; }
 .editor-toolbar .editor-more > summary { list-style: none; }
 .editor-more > summary::-webkit-details-marker { display: none; }
-.editor-more-menu { position: absolute; top: calc(100% + 6px); right: 0; width: 152px; padding: 5px; z-index: 20; border: 1px solid #e1e5eb; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #10182814; }
+.editor-more-menu { position: absolute; top: calc(100% + 6px); right: 0; width: 168px; padding: 5px; z-index: 20; border: 1px solid #e1e5eb; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #10182814; }
 .editor-more-menu .editor-tool { width: 100%; gap: 8px; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
 .editor-more-menu .editor-tool:hover { background: #f4f2fa; }
 .editor-more-menu .editor-sr-only { position: static; width: auto; height: auto; clip-path: none; overflow: visible; order: 1; font-size: 12px; }
+.editor-image-tools { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 4px; padding: 5px 4px 0; border-top: 1px solid #e1e5eb; }
 
 /* Keep editor theme variables within the library's own surfaces. */
 .reactjs-tiptap-editor,

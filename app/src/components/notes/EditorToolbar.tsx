@@ -145,7 +145,7 @@ function Tool({ label, children }: { label: string; children: ReactNode }) {
     return <label className="editor-tool" data-tool={label}><span className="editor-sr-only">{label}</span>{children}</label>;
 }
 
-export function EditorToolbar({ editor }: { editor: Editor }) {
+export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: ReactNode }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [insertDialog, setInsertDialog] = useState<'link' | 'image' | null>(null);
     const [textColor, setTextColor] = useState('#000000');
@@ -234,20 +234,8 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                     <Tool label="撤销"><RichTextUndo /></Tool>
                     <Tool label="重做"><RichTextRedo /></Tool>
                     <Tool label="格式刷"><RichTextFormatPainter /></Tool>
-                    <Tool label="清除格式"><RichTextClear /></Tool>
-                    <button type="button" className="editor-toolbar-btn" aria-label="查找替换" title="查找替换"
-                        data-state={searchOpen ? 'on' : 'off'} aria-pressed={searchOpen}
-                        onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
                 </div>
-                {lists.image && <div className="editor-toolbar-group editor-context-tools" role="group" aria-label="图片工具" title="拖动图片四角可调整大小">
-                    <CustomSelect className="editor-list-select" aria-label="图片宽度" value="" placeholder="图片宽度"
-                        options={[{ value: 'auto', label: '原始宽度' }, ...['25%', '50%', '75%', '100%'].map(value => ({ value, label: `${value} 正文宽度` }))]}
-                        onChange={value => editor.chain().focus().updateImage({ width: value === 'auto' ? null
-                            : Math.round(editor.view.dom.clientWidth * Number.parseInt(value) / 100) }).run()} />
-                    <button type="button" className="editor-toolbar-btn" aria-label="打开图片文件夹" title="打开图片文件夹"
-                        onClick={() => void openNoteImageFolder(editor.getAttributes('imageBlock').src || editor.getAttributes('image').src)
-                            .catch(error => useToastStore.getState().addToast(error instanceof Error ? error.message : String(error), 'error'))}><FolderOpen size={17} /></button>
-                </div>}
+                {actions}
             </div>
             <div className="editor-toolbar-row">
                 <div className="editor-toolbar-group" role="group" aria-label="段落">
@@ -286,7 +274,6 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                     }} title="选择表格大小；键盘 Enter 可插入 3×3 表格">
                         <Tool label="插入表格"><RichTextTable /></Tool>
                     </span>
-                    <Tool label="引用"><RichTextBlockquote /></Tool>
                     <details className="editor-more" ref={moreRef}
                         onKeyDown={event => {
                             if (event.key === 'Escape') {
@@ -294,13 +281,27 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                                 event.currentTarget.querySelector('summary')?.focus();
                             }
                         }}>
-                        <summary aria-label="更多插入工具" title="更多插入工具"><MoreHorizontal size={18} /></summary>
+                        <summary aria-label="更多工具" title="查找替换、清除格式、引用和代码"><MoreHorizontal size={18} /><span>更多</span></summary>
                         <div className="editor-more-menu" onClick={event => {
-                            if (event.target instanceof Element && event.target.closest('button') && moreRef.current) moreRef.current.open = false;
+                            if (event.target instanceof Element && event.target.closest('button') && !event.target.closest('[role="combobox"]') && moreRef.current) moreRef.current.open = false;
                         }}>
+                            <Tool label="查找替换"><button type="button" className="editor-toolbar-btn" aria-label="查找替换"
+                                data-state={searchOpen ? 'on' : 'off'} aria-pressed={searchOpen}
+                                onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button></Tool>
+                            <Tool label="清除格式"><RichTextClear /></Tool>
+                            <Tool label="引用"><RichTextBlockquote /></Tool>
                             <Tool label="行内代码"><RichTextCode /></Tool>
                             <Tool label="代码块"><RichTextCodeBlock /></Tool>
                             <Tool label="分隔线"><RichTextHorizontalRule /></Tool>
+                            {lists.image && <div className="editor-image-tools" role="group" aria-label="图片工具" title="拖动图片四角可调整大小">
+                                <CustomSelect className="editor-list-select" aria-label="图片宽度" value="" placeholder="图片宽度"
+                                    options={[{ value: 'auto', label: '原始宽度' }, ...['25%', '50%', '75%', '100%'].map(value => ({ value, label: `${value} 正文宽度` }))]}
+                                    onChange={value => editor.chain().focus().updateImage({ width: value === 'auto' ? null
+                                        : Math.round(editor.view.dom.clientWidth * Number.parseInt(value) / 100) }).run()} />
+                                <button type="button" className="editor-toolbar-btn" aria-label="打开图片文件夹" title="打开图片文件夹"
+                                    onClick={() => void openNoteImageFolder(editor.getAttributes('imageBlock').src || editor.getAttributes('image').src)
+                                        .catch(error => useToastStore.getState().addToast(error instanceof Error ? error.message : String(error), 'error'))}><FolderOpen size={17} /></button>
+                            </div>}
                         </div>
                     </details>
                 </div>

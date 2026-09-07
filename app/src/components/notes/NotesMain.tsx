@@ -42,26 +42,29 @@ export function NotesMain() {
         setSelectedNoteId(newNote.id);
     };
 
+    const toolbarActions = (
+        <div className="notes-center-actions">
+            <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className="btn btn-light" aria-pressed={aiPanelOpen}
+                aria-label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} title="AI助手：一键生成待办事项">
+                <PanelRight size={16} />
+                <span>AI助手<span className="notes-ai-description">：一键生成待办事项</span></span>
+            </button>
+            <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light notes-settings-btn" aria-label="AI 设置" title="AI 设置">
+                <Settings size={17} />
+            </button>
+        </div>
+    );
+
     return (
         <div className="notes-main-root">
-            {/* Keep the header and toolbar above both columns when the assistant is toggled. */}
-            <div className="notes-center-header">
+            {/* Editing actions share the full-width toolbar; empty/trash views keep a small header. */}
+            {(!activeNote || noteViewMode === 'trash') && <div className="notes-center-header">
                 <div className="notes-center-title">
                     <Icon name="note" size={18} />
                     <span className="notes-center-title-text">随记编辑器</span>
                 </div>
-
-                <div className="notes-center-actions">
-                    <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className="btn btn-light" aria-pressed={aiPanelOpen}
-                        aria-label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} title={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'}>
-                        <PanelRight size={16} />
-                        <span>AI助手：一键生成待办事项</span>
-                    </button>
-                    <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light notes-settings-btn" aria-label="AI 设置" title="AI 设置">
-                        <Settings size={17} />
-                    </button>
-                </div>
-            </div>
+                {toolbarActions}
+            </div>}
 
             <div id="editor-toolbar-portal" />
 
@@ -71,7 +74,7 @@ export function NotesMain() {
                         {noteViewMode === 'trash' ? (
                             <NotesRecycleBin />
                         ) : (
-                            <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={setDraft} />
+                            <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={setDraft} toolbarActions={toolbarActions} />
                         )}
                     </main>
                 </section>

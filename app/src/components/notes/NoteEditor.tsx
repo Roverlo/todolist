@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
 import type { Note } from '../../types';
@@ -19,13 +19,14 @@ interface NoteEditorProps {
     onSave: (title: string, content: string, tags?: string[]) => void;
     onCreate?: () => void;
     onDraftChange?: (draft: Pick<Note, 'id' | 'title' | 'content'>) => void;
+    toolbarActions?: ReactNode;
 }
 
 export function NoteEditor(props: NoteEditorProps) {
     return <NoteEditorContent key={props.note?.id} {...props} />;
 }
 
-function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditorProps) {
+function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActions }: NoteEditorProps) {
     const [title, setTitle] = useState(note?.title || '');
     const [tags, setTags] = useState<string[]>(note?.tags || []);
     const [contentHtml, setContentHtml] = useState(note?.content || '');
@@ -175,7 +176,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
             />
 
             {editor && <RichTextProvider editor={editor}>
-                {portalTarget ? createPortal(<EditorToolbar editor={editor} />, portalTarget) : <EditorToolbar editor={editor} />}
+                {portalTarget ? createPortal(<EditorToolbar editor={editor} actions={toolbarActions} />, portalTarget) : <EditorToolbar editor={editor} actions={toolbarActions} />}
                 <div
                 className="note-editor-content-wrapper"
                 onClick={(e) => {
