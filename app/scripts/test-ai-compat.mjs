@@ -41,10 +41,7 @@ const ai = await import(aiUrl);
 const aiServiceUrl = await compile('../src/services/aiService.ts', [
     ["import { fetch } from '@tauri-apps/plugin-http';", 'const fetch = globalThis.fetch;'],
     ["import { normalizeAIEndpoint } from './aiConfig';", 'const normalizeAIEndpoint = value => value;'],
-    [
-        /import \{\s*getOpenAIRequestOptions,\s*parseOpenAIJsonResponse,\s*type OpenAIChatResponse,\s*\} from '\.\/ai';/,
-        `import { getOpenAIRequestOptions, parseOpenAIJsonResponse } from '${aiUrl}';`,
-    ],
+    ["from './ai';", `from '${aiUrl}';`],
 ]);
 const { testAIConnection } = await import(aiServiceUrl);
 const { getOpenAIRequestOptions, hasOpenAIReply, parseOpenAIJsonResponse } = ai;
@@ -154,4 +151,91 @@ assert.deepEqual(
     },
 );
 
-console.log('AI compatibility checks passed');
+const provider = ai.createAIProvider(profile);
+const rejected = (message, status = 400) => ({ ok: false, status, text: async () => JSON.stringify({ error: { message } }) });
+const successful = content => ({ ok: true, json: async () => ({ model: profile.model, choices: [{ message: { content } }] }) });
+const chain = [
+    rejected('Unsupported parameter: response_format'),
+    rejected("Unsupported value: temperature. Only the default (1) value is supported."),
+    rejected('max_tokens is not compatible with this model; use max_completion_tokens instead'),
+    rejected('max_completion_tokens must be less than or equal to 8192', 422),
+    successful([{ type: 'text', text: '```json\n' }, { type: 'text', text: '{"tasks":[{"title":"周五提交报告"}]}' }, { type: 'text', text: '\n```' }]),
+];
+calls = [];
+fetchHandler = async (_url, init) => {
+    calls.push(JSON.parse(init.body));
+    assert.equal(init.signal, controller.signal);
+    assert.ok(chain.length, 'Compatibility retry must be bounded');
+    return chain.shift();
+};
+assert.deepEqual(await provider.generateJson('提取任务', '周五提交报告', controller.signal), { tasks: [{ title: '周五提交报告' }] });
+assert.equal(calls.length, 5);
+assert.ok(calls.every(body => body.messages.every(message => typeof message.content === 'string')));
+assert.ok(calls.every(body => body.model === profile.model && body.stream === false));
+assert.ok(calls.every(body => JSON.stringify(body.messages) === JSON.stringify(calls[0].messages)), 'Retries must preserve the entire note');
+assert.equal(calls[1].response_format, undefined);
+assert.equal(calls[2].temperature, undefined);
+assert.equal(calls[3].max_tokens, undefined);
+assert.equal(calls[3].max_completion_tokens, 16384);
+assert.equal(calls[4].max_completion_tokens, 8192);
+
+// Connection tests and generation must use the same compatibility behavior.
+calls = [];
+fetchHandler = async (_url, init = {}) => {
+    if (!init.method) return { ok: false };
+    const body = JSON.parse(init.body);
+    calls.push(body);
+    if (body.response_format) return rejected('response_format is not supported');
+    const probe = body.messages.at(-1).content.match(/"probe":"([^"]+)"/)?.[1];
+    return successful(JSON.stringify({ probe }));
+};
+assert.deepEqual(await testAIConnection(profile), { success: true, message: '配置验证成功！' });
+assert.equal(calls.length, 2);
+assert.equal(calls[1].response_format, undefined);
+assert.equal(calls[1].temperature, 0.1);
+
+// Failures unrelated to parameter support must not issue another model request.
+for (const status of [401, 403, 404, 429, 500, 503]) {
+    calls = [];
+    fetchHandler = async (_url, init) => { calls.push(init); return rejected('Unsupported parameter: response_format', status); };
+    await assert.rejects(provider.generateJson('提取任务', '正文'), new RegExp(String(status)));
+    assert.equal(calls.length, 1);
+}
+for (const message of ['Invalid API key', 'Context length exceeded', 'Unknown model', 'Invalid JSON schema']) {
+    calls = [];
+    fetchHandler = async (_url, init) => { calls.push(init); return rejected(message); };
+    await assert.rejects(provider.generateJson('提取任务', '正文'), new RegExp(message));
+    assert.equal(calls.length, 1);
+}
+calls = [];
+fetchHandler = async (_url, init) => { calls.push(init); throw new TypeError('network failed'); };
+await assert.rejects(provider.generateJson('提取任务', '正文'), /network failed/);
+assert.equal(calls.length, 1);
+
+calls = [];
+fetchHandler = async (_url, init) => {
+    calls.push(JSON.parse(init.body));
+    return rejected(`max_tokens maximum value is ${16384 - calls.length}`);
+};
+await assert.rejects(provider.generateJson('提取任务', '正文'), /maximum value/);
+assert.equal(calls.length, 5, 'Repeated parameter rejections must stop after five requests');
+
+const cancelled = new AbortController();
+calls = [];
+fetchHandler = async (_url, init) => { calls.push(init); cancelled.abort(); return rejected('Unsupported parameter: response_format'); };
+await assert.rejects(provider.generateJson('提取任务', '正文', cancelled.signal), { name: 'AbortError' });
+assert.equal(calls.length, 1, 'Cancellation must stop before a compatibility retry');
+await assert.rejects(provider.generateJson('提取任务', '正文', cancelled.signal), { name: 'AbortError' });
+assert.equal(calls.length, 1, 'An already cancelled operation must not send a request');
+
+assert.deepEqual(parseOpenAIJsonResponse({ choices: [{ message: { content: '<think>过程</think>\n```json\n{"tasks":[]}\n```' } }] }), { tasks: [] });
+for (const content of [null, 123, [{ type: 'image', text: '{"tasks":[]}' }]]) {
+    assert.throws(() => parseOpenAIJsonResponse({ choices: [{ message: { content } }] }), /没有返回可用内容/);
+}
+assert.throws(() => parseOpenAIJsonResponse({ choices: [{ message: { content: '', reasoning_content: '还在思考' } }] }), /只返回了思考过程/);
+assert.throws(() => parseOpenAIJsonResponse({ choices: [{ finish_reason: 'length', message: { content: '{"tasks":[]}' } }] }), /被截断/,
+    'Even valid-looking JSON must not be accepted when the server reports truncation');
+assert.throws(() => parseOpenAIJsonResponse({ choices: [{ message: { refusal: 'declined', content: '' } }] }), /模型未能处理/);
+assert.throws(() => parseOpenAIJsonResponse({ choices: [{ finish_reason: 'content_filter', message: { content: '' } }] }), /模型未能处理/);
+
+console.log('AI compatibility checks passed: text-only requests, bounded parameter fallback, connection probe, cancellation, errors and response variants');

@@ -6,8 +6,9 @@ export interface OpenAIChatResponse {
     choices?: Array<{
         finish_reason?: string | null;
         message?: {
-            content?: string | null;
+            content?: string | Array<{ type: string; text?: string }> | null;
             reasoning_content?: string | null;
+            refusal?: string | null;
         };
     }>;
 }
@@ -27,12 +28,26 @@ export function getOpenAIRequestOptions(
 
 export function hasOpenAIReply(data: OpenAIChatResponse): boolean {
     const message = data.choices?.[0]?.message;
-    return Boolean(message?.content?.trim() || message?.reasoning_content?.trim());
+    return Boolean(replyText(data) || message?.reasoning_content?.trim());
+}
+
+function replyText(data: OpenAIChatResponse): string {
+    const content = data?.choices?.[0]?.message?.content;
+    return (typeof content === 'string' ? content : Array.isArray(content)
+        ? content.filter(part => part?.type === 'text' && typeof part.text === 'string').map(part => part.text).join('')
+        : '').trim();
 }
 
 export function parseOpenAIJsonResponse<T>(data: OpenAIChatResponse): T {
-    const choice = data.choices?.[0];
-    let content = choice?.message?.content?.trim() ?? '';
+    const choice = data?.choices?.[0];
+    let content = replyText(data);
+
+    if (choice?.message?.refusal || choice?.finish_reason === 'content_filter') {
+        throw new Error('模型未能处理这段内容，请检查笔记或更换模型后重试');
+    }
+    if (content && choice?.finish_reason === 'length') {
+        throw new Error('AI 返回的 JSON 被截断（输出额度不足）；请缩短笔记后重试');
+    }
 
     if (!content) {
         if (choice?.finish_reason === 'length') {
@@ -60,9 +75,6 @@ export function parseOpenAIJsonResponse<T>(data: OpenAIChatResponse): T {
     try {
         return JSON.parse(json) as T;
     } catch (error) {
-        if (choice?.finish_reason === 'length') {
-            throw new Error('AI 返回的 JSON 被截断（输出额度不足）；请缩短笔记后重试');
-        }
         console.error('JSON Parse Error:', error, { finishReason: choice?.finish_reason });
         throw new Error('AI 返回的格式不是有效的 JSON');
     }
@@ -71,6 +83,54 @@ export function parseOpenAIJsonResponse<T>(data: OpenAIChatResponse): T {
 export interface AIMessage {
     role: 'system' | 'user' | 'assistant';
     content: string;
+}
+
+interface OpenAIChatRequest {
+    model: string;
+    messages: AIMessage[];
+    temperature?: number;
+    max_tokens?: number;
+    max_completion_tokens?: number;
+    stream: false;
+    response_format?: unknown;
+}
+
+// Retry only explicit parameter rejections, never a failed generation or transport error.
+// Five requests cover JSON mode, temperature, token-name and token-limit adjustments.
+export async function requestOpenAIChat(
+    endpoint: string, apiKey: string, request: OpenAIChatRequest, signal?: AbortSignal,
+): Promise<OpenAIChatResponse> {
+    const body = { ...request };
+    for (let attempt = 0; ; attempt++) {
+        signal?.throwIfAborted();
+        const response = await fetch(endpoint, {
+            signal, method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify(body),
+        });
+        if (response.ok) return await response.json() as OpenAIChatResponse;
+
+        const errorText = await response.text();
+        const failure = new Error(`AI 请求失败 (${response.status}): ${errorText.slice(0, 1000)}`);
+        if (attempt >= 4 || ![400, 422].includes(response.status)) throw failure;
+        signal?.throwIfAborted();
+        const mentions = (parameter: string) => new RegExp(`\\b${parameter}\\b`, 'i').test(errorText);
+        const unsupported = /unsupported|not[ _-]+supported|not[ _-]+compatible|does not support|unknown (?:field|parameter)|unrecognized|extra_forbidden|extra inputs are not permitted|not allowed/i.test(errorText);
+        const tokenField = body.max_completion_tokens !== undefined ? 'max_completion_tokens' : 'max_tokens';
+        const limit = errorText.match(/(?:maximum(?: (?:allowed|value))?(?:\s*(?:is|of|:|=))?|at most|less than or equal to|<=|"(?:le|limit_value)"\s*:)\s*(\d+)/i);
+        if (unsupported && mentions('response_format') && body.response_format !== undefined) {
+            delete body.response_format;
+        } else if (unsupported && mentions('temperature') && body.temperature !== undefined) {
+            delete body.temperature;
+        } else if (unsupported && mentions('max_tokens') && body.max_tokens !== undefined) {
+            body.max_completion_tokens = body.max_tokens;
+            delete body.max_tokens;
+        } else if (mentions(tokenField) && limit && Number(limit[1]) > 0 && Number(limit[1]) < (body[tokenField] ?? 0)) {
+            body[tokenField] = Number(limit[1]);
+        } else {
+            throw failure;
+        }
+    }
 }
 
 export interface AIProvider {
@@ -97,29 +157,10 @@ class OpenAICompatibleProvider implements AIProvider {
     async chat(messages: AIMessage[], signal?: AbortSignal): Promise<string> {
         this.ensureConfigured();
 
-        const response = await fetch(this.chatCompletionsUrl, {
-            signal,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`,
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages,
-                temperature: 0.7,
-                max_tokens: 2000,
-                stream: false,
-            }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`AI 请求失败 (${response.status}): ${errorText}`);
-        }
-
-        const data = await response.json() as OpenAIChatResponse;
-        return data.choices?.[0]?.message?.content || '';
+        const data = await requestOpenAIChat(this.chatCompletionsUrl, this.apiKey, {
+            model: this.model, messages, temperature: 0.7, max_tokens: 2000, stream: false,
+        }, signal);
+        return replyText(data);
     }
 
     async generateJson<T>(systemPrompt: string, userPrompt: string, signal?: AbortSignal): Promise<T> {
@@ -132,29 +173,10 @@ class OpenAICompatibleProvider implements AIProvider {
             { role: 'user', content: userPrompt }
         ];
 
-        const response = await fetch(this.chatCompletionsUrl, {
-            signal,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`,
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages,
-                temperature: 0.1,
-                max_tokens: 16384,
-                stream: false,
-                ...getOpenAIRequestOptions(this.model, true),
-            }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`AI 请求失败 (${response.status}): ${errorText}`);
-        }
-
-        const data = await response.json() as OpenAIChatResponse;
+        const data = await requestOpenAIChat(this.chatCompletionsUrl, this.apiKey, {
+            model: this.model, messages, temperature: 0.1, max_tokens: 16384, stream: false,
+            ...getOpenAIRequestOptions(this.model, true),
+        }, signal);
         return parseOpenAIJsonResponse<T>(data);
     }
 }

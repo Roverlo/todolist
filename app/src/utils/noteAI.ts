@@ -1,12 +1,36 @@
 import type { AIGeneratedTask } from '../types';
 import { isNoteDate } from './noteDate';
 
-export function noteTextForAI(html: string): string {
+export function noteContentForAI(html: string): { text: string; imageCount: number } {
     const document = new DOMParser().parseFromString(html, 'text/html');
+    const imageCount = document.querySelectorAll('img').length;
     document.querySelectorAll('script, style, img').forEach(node => node.remove());
+    document.querySelectorAll('a[href]').forEach(node => {
+        const href = node.getAttribute('href') || '';
+        if (/^https?:\/\//i.test(href) && href !== node.textContent?.trim()) node.append(` (${href})`);
+    });
+    document.querySelectorAll('li').forEach(node => {
+        if (!node.textContent?.trim()) return;
+        const checkbox = Array.from(node.querySelectorAll('input[type="checkbox"]')).find(input => input.closest('li') === node);
+        const isTask = node.hasAttribute('data-checked') || node.getAttribute('data-type') === 'taskItem' || checkbox;
+        const checked = node.hasAttribute('data-checked') ? node.getAttribute('data-checked') === 'true' : checkbox?.hasAttribute('checked');
+        const parent = node.parentElement;
+        const marker = isTask ? `- [${checked ? 'x' : ' '}] ` : parent?.tagName === 'OL'
+            ? `${(parent as HTMLOListElement).start + Array.from(parent.children).indexOf(node)}. ` : '- ';
+        node.prepend(marker);
+    });
     document.querySelectorAll('br').forEach(node => node.replaceWith('\n'));
     document.querySelectorAll('p, div, li, tr, h1, h2, h3, h4, h5, h6, blockquote').forEach(node => node.append('\n'));
-    return (document.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+    // Convert inner tables first, preserving empty columns and explicit merged-cell spans.
+    Array.from(document.querySelectorAll('table')).reverse().forEach(table => {
+        if (!table.textContent?.trim()) { table.remove(); return; }
+        const rows = Array.from(table.rows).map(row => '| ' + Array.from(row.cells).map(cell => {
+            const span = (cell.colSpan > 1 ? `[跨${cell.colSpan}列]` : '') + (cell.rowSpan > 1 ? `[跨${cell.rowSpan}行]` : '');
+            return (cell.textContent || '').replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|') + span;
+        }).join(' | ') + ' |');
+        table.replaceWith('\n[表格]\n' + rows.join('\n') + '\n[/表格]\n');
+    });
+    return { text: (document.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim(), imageCount };
 }
 
 export function parseGeneratedTasks(response: unknown): AIGeneratedTask[] {

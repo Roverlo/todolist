@@ -8,7 +8,7 @@ import { normalizeAIEndpoint } from './aiConfig';
 import {
     getOpenAIRequestOptions,
     parseOpenAIJsonResponse,
-    type OpenAIChatResponse,
+    requestOpenAIChat,
 } from './ai';
 
 const sameModel = (left: string, right: string) => {
@@ -36,7 +36,10 @@ export async function testAIConnection(
         };
     }
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort('timeout'), 120000);
     try {
+        const signal = controller.signal;
         const headers = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
@@ -45,7 +48,7 @@ export async function testAIConnection(
         modelsEndpoint.pathname = modelsEndpoint.pathname.replace(/\/chat\/completions$/i, '/models');
 
         try {
-            const modelsResponse = await fetch(modelsEndpoint.toString(), { headers });
+            const modelsResponse = await fetch(modelsEndpoint.toString(), { headers, signal });
             if (modelsResponse.ok) {
                 const modelsData = await modelsResponse.json() as {
                     data?: Array<{ id?: string | null }>;
@@ -66,51 +69,17 @@ export async function testAIConnection(
         }
 
         const probe = crypto.randomUUID();
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                model,
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'Return valid JSON only. No markdown or explanation.',
-                    },
-                    {
-                        role: 'user',
-                        content: `Return exactly this JSON object: {"probe":"${probe}"}`,
-                    },
-                ],
-                temperature: 0,
-                max_tokens: 16384,
-                stream: false,
-                ...getOpenAIRequestOptions(model, true),
-            }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `HTTP ${response.status}`;
-            try {
-                const errorJson = JSON.parse(errorText);
-                errorMessage = errorJson.error?.message
-                    || errorJson.error?.type
-                    || errorJson.message
-                    || errorJson.detail
-                    || errorJson.msg
-                    || `HTTP ${response.status}: ${response.statusText}`;
-            } catch {
-                if (errorText.length > 100) {
-                    errorMessage = `HTTP ${response.status}: ${errorText.substring(0, 100)}...`;
-                } else if (errorText) {
-                    errorMessage = `HTTP ${response.status}: ${errorText}`;
-                }
-            }
-            console.error('[AI Test] Failed:', { status: response.status, errorText });
-            return { success: false, message: errorMessage };
-        }
-
-        const data = await response.json() as OpenAIChatResponse;
+        const data = await requestOpenAIChat(endpoint, apiKey, {
+            model,
+            messages: [
+                { role: 'system', content: 'Return valid JSON only. No markdown or explanation.' },
+                { role: 'user', content: `Return exactly this JSON object: {"probe":"${probe}"}` },
+            ],
+            temperature: 0.1,
+            max_tokens: 16384,
+            stream: false,
+            ...getOpenAIRequestOptions(model, true),
+        }, signal);
         const actualModel = data.model?.trim();
 
         if (!actualModel) {
@@ -136,6 +105,7 @@ export async function testAIConnection(
 
         return { success: true, message: '配置验证成功！' };
     } catch (error) {
+        if (controller.signal.aborted) return { success: false, message: '连接超时，请检查网络或模型接口' };
         console.error('[AI Test] Error:', error);
         const errMsg = error instanceof Error ? error.message : String(error);
         if (errMsg.includes('network') || errMsg.includes('fetch')) {
@@ -145,5 +115,7 @@ export async function testAIConnection(
             return { success: false, message: '连接超时，请检查网络' };
         }
         return { success: false, message: errMsg || '连接失败' };
+    } finally {
+        clearTimeout(timeout);
     }
 }

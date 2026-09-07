@@ -68,7 +68,7 @@ try {
         await server.listen();
         browser = await chromium.launch({ channel: 'msedge', headless: true });
         page = await browser.newPage({ timezoneId: 'Asia/Shanghai' });
-        await page.goto(server.resolvedUrls.local[0]);
+        await page.goto(server.resolvedUrls.local[0], { waitUntil: 'domcontentloaded', timeout: 90000 });
     }
     await page.setViewportSize({ width: 1538, height: 698 });
     page.on('pageerror', error => errors.push(error.message));
@@ -214,6 +214,45 @@ try {
         assert.ok((await readdir(dirname(imagePath))).includes(filename));
     }
     console.log('Passed: complete link dialog, image explanation, embedded copy' + (native ? ' and actual native file storage' : ''));
+
+    const imageHTML = `<img src="data:image/png;base64,${png.toString('base64')}" alt="不应发送的图片说明">`;
+    await body.evaluate((root, html) => root.editor.commands.setContent(html), imageHTML);
+    await panel.getByText('当前随记只有图片，暂不识别图片内容。请补充文字后生成。', { exact: true }).waitFor();
+    assert.equal(await panel.locator('.ai-panel-generate-btn').isEnabled(), false);
+    const mixedHTML = '<p>请按以下记录整理待办</p><ul data-type="taskList">'
+        + '<li data-type="taskItem" data-checked="true"><p>已经完成验收</p></li>'
+        + '<li data-type="taskItem" data-checked="false"><p>周五提交报告</p></li></ul>'
+        + '<table><tr><th><p>事项</p></th><th><p>责任人</p></th><th><p>截止日期</p></th></tr>'
+        + '<tr><td><p>接口联调</p></td><td><p>张三</p></td><td><p>周五</p></td></tr></table>' + imageHTML;
+    await body.evaluate((root, html) => root.editor.commands.setContent(html), mixedHTML);
+    await panel.getByText('本次仅提取文字，已跳过 1 张图片；图片内容不会被识别。', { exact: true }).waitFor();
+    await page.screenshot({ path: join(output, 'ai-text-only-compatibility.png') });
+    const start = requests.length;
+    replies.push(
+        { status: 400, payload: { error: { message: 'Unsupported parameter: response_format' } } },
+        { status: 400, payload: { error: { message: 'temperature does not support 0.1, only the default (1) is supported' } } },
+        { status: 400, payload: { error: { message: 'max_tokens is not supported; use max_completion_tokens' } } },
+        { status: 422, payload: { error: { message: 'max_completion_tokens must be <= 8192' } } },
+        { payload: { tasks: [] } },
+    );
+    await generate();
+    await until(() => requests.length === start + 5, 'Missing bounded compatibility requests');
+    await panel.getByText('没有识别到待办。可以补充具体行动后重新生成。', { exact: true }).waitFor();
+    const compatibilityRequests = requests.slice(start);
+    const extracted = compatibilityRequests[0].body.messages.at(-1).content;
+    assert.match(extracted, /- \[x\] 已经完成验收/);
+    assert.match(extracted, /- \[ \] 周五提交报告/);
+    assert.match(extracted, /\| 事项 \| 责任人 \| 截止日期 \|/);
+    assert.match(extracted, /\| 接口联调 \| 张三 \| 周五 \|/);
+    assert.doesNotMatch(extracted, /data:image|base64|不应发送的图片说明|<img|<table/);
+    assert.match(compatibilityRequests[0].body.messages[0].content, /不得把已完成事项重新生成为待办/);
+    assert.ok(compatibilityRequests.every(request => request.body.messages.every(message => typeof message.content === 'string')));
+    assert.ok(compatibilityRequests.every(request => request.body.messages.at(-1).content === extracted));
+    assert.equal(compatibilityRequests[1].body.response_format, undefined);
+    assert.equal(compatibilityRequests[2].body.temperature, undefined);
+    assert.equal(compatibilityRequests[3].body.max_tokens, undefined);
+    assert.equal(compatibilityRequests[4].body.max_completion_tokens, 8192);
+    console.log('Passed: image-only guidance, text-only rich-note request, checked items/table structure and four explicit parameter fallbacks');
 
     await page.getByTitle('切换到待办事项', { exact: true }).click();
     const taskRow = page.getByRole('row').filter({ has: page.getByText('确认后的接口联调', { exact: true }) });

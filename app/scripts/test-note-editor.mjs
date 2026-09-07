@@ -87,6 +87,39 @@ try {
         else await menu.locator('[role="option"][data-value="' + value + '"]').click();
     };
 
+    const aiContent = await page.evaluate(async () => {
+        const { noteContentForAI } = await import('/src/utils/noteAI.ts');
+        const samples = {
+            plain: '<p>张三明天完成联调</p><p>保留换行</p>',
+            checklist: '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p>已完成父项</p><ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p>仍需跟进的子项</p></li></ul></li><li data-type="taskItem" data-checked="false"><p>周五提交报告</p></li></ul>',
+            importedChecklist: '<ul><li><input type="checkbox" checked>旧格式完成项</li><li><input type="checkbox">旧格式未完成项</li></ul>',
+            table: '<table><tr><th>事项</th><th>责任人</th><th>截止日期</th></tr><tr><td><p>接口联调</p></td><td>张三</td><td>周五</td></tr><tr><td>提交报告</td><td></td><td>下周一</td></tr><tr><td colspan="2" rowspan="2">跨格说明</td><td>日期</td></tr></table>',
+            images: '<p><img src="data:image/png;base64,PRIVATE" alt="图片文字" data-local-path="C:/private.png"></p><img src="https://example.invalid/private.png">',
+            mixed: '<p>按文字生成</p><img src="data:image/png;base64,PRIVATE"><script>不应发送</script><style>同样不发送</style>',
+            links: '<p>查看<a href="https://example.invalid/doc">项目文档</a><a href="data:image/png;base64,PRIVATE">数据链接</a></p>',
+            empty: '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p></p></li></ul><table><tr><td></td></tr></table>',
+            ordered: '<ol start="3"><li>第三项</li><li>第四项</li></ol>',
+        };
+        return Object.fromEntries(Object.entries(samples).map(([name, html]) => [name, noteContentForAI(html)]));
+    });
+    assert.match(aiContent.plain.text, /张三明天完成联调\n保留换行/);
+    assert.match(aiContent.checklist.text, /- \[x\] 已完成父项/);
+    assert.match(aiContent.checklist.text, /- \[ \] 仍需跟进的子项/);
+    assert.match(aiContent.checklist.text, /- \[ \] 周五提交报告/);
+    assert.match(aiContent.importedChecklist.text, /- \[x\] 旧格式完成项/);
+    assert.match(aiContent.importedChecklist.text, /- \[ \] 旧格式未完成项/);
+    assert.match(aiContent.table.text, /\| 事项 \| 责任人 \| 截止日期 \|/);
+    assert.match(aiContent.table.text, /\| 接口联调 \| 张三 \| 周五 \|/);
+    assert.match(aiContent.table.text, /\| 提交报告 \|  \| 下周一 \|/);
+    assert.match(aiContent.table.text, /跨格说明\[跨2列\]\[跨2行\]/);
+    assert.deepEqual(aiContent.images, { text: '', imageCount: 2 });
+    assert.deepEqual(aiContent.mixed, { text: '按文字生成', imageCount: 1 });
+    assert.match(aiContent.links.text, /项目文档 \(https:\/\/example.invalid\/doc\)/);
+    assert.doesNotMatch(aiContent.links.text, /PRIVATE|base64/);
+    assert.equal(aiContent.empty.text, '');
+    assert.match(aiContent.ordered.text, /3\. 第三项\n4\. 第四项/);
+    console.log('Passed: AI text serialization preserves completion, table cells/spans, lists and links, excludes image bytes and handles empty notes');
+
     await openNote('<p data-indent="7">正文对齐</p>', 'Tab 对齐');
     await body.press('Control+Home');
     await body.press('Tab');

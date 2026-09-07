@@ -10,7 +10,7 @@ import { createAIProvider } from '../../services/ai';
 import { SYSTEM_PROMPT_TASK_EXTRACTION } from '../../services/ai/prompts';
 import { TaskPreviewCard } from './TaskPreviewCard';
 import { AISettingsModal } from './AISettingsModal';
-import { noteTextForAI, parseGeneratedTasks } from '../../utils/noteAI';
+import { noteContentForAI, parseGeneratedTasks } from '../../utils/noteAI';
 
 // 解析周期提示为 schedule 对象
 function parseRecurringHint(hint: string | undefined): RecurringTemplate['schedule'] | null {
@@ -96,7 +96,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [hasGenerated, setHasGenerated] = useState(false);
     const [generatedFrom, setGeneratedFrom] = useState('');
-    const plainText = useMemo(() => noteTextForAI(note?.content || ''), [note?.content]);
+    const { text: plainText, imageCount } = useMemo(() => noteContentForAI(note?.content || ''), [note?.content]);
 
     // 可用项目列表（排除回收站）
     const availableProjects = projects.filter(p => p.name !== '回收站');
@@ -340,7 +340,10 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
                         {loading && <LoaderCircle size={16} className="ai-spinner" />}
                         {loading ? '正在生成待办…' : !hasAIConfig ? '配置 AI' : error ? '重试生成' : tasks.length ? '重新生成' : '生成待办事项'}
                     </button>
-                    {!plainText && <p className="ai-inline-tip">先在左侧写下要做的事情，即可开始生成。</p>}
+                    {imageCount > 0 && <p className="ai-inline-tip">{plainText
+                        ? `本次仅提取文字，已跳过 ${imageCount} 张图片；图片内容不会被识别。`
+                        : '当前随记只有图片，暂不识别图片内容。请补充文字后生成。'}</p>}
+                    {!plainText && !imageCount && <p className="ai-inline-tip">先在左侧写下要做的事情，即可开始生成。</p>}
                     {loading && <div className="ai-request-status" role="status">
                         <span>已等待 {elapsedSeconds} 秒</span>
                         <button type="button" onClick={cancelGeneration}>取消生成</button>
