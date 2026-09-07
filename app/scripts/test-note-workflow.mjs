@@ -94,15 +94,6 @@ try {
     assert.equal(await page.getByRole('button', { name: '隐藏 AI 助手', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).locator('svg.lucide-settings').count(), 1);
     assert.match(await page.getByRole('button', { name: '隐藏 AI 助手', exact: true }).innerText(), /AI助手：一键生成待办事项/);
-    const caption = page.locator('.editor-toolbar-group > .editor-group-label').first();
-    const purple = await caption.evaluate(el => getComputedStyle(el).color);
-    const originalTheme = await page.evaluate(() => {
-        const previous = document.documentElement.getAttribute('data-theme');
-        document.documentElement.setAttribute('data-theme', 'blue');
-        return previous;
-    });
-    assert.notEqual(await caption.evaluate(el => getComputedStyle(el).color), purple, 'Toolbar captions must follow the app theme');
-    await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), originalTheme);
     await page.getByRole('combobox', { name: '编号样式', exact: true }).click();
     await page.screenshot({ path: join(output, 'editor-dropdown.png') });
     await page.getByRole('combobox', { name: '编号样式', exact: true }).press('Escape');

@@ -204,127 +204,110 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
             onMouseDown={event => {
                 if (event.target instanceof Element && event.target.closest('button, summary') && !event.target.closest('[role="combobox"]')) event.preventDefault();
             }}>
-            <div className="editor-toolbar-group" role="group" aria-label="字体">
-                <span className="editor-group-label" aria-hidden="true">文字</span>
-                <div className="editor-toolbar-row">
-                <CustomSelect className="editor-heading-select" aria-label="段落标题" value={lists.heading}
-                    options={[{ value: '0', label: '段落' }, ...[1, 2, 3, 4, 5, 6].map(level => ({ value: String(level), label: `标题 ${level}` }))]}
-                    onChange={value => value === '0' ? editor.chain().focus().setParagraph().run()
-                        : editor.chain().focus().setHeading({ level: Number(value) as 1 | 2 | 3 | 4 | 5 | 6 }).run()} />
-                <CustomSelect className="editor-font-select" aria-label="正文字体" value={lists.font}
-                    options={[...FONT_FAMILIES.map(([value, label]) => ({ value, label })),
-                        ...(!FONT_FAMILIES.some(([value]) => value === lists.font) ? [{ value: lists.font, label: lists.font }] : [])]}
-                    onChange={value => value ? editor.chain().focus().setFontFamily(value).run() : editor.chain().focus().unsetFontFamily().run()} />
-                <CustomSelect className="editor-size-select" aria-label="字号" value={lists.size}
-                    options={[{ value: '', label: '默认' }, ...['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'].map(value => ({ value, label: value }))]}
-                    onChange={value => value ? editor.chain().focus().setFontSize(value).run() : editor.chain().focus().unsetFontSize().run()} />
+            <div className="editor-toolbar-row">
+                <div className="editor-toolbar-group" role="group" aria-label="字体">
+                    <CustomSelect className="editor-heading-select" aria-label="段落标题" value={lists.heading}
+                        options={[{ value: '0', label: '段落' }, ...[1, 2, 3, 4, 5, 6].map(level => ({ value: String(level), label: `标题 ${level}` }))]}
+                        onChange={value => value === '0' ? editor.chain().focus().setParagraph().run()
+                            : editor.chain().focus().setHeading({ level: Number(value) as 1 | 2 | 3 | 4 | 5 | 6 }).run()} />
+                    <CustomSelect className="editor-font-select" aria-label="正文字体" value={lists.font}
+                        options={[...FONT_FAMILIES.map(([value, label]) => ({ value, label })),
+                            ...(!FONT_FAMILIES.some(([value]) => value === lists.font) ? [{ value: lists.font, label: lists.font }] : [])]}
+                        onChange={value => value ? editor.chain().focus().setFontFamily(value).run() : editor.chain().focus().unsetFontFamily().run()} />
+                    <CustomSelect className="editor-size-select" aria-label="字号" value={lists.size}
+                        options={[{ value: '', label: '默认' }, ...['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'].map(value => ({ value, label: value }))]}
+                        onChange={value => value ? editor.chain().focus().setFontSize(value).run() : editor.chain().focus().unsetFontSize().run()} />
                 </div>
-                <div className="editor-toolbar-row">
-                <Tool label="加粗"><RichTextBold /></Tool>
-                <Tool label="斜体"><RichTextItalic /></Tool>
-                <Tool label="下划线"><RichTextUnderline /></Tool>
-                <Tool label="删除线"><RichTextStrike /></Tool>
-                <WordColorPicker icon={Baseline} label="字体颜色" color={textColor} clearLabel="自动颜色"
-                    onApply={color => { setTextColor(color); editor.chain().focus().setColor(color).run(); }}
-                    onClear={() => editor.chain().focus().unsetColor().run()} />
-                <WordColorPicker icon={Highlighter} label="背景颜色" color={highlightColor} clearLabel="无颜色"
-                    onApply={color => { setHighlightColor(color); editor.chain().focus().setHighlight({ color }).run(); }}
-                    onClear={() => editor.chain().focus().unsetHighlight().run()} />
+                <div className="editor-toolbar-group" role="group" aria-label="文字样式">
+                    <Tool label="加粗"><RichTextBold /></Tool>
+                    <Tool label="斜体"><RichTextItalic /></Tool>
+                    <Tool label="下划线"><RichTextUnderline /></Tool>
+                    <Tool label="删除线"><RichTextStrike /></Tool>
+                    <WordColorPicker icon={Baseline} label="字体颜色" color={textColor} clearLabel="自动颜色"
+                        onApply={color => { setTextColor(color); editor.chain().focus().setColor(color).run(); }}
+                        onClear={() => editor.chain().focus().unsetColor().run()} />
+                    <WordColorPicker icon={Highlighter} label="背景颜色" color={highlightColor} clearLabel="无颜色"
+                        onApply={color => { setHighlightColor(color); editor.chain().focus().setHighlight({ color }).run(); }}
+                        onClear={() => editor.chain().focus().unsetHighlight().run()} />
                 </div>
+                <div className="editor-toolbar-group" role="group" aria-label="编辑">
+                    <Tool label="撤销"><RichTextUndo /></Tool>
+                    <Tool label="重做"><RichTextRedo /></Tool>
+                    <Tool label="格式刷"><RichTextFormatPainter /></Tool>
+                    <Tool label="清除格式"><RichTextClear /></Tool>
+                    <button type="button" className="editor-toolbar-btn" aria-label="查找替换" title="查找替换"
+                        data-state={searchOpen ? 'on' : 'off'} aria-pressed={searchOpen}
+                        onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
+                </div>
+                {lists.image && <div className="editor-toolbar-group editor-context-tools" role="group" aria-label="图片工具" title="拖动图片四角可调整大小">
+                    <CustomSelect className="editor-list-select" aria-label="图片宽度" value="" placeholder="图片宽度"
+                        options={[{ value: 'auto', label: '原始宽度' }, ...['25%', '50%', '75%', '100%'].map(value => ({ value, label: `${value} 正文宽度` }))]}
+                        onChange={value => editor.chain().focus().updateImage({ width: value === 'auto' ? null
+                            : Math.round(editor.view.dom.clientWidth * Number.parseInt(value) / 100) }).run()} />
+                    <button type="button" className="editor-toolbar-btn" aria-label="打开图片文件夹" title="打开图片文件夹"
+                        onClick={() => void openNoteImageFolder(editor.getAttributes('imageBlock').src || editor.getAttributes('image').src)
+                            .catch(error => useToastStore.getState().addToast(error instanceof Error ? error.message : String(error), 'error'))}><FolderOpen size={17} /></button>
+                </div>}
             </div>
-            <div className="editor-toolbar-group" role="group" aria-label="编辑">
-                <span className="editor-group-label" aria-hidden="true">编辑</span>
-                <div className="editor-toolbar-row">
-                <Tool label="撤销"><RichTextUndo /></Tool>
-                <Tool label="重做"><RichTextRedo /></Tool>
+            <div className="editor-toolbar-row">
+                <div className="editor-toolbar-group" role="group" aria-label="段落">
+                    {([['left', '左对齐', AlignLeft], ['center', '居中对齐', AlignCenter], ['right', '右对齐', AlignRight], ['justify', '两端对齐', AlignJustify]] as const)
+                        .map(([value, label, AlignIcon]) => <button key={value} type="button" className="editor-toolbar-btn"
+                            aria-label={label} title={label} data-state={lists.align === value ? 'on' : 'off'} aria-pressed={lists.align === value}
+                            onClick={() => editor.chain().focus().setTextAlign(value).run()}><AlignIcon size={18} /></button>)}
+                    <CustomSelect className="editor-line-select" aria-label="行距" value={lists.lineHeight}
+                        options={[{ value: '', label: '行距' }, ...['1', '1.25', '1.5', '1.75', '2', '2.5', '3'].map(value => ({ value, label: `${value} 倍` }))]}
+                        onChange={value => value ? editor.chain().focus().setLineHeight(value).run() : editor.chain().focus().unsetLineHeight().run()} />
+                    <button type="button" className="editor-toolbar-btn" aria-label="增加缩进" title="增加缩进 (Tab)"
+                        onClick={() => editor.chain().focus().indent().run()}><IndentIncrease size={18} /></button>
+                    <button type="button" className="editor-toolbar-btn" aria-label="减少缩进" title="减少缩进 (Shift+Tab)"
+                        onClick={() => editor.chain().focus().outdent().run()}><IndentDecrease size={18} /></button>
                 </div>
-                <div className="editor-toolbar-row">
-                <Tool label="格式刷"><RichTextFormatPainter /></Tool>
-                <Tool label="清除格式"><RichTextClear /></Tool>
-                <button type="button" className="editor-toolbar-btn" aria-label="查找替换" title="查找替换"
-                    data-state={searchOpen ? 'on' : 'off'} aria-pressed={searchOpen}
-                    onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
+                <div className="editor-toolbar-group" role="group" aria-label="列表">
+                    <CustomSelect className="editor-list-select" aria-label="项目符号样式" value={lists.bullet} placeholder="项目符号"
+                        options={[...BULLET_STYLES.map(([value, label]) => ({ value, label })), ...(lists.bullet ? [{ value: 'none', label: '取消项目符号' }] : [])]}
+                        onChange={value => setListStyle('bulletList', value)} />
+                    <CustomSelect className="editor-list-select" aria-label="编号样式" value={lists.ordered} placeholder="编号样式"
+                        options={[...NUMBER_STYLES.map(([value, label]) => ({ value, label })), ...(lists.ordered ? [{ value: 'none', label: '取消编号' }] : [])]}
+                        onChange={value => setListStyle('orderedList', value)} />
+                    <Tool label="待办列表"><RichTextTaskList /></Tool>
                 </div>
-            </div>
-            <div className="editor-toolbar-group" role="group" aria-label="段落和列表">
-                <span className="editor-group-label" aria-hidden="true">段落</span>
-                <div className="editor-toolbar-row">
-                {([['left', '左对齐', AlignLeft], ['center', '居中对齐', AlignCenter], ['right', '右对齐', AlignRight], ['justify', '两端对齐', AlignJustify]] as const)
-                    .map(([value, label, AlignIcon]) => <button key={value} type="button" className="editor-toolbar-btn"
-                        aria-label={label} title={label} data-state={lists.align === value ? 'on' : 'off'} aria-pressed={lists.align === value}
-                        onClick={() => editor.chain().focus().setTextAlign(value).run()}><AlignIcon size={18} /></button>)}
-                <CustomSelect className="editor-line-select" aria-label="行距" value={lists.lineHeight}
-                    options={[{ value: '', label: '行距' }, ...['1', '1.25', '1.5', '1.75', '2', '2.5', '3'].map(value => ({ value, label: `${value} 倍` }))]}
-                    onChange={value => value ? editor.chain().focus().setLineHeight(value).run() : editor.chain().focus().unsetLineHeight().run()} />
-                <button type="button" className="editor-toolbar-btn" aria-label="增加缩进" title="增加缩进 (Tab)"
-                    onClick={() => editor.chain().focus().indent().run()}><IndentIncrease size={18} /></button>
-                <button type="button" className="editor-toolbar-btn" aria-label="减少缩进" title="减少缩进 (Shift+Tab)"
-                    onClick={() => editor.chain().focus().outdent().run()}><IndentDecrease size={18} /></button>
-                </div>
-                <div className="editor-toolbar-row">
-                <CustomSelect className="editor-list-select" aria-label="项目符号样式" value={lists.bullet} placeholder="项目符号"
-                    options={[...BULLET_STYLES.map(([value, label]) => ({ value, label })), ...(lists.bullet ? [{ value: 'none', label: '取消项目符号' }] : [])]}
-                    onChange={value => setListStyle('bulletList', value)} />
-                <CustomSelect className="editor-list-select" aria-label="编号样式" value={lists.ordered} placeholder="编号样式"
-                    options={[...NUMBER_STYLES.map(([value, label]) => ({ value, label })), ...(lists.ordered ? [{ value: 'none', label: '取消编号' }] : [])]}
-                    onChange={value => setListStyle('orderedList', value)} />
-                <Tool label="待办列表"><RichTextTaskList /></Tool>
-                </div>
-            </div>
-            <div className="editor-toolbar-group" role="group" aria-label="插入">
-                <span className="editor-group-label" aria-hidden="true">插入</span>
-                <div className="editor-toolbar-row">
-                <button type="button" className="editor-toolbar-btn" aria-label="插入链接" title="插入链接" onClick={() => setInsertDialog('link')}><Link size={18} /></button>
-                <button type="button" className="editor-toolbar-btn" aria-label="插入图片" title="插入图片" onClick={() => setInsertDialog('image')}><ImagePlus size={18} /></button>
-                </div>
-                <div className="editor-toolbar-row">
-                <span onKeyDownCapture={event => {
-                    if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLButtonElement) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-                    }
-                }} title="选择表格大小；键盘 Enter 可插入 3×3 表格">
-                    <Tool label="插入表格"><RichTextTable /></Tool>
-                </span>
-                <Tool label="引用"><RichTextBlockquote /></Tool>
-                <details className="editor-more" ref={moreRef}
-                    onKeyDown={event => {
-                        if (event.key === 'Escape') {
-                            event.currentTarget.open = false;
-                            event.currentTarget.querySelector('summary')?.focus();
+                <div className="editor-toolbar-group" role="group" aria-label="插入">
+                    <button type="button" className="editor-toolbar-btn" aria-label="插入链接" title="插入链接" onClick={() => setInsertDialog('link')}><Link size={18} /></button>
+                    <button type="button" className="editor-toolbar-btn" aria-label="插入图片" title="插入图片" onClick={() => setInsertDialog('image')}><ImagePlus size={18} /></button>
+                    <span onKeyDownCapture={event => {
+                        if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLButtonElement) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
                         }
-                    }}>
-                    <summary aria-label="更多插入工具" title="更多插入工具"><MoreHorizontal size={18} />更多</summary>
-                    <div className="editor-more-menu" onClick={event => {
-                        if (event.target instanceof Element && event.target.closest('button') && moreRef.current) moreRef.current.open = false;
-                    }}>
-                        <Tool label="行内代码"><RichTextCode /></Tool>
-                        <Tool label="代码块"><RichTextCodeBlock /></Tool>
-                        <Tool label="分隔线"><RichTextHorizontalRule /></Tool>
-                    </div>
-                </details>
+                    }} title="选择表格大小；键盘 Enter 可插入 3×3 表格">
+                        <Tool label="插入表格"><RichTextTable /></Tool>
+                    </span>
+                    <Tool label="引用"><RichTextBlockquote /></Tool>
+                    <details className="editor-more" ref={moreRef}
+                        onKeyDown={event => {
+                            if (event.key === 'Escape') {
+                                event.currentTarget.open = false;
+                                event.currentTarget.querySelector('summary')?.focus();
+                            }
+                        }}>
+                        <summary aria-label="更多插入工具" title="更多插入工具"><MoreHorizontal size={18} /></summary>
+                        <div className="editor-more-menu" onClick={event => {
+                            if (event.target instanceof Element && event.target.closest('button') && moreRef.current) moreRef.current.open = false;
+                        }}>
+                            <Tool label="行内代码"><RichTextCode /></Tool>
+                            <Tool label="代码块"><RichTextCodeBlock /></Tool>
+                            <Tool label="分隔线"><RichTextHorizontalRule /></Tool>
+                        </div>
+                    </details>
                 </div>
+                {lists.table && <div className="editor-toolbar-group editor-context-tools" role="group" aria-label="表格工具" title="拖选多个单元格后可合并">
+                    <CustomSelect className="editor-list-select" aria-label="表格操作" value="" placeholder="表格操作"
+                        options={tableActions.map(([label, , disabled], index) => ({ value: String(index), label, disabled }))}
+                        onChange={value => tableActions[Number(value)][1]()} />
+                </div>}
             </div>
-            {(lists.table || lists.image) && <div className="editor-context-tools" role="group" aria-label="选中内容工具">
-                {lists.table && <>
-                <span className="editor-group-label">表格</span>
-                <CustomSelect className="editor-list-select" aria-label="表格操作" value="" placeholder="行列与单元格"
-                    options={tableActions.map(([label, , disabled], index) => ({ value: String(index), label, disabled }))}
-                    onChange={value => tableActions[Number(value)][1]()} />
-                <span className="editor-context-hint">拖选多个单元格后可合并</span>
-                </>}
-                {lists.image && <>
-                <span className="editor-group-label">图片</span>
-                <CustomSelect className="editor-list-select" aria-label="图片宽度" value="" placeholder="图片宽度"
-                    options={[{ value: 'auto', label: '原始宽度' }, ...['25%', '50%', '75%', '100%'].map(value => ({ value, label: `${value} 正文宽度` }))]}
-                    onChange={value => editor.chain().focus().updateImage({ width: value === 'auto' ? null
-                        : Math.round(editor.view.dom.clientWidth * Number.parseInt(value) / 100) }).run()} />
-                <button type="button" className="editor-image-folder" onClick={() => void openNoteImageFolder(editor.getAttributes('imageBlock').src || editor.getAttributes('image').src)
-                    .catch(error => useToastStore.getState().addToast(error instanceof Error ? error.message : String(error), 'error'))}><FolderOpen size={15} />打开图片文件夹</button>
-                <span className="editor-context-hint">拖动图片四角可调整大小</span>
-                </>}
-            </div>}
         </div>
         {searchOpen && <EditorSearch editor={editor} onClose={() => setSearchOpen(false)} />}
         {insertDialog && <EditorInsertDialog editor={editor} kind={insertDialog} onClose={() => setInsertDialog(null)} />}

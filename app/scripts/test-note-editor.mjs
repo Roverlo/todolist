@@ -308,6 +308,8 @@ try {
     console.log('Passed: image upload, sizing, paste/drop, validation, persistence and HTML export');
 
     await openNote('<p>工具栏布局检查</p>', '工具栏布局');
+    const toolbarHeight = (await page.getByRole('toolbar').boundingBox()).height;
+    assert.ok(toolbarHeight <= 82, 'The toolbar should occupy only two compact rows');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
     await page.getByLabel('更多插入工具', { exact: true }).click();
     await page.getByRole('button', { name: '分隔线', exact: true }).click();
@@ -319,9 +321,19 @@ try {
     await body.press('Control+End');
     await page.getByRole('button', { name: '插入表格', exact: true }).press('Enter');
     await body.locator('table').waitFor();
+    assert.equal((await page.getByRole('toolbar').boundingBox()).height, toolbarHeight, 'Table tools must not add another row');
+    await body.locator('th').first().click();
+    await page.getByRole('button', { name: '插入图片', exact: true }).click();
+    const tableImageChooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: '选择图片', exact: false }).click();
+    await (await tableImageChooser).setFiles({ name: '表格图片.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+    await page.getByRole('dialog').getByRole('button', { name: '插入图片', exact: true }).click();
+    await body.locator('table .image-view__body').click();
+    await page.getByRole('combobox', { name: '图片宽度', exact: true }).waitFor();
+    await page.getByRole('combobox', { name: '表格操作', exact: true }).waitFor();
     assert.equal(await page.locator('.ai-panel-header').count(), 0, 'Do not add a second title bar for the assistant');
-    for (const width of [1100, 1186, 1280, 1536, 1920]) {
-        await page.setViewportSize({ width, height: 840 });
+    for (const width of [1100, 1186, 1280, 1538, 1920]) {
+        await page.setViewportSize({ width, height: 698 });
         let closedLayout;
         for (const panelOpen of [false, true, false]) {
             const toggle = page.getByRole('button', { name: panelOpen ? '显示 AI 助手' : '隐藏 AI 助手', exact: true });
@@ -334,6 +346,7 @@ try {
                 titleTop: el.querySelector('.note-editor-title').getBoundingClientRect().top,
             }));
             closedLayout ??= layout;
+            assert.equal(layout.topBars[2].height, toolbarHeight, `Image and table tools must stay within two rows at ${width}px`);
             assert.deepEqual(layout, closedLayout, `Header, toolbar and note top must not jump when toggling AI at ${width}px`);
             assert.ok(await page.locator('.notes-main-root').evaluate(el =>
                 el.getBoundingClientRect().left >= document.querySelector('.sidebar').getBoundingClientRect().right),
@@ -359,9 +372,11 @@ try {
             }
             assert.equal(await body.locator('hr').count(), 1, 'Toggling the sidebar must preserve the editor content');
             assert.equal(await body.locator('table').count(), 1, 'Toggling the sidebar must preserve the table');
-            if (width === 1186) await page.screenshot({ path: `ui-check.local/ai-layout-${panelOpen ? 'open' : 'closed'}.png` });
+            assert.equal(await body.locator('table img').count(), 1, 'Toggling the sidebar must preserve the image');
+            if ([1186, 1538].includes(width)) await page.screenshot({ path: `ui-check.local/compact-toolbar-${width}-${panelOpen ? 'open' : 'closed'}.png` });
         }
     }
+    console.log(`Passed: two-row toolbar (${toolbarHeight}px), image/table controls and stable AI toggle at five desktop widths`);
     assert.deepEqual(errors, []);
     await page.setViewportSize({ width: 1280, height: 840 });
     await page.screenshot({ path: 'ui-check.local/note-editor.png' });

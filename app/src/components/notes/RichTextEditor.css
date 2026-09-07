@@ -4,10 +4,10 @@
 }
 
 .editor-toolbar.reactjs-tiptap-editor {
-    display: grid;
-    grid-template-columns: minmax(268px, 2.5fr) minmax(110px, 1fr) minmax(276px, 2.5fr) minmax(132px, 1.2fr);
-    gap: 12px;
-    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 8px;
     background: #fafbfc;
     border-bottom: 1px solid #e5e7eb;
     color: #475467;
@@ -16,22 +16,16 @@
 
 .editor-toolbar-group {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
 }
 
-.editor-toolbar-group + .editor-toolbar-group { padding-left: 12px; border-left: 1px solid #e1e5eb; }
-.editor-group-label { flex: 0 0 auto; margin-right: 6px; color: rgb(var(--primary-rgb)); font-size: 11px; font-weight: 500; white-space: nowrap; }
-.editor-toolbar-group > .editor-group-label { order: 1; margin: 0; line-height: 14px; }
-.editor-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%; min-height: 32px; }
-.editor-toolbar-row > * { flex-shrink: 0; }
-.editor-toolbar-divider { flex-basis: 100%; height: 0; }
-.editor-toolbar-group > :is(button, select, .editor-tool, .word-color-picker, .editor-more) { flex-shrink: 0; }
-.editor-context-tools { grid-column: 1 / -1; }
-@container note-document (max-width: 858px) {
-    .editor-toolbar.reactjs-tiptap-editor { grid-template-columns: minmax(0, 1fr) 150px; }
-    .editor-toolbar-group[aria-label='段落和列表'] { padding-left: 0; border-left: 0; }
+.editor-toolbar-group + .editor-toolbar-group { padding-left: 6px; border-left: 1px solid #e1e5eb; }
+.editor-toolbar-group > * { flex-shrink: 0; }
+.editor-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 32px; }
+@container note-document (max-width: 800px) {
+    .editor-toolbar-row { flex-wrap: wrap; justify-content: flex-start; }
 }
 .editor-tool { display: inline-flex; align-items: center; }
 .editor-sr-only {
@@ -48,9 +42,9 @@
 .editor-toolbar .editor-tool > button,
 .editor-toolbar .editor-more > summary {
     display: inline-flex;
-    width: 32px;
+    width: 30px;
     min-width: 0;
-    height: 32px;
+    height: 30px;
     align-items: center;
     justify-content: center;
     padding: 0;
@@ -80,24 +74,20 @@
 .editor-toolbar.reactjs-tiptap-editor button:focus-visible,
 .editor-toolbar.reactjs-tiptap-editor select:focus-visible,
 .editor-toolbar .editor-more > summary:focus-visible { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 2px; }
-.editor-toolbar .custom-select-trigger { height: 32px; padding: 0 7px; gap: 4px; font-size: 12px; font-weight: 400; color: #344054; border-color: #dce1e9; }
-.editor-toolbar .custom-select-container { width: 104px; }
-.editor-toolbar .editor-heading-select { width: 82px; }
+.editor-toolbar .custom-select-trigger { height: 30px; padding: 0 6px; gap: 3px; font-size: 12px; font-weight: 400; color: #344054; border-color: #dce1e9; }
+.editor-toolbar .custom-select-container { width: 92px; }
+.editor-toolbar .editor-heading-select { width: 76px; }
 .editor-toolbar .editor-size-select { width: 64px; }
 .editor-toolbar .editor-line-select { width: 54px; }
 .editor-toolbar .editor-line-select .custom-select-trigger { padding: 0 3px; gap: 2px; }
 .editor-toolbar .custom-select-trigger:hover, .editor-toolbar .custom-select-trigger.is-open { border-color: rgb(var(--primary-rgb)); background: var(--primary-soft); }
 .editor-more { position: relative; }
-.editor-toolbar .editor-more > summary { width: auto; gap: 4px; padding: 0 7px; list-style: none; font-size: 12px; }
+.editor-toolbar .editor-more > summary { list-style: none; }
 .editor-more > summary::-webkit-details-marker { display: none; }
 .editor-more-menu { position: absolute; top: calc(100% + 6px); right: 0; width: 152px; padding: 5px; z-index: 20; border: 1px solid #e1e5eb; border-radius: 8px; background: #fff; box-shadow: 0 8px 24px #10182814; }
 .editor-more-menu .editor-tool { width: 100%; gap: 8px; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
 .editor-more-menu .editor-tool:hover { background: #f4f2fa; }
 .editor-more-menu .editor-sr-only { position: static; width: auto; height: auto; clip-path: none; overflow: visible; order: 1; font-size: 12px; }
-.editor-context-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; }
-.editor-toolbar .editor-context-tools .editor-list-select { width: 152px; }
-.editor-context-hint { color: #667085; font-size: 11px; }
-.editor-image-folder { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid #dce1e9; border-radius: 6px; background: #fff; font: inherit; color: rgb(var(--primary-rgb)); cursor: pointer; }
 
 /* Keep editor theme variables within the library's own surfaces. */
 .reactjs-tiptap-editor,
