@@ -132,11 +132,10 @@ div[data-richtext-portal] { z-index: 1200; }
     color: var(--note-selection-color) !important;
     text-shadow: none;
 }
-/* A two-tone edge identifies the range even over an identical blue/white highlight. */
+/* A quiet inset edge separates matching highlights without framing the text. */
 .note-editor .ProseMirror .note-selection {
-    outline: 1px dashed #111827;
-    outline-offset: 1px;
-    box-shadow: 0 0 0 1px #fff;
+    outline: 1px solid #c7d9fa;
+    outline-offset: -1px;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
     forced-color-adjust: none;
@@ -155,8 +154,7 @@ div[data-richtext-portal] { z-index: 1200; }
         --note-selection-color: HighlightText;
     }
     .note-editor .ProseMirror .note-selection {
-        outline-color: CanvasText;
-        box-shadow: 0 0 0 1px Canvas;
+        outline-color: HighlightText;
     }
 }
 .note-editor .ProseMirror p { margin: 0.5em 0; }

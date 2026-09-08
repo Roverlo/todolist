@@ -110,10 +110,10 @@ try {
         await selected.first().waitFor();
         for (const edge of await selected.evaluateAll(elements => elements.map(el => {
             const css = getComputedStyle(el);
-            return [css.outlineStyle, css.outlineWidth, css.boxShadow];
+            return [css.outlineStyle, css.outlineWidth, css.outlineOffset, css.outlineColor, css.boxShadow];
         }))) {
-            assert.deepEqual(edge.slice(0, 2), ['dashed', '1px']);
-            assert.notEqual(edge[2], 'none', 'A light inner edge must distinguish selection on a dark background');
+            assert.deepEqual(edge, ['solid', '1px', '-1px', 'rgb(199, 217, 250)', 'none'],
+                'A single light inset edge must distinguish matching colors without a dark frame or halo');
         }
     };
     await assertSelectionEdge();
@@ -164,10 +164,13 @@ try {
     const allSelectedText = await body.evaluate(root => root.editor.state.doc.textContent);
     await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
     await assertRetainedSelection(allSelectedText);
+    await page.screenshot({ path: 'ui-check.local/note-selection-multiline.png' });
     await page.emulateMedia({ forcedColors: 'active' });
     const systemSelectionColors = await nativeSelectionColors();
     assert.notEqual(systemSelectionColors[0], systemSelectionColors[1], 'Windows high contrast must distinguish text and selection');
     await assertRetainedSelection(allSelectedText, systemSelectionColors);
+    assert.equal(await body.locator('.note-selection').first().evaluate(el => getComputedStyle(el).outlineColor), systemSelectionColors[1],
+        'The inset edge must follow the system selection text color in high contrast');
     await page.emulateMedia({ forcedColors: 'none' });
     await page.keyboard.press('Escape');
     await body.press('ArrowRight');
@@ -261,7 +264,7 @@ try {
     await saveAndReload();
     assert.equal(await body.textContent(), '左侧未选  蓝底白字  右侧未选', 'Reload must preserve alignment spaces and the original text');
     assert.equal(await body.evaluate(root => root.editor.getHTML()), collisionHTML);
-    console.log('Passed: identical blue/white styling, partial keyboard selection, active/blurred two-tone outline, stable layout and original formatting');
+    console.log('Passed: identical blue/white styling, partial keyboard selection, active/blurred inset edge, stable layout and original formatting');
 
     // Highlights must decorate text without adding the dependency's padded, rounded block.
     await openNote('<p>普通文字 <span style="color:#008000"><mark data-color="#ff0000" style="background-color:#ff0000">哇水水水水</mark></span></p>'
