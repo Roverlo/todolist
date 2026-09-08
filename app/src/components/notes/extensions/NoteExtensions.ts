@@ -117,8 +117,8 @@ const NoteIndent = Indent.extend<IndentOptions>({
     },
 });
 
-// Toolbar inputs take focus, but formatting still applies to the editor selection.
-// Decorations keep that range visible without changing saved or copied HTML.
+// Outline the selection even when its text already has the same colors.
+// Decorations also retain it on blur without changing saved or copied HTML.
 const NoteSelection = Extension.create({
     name: 'noteSelection',
     addProseMirrorPlugins() {
@@ -126,7 +126,7 @@ const NoteSelection = Extension.create({
         return [new Plugin({
             props: {
                 decorations({ doc, selection }) {
-                    if (editor.isFocused || !editor.isEditable || editor.view.dragging || selection.empty
+                    if (!editor.isEditable || editor.view.dragging || selection.empty
                         || !(selection instanceof TextSelection || selection instanceof AllSelection)) return null;
                     return DecorationSet.create(doc, [Decoration.inline(selection.from, selection.to, { class: 'note-selection' })]);
                 },

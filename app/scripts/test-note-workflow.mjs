@@ -58,6 +58,7 @@ try {
         assert.equal(bridgeCheck, 'ok', 'Native HTTP bridge scope check: ' + bridgeCheck);
     } else {
         server = await createViteServer({
+            cacheDir: 'node_modules/.vite-test-note-workflow',
             logLevel: 'error', server: { host: '127.0.0.1', port: 0 },
             plugins: [{ name: 'browser-only-native-http-test', enforce: 'pre', transform(code, id) {
                 if (id.replaceAll('\\', '/').endsWith('/src/services/ai/index.ts')) {

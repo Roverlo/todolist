@@ -132,9 +132,18 @@ div[data-richtext-portal] { z-index: 1200; }
     color: var(--note-selection-color) !important;
     text-shadow: none;
 }
-/* Override saved inline colors and completed-task gray only inside the retained selection. */
-.note-editor .ProseMirror.ProseMirror.ProseMirror .note-selection,
-.note-editor .ProseMirror.ProseMirror.ProseMirror .note-selection * {
+/* A two-tone edge identifies the range even over an identical blue/white highlight. */
+.note-editor .ProseMirror .note-selection {
+    outline: 1px dashed #111827;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 1px #fff;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    forced-color-adjust: none;
+}
+/* Native selection paints focused text; fill its decoration only when focus moves away. */
+.note-editor .ProseMirror.ProseMirror.ProseMirror:not(.ProseMirror-focused) .note-selection,
+.note-editor .ProseMirror.ProseMirror.ProseMirror:not(.ProseMirror-focused) .note-selection * {
     background-color: var(--note-selection-background) !important;
     color: var(--note-selection-color) !important;
     text-shadow: none !important;
@@ -144,6 +153,10 @@ div[data-richtext-portal] { z-index: 1200; }
     .note-editor .ProseMirror.ProseMirror.ProseMirror {
         --note-selection-background: Highlight;
         --note-selection-color: HighlightText;
+    }
+    .note-editor .ProseMirror .note-selection {
+        outline-color: CanvasText;
+        box-shadow: 0 0 0 1px Canvas;
     }
 }
 .note-editor .ProseMirror p { margin: 0.5em 0; }

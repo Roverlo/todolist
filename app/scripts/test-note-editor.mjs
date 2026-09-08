@@ -15,7 +15,8 @@ const port = await new Promise(resolve => {
         probe.close(() => resolve(port));
     });
 });
-const server = await createViteServer({ logLevel: 'error', server: { host: '127.0.0.1', port, strictPort: true } });
+// Separate optimized modules from the live preview and other test servers.
+const server = await createViteServer({ cacheDir: 'node_modules/.vite-test-notes', logLevel: 'error', server: { host: '127.0.0.1', port, strictPort: true } });
 await mkdir('ui-check.local', { recursive: true });
 let browser;
 let page;
@@ -104,6 +105,18 @@ try {
     await page.mouse.move(dragBox.x + dragBox.width - 1, dragBox.y + dragBox.height / 2, { steps: 8 });
     await page.mouse.up();
     assert.equal(await page.evaluate(() => window.getSelection().toString()), '选区可见');
+    const assertSelectionEdge = async () => {
+        const selected = body.locator('.note-selection');
+        await selected.first().waitFor();
+        for (const edge of await selected.evaluateAll(elements => elements.map(el => {
+            const css = getComputedStyle(el);
+            return [css.outlineStyle, css.outlineWidth, css.boxShadow];
+        }))) {
+            assert.deepEqual(edge.slice(0, 2), ['dashed', '1px']);
+            assert.notEqual(edge[2], 'none', 'A light inner edge must distinguish selection on a dark background');
+        }
+    };
+    await assertSelectionEdge();
     const selectionColors = ['rgb(37, 99, 235)', 'rgb(255, 255, 255)'];
     const nativeSelectionColors = () => body.locator('mark').evaluate(el => {
         const css = getComputedStyle(el, '::selection');
@@ -139,7 +152,7 @@ try {
     await assertRetainedSelection('选区可见');
     await page.getByRole('listbox', { name: '正文字体', exact: true }).getByRole('option', { name: 'Arial', exact: true }).click();
     await page.waitForFunction(() => document.activeElement === document.querySelector('.ProseMirror'));
-    assert.equal(await body.locator('.note-selection').count(), 0, 'Native selection takes over when editing resumes');
+    await assertSelectionEdge();
     assert.equal(await body.locator('span[style*="Arial"]').innerText(), '选区可见', 'Formatting must affect only the visibly selected range');
     await page.getByRole('button', { name: '插入链接', exact: true }).click();
     await page.getByLabel('显示文字', { exact: true }).press('Control+A');
@@ -158,6 +171,7 @@ try {
     await page.emulateMedia({ forcedColors: 'none' });
     await page.keyboard.press('Escape');
     await body.press('ArrowRight');
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.state.selection.empty);
     assert.equal(await body.locator('.note-selection').count(), 0, 'Collapsing the selection must remove every retained highlight');
     assert.deepEqual(await selectedMark.evaluate(el => [getComputedStyle(el).backgroundColor, getComputedStyle(el).color]),
         ['rgb(255, 0, 0)', 'rgb(0, 128, 0)'], 'Deselecting must restore the original foreground and background');
@@ -168,6 +182,34 @@ try {
     assert.doesNotMatch((await storedNotes()).find(note => note.id === selectionNoteId).content, /note-selection/);
     assert.equal(await body.locator('.note-selection').count(), 0, 'Reload must not restore a stale visual selection');
     console.log('Passed: mouse/keyboard selection, eight themes, palette/input/font/link focus, exact formatting range, multiline/checklist/code selection, high contrast and clean persistence');
+
+    await openNote('<p><mark data-color="#2563eb" style="background-color:#2563eb"><span style="color:#fff">左侧未选  蓝底白字  右侧未选</span></mark></p>', '同色选区');
+    const collisionHTML = await body.evaluate(root => root.editor.getHTML());
+    const collisionBox = await body.locator('mark').boundingBox();
+    await body.press('Control+Home');
+    for (let i = 0; i < '左侧未选  '.length; i++) await body.press('ArrowRight');
+    for (let i = 0; i < '蓝底白字'.length; i++) await body.press('Shift+ArrowRight');
+    assert.equal(await page.evaluate(() => window.getSelection().toString()), '蓝底白字');
+    await assertSelectionEdge();
+    const outlinedBox = await body.locator('mark').boundingBox();
+    // Inline text splitting can round glyph widths to the next subpixel.
+    for (const side of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(outlinedBox[side] - collisionBox[side]) < 0.5, 'Selection outlines must not shift text layout');
+    assert.equal(await body.evaluate(root => root.editor.getHTML()), collisionHTML);
+    await page.screenshot({ path: 'ui-check.local/note-selection-same-color.png' });
+    await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
+    await selectionPalette.getByRole('textbox', { name: '背景颜色色号', exact: true }).press('Control+A');
+    await assertRetainedSelection('蓝底白字');
+    await assertSelectionEdge();
+    await page.screenshot({ path: 'ui-check.local/note-selection-same-color-blurred.png' });
+    await page.keyboard.press('Escape');
+    await body.press('ArrowRight');
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.state.selection.empty);
+    assert.equal(await body.locator('.note-selection').count(), 0);
+    assert.equal(await body.evaluate(root => root.editor.getHTML()), collisionHTML, 'Deselecting must preserve blue background and white text');
+    await saveAndReload();
+    assert.equal(await body.textContent(), '左侧未选  蓝底白字  右侧未选', 'Reload must preserve alignment spaces and the original text');
+    assert.equal(await body.evaluate(root => root.editor.getHTML()), collisionHTML);
+    console.log('Passed: identical blue/white styling, partial keyboard selection, active/blurred two-tone outline, stable layout and original formatting');
 
     // Highlights must decorate text without adding the dependency's padded, rounded block.
     await openNote('<p>普通文字 <span style="color:#008000"><mark data-color="#ff0000" style="background-color:#ff0000">哇水水水水</mark></span></p>'

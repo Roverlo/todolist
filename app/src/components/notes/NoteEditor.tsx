@@ -62,6 +62,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
         immediatelyRender: false,
         extensions: noteExtensions,
         content: note?.content || '',
+        parseOptions: { preserveWhitespace: 'full' },
         editorProps: { attributes: {
             'aria-label': '随记正文', role: 'textbox', 'aria-multiline': 'true',
             'aria-description': 'Tab 插入空格，列表内调整层级；按 Escape 后可用 Tab 离开编辑区。',

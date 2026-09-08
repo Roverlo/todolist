@@ -24,7 +24,9 @@ const port = await new Promise((resolve, reject) => {
         probe.close(error => error ? reject(error) : resolve(address.port));
     });
 });
+const testCacheDir = 'node_modules/.vite-test-ui';
 const server = await createViteServer({
+    cacheDir: testCacheDir,
     logLevel: 'silent',
     optimizeDeps: { include: ['react-window'] },
     server: { host: '127.0.0.1', port, strictPort: true },
@@ -51,7 +53,7 @@ try {
     await editor.press('Control+A');
     await page.getByRole('button', { name: '字体颜色菜单' }).click();
     await page.getByRole('button', { name: '字体颜色：绿色', exact: true }).click();
-    assert.match(await editor.locator('span').getAttribute('style'), /112, 173, 71/);
+    assert.match(await editor.locator('span[style*="color"]').getAttribute('style'), /112, 173, 71/);
 
     await editor.press('Control+A');
     await page.getByRole('button', { name: '背景颜色菜单' }).click();
@@ -265,10 +267,10 @@ try {
     assert.equal(migrationAndHistory.redone, '修改后的任务');
 
     // Exercise the installed react-window API, including scrolling beyond the first viewport.
-    await page.evaluate(async () => {
+    await page.evaluate(async cacheDir => {
         const { useAppStore } = await import('/src/state/appStore.ts');
-        const { default: React } = await import('/node_modules/.vite/deps/react.js');
-        const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+        const { default: React } = await import(`/${cacheDir}/deps/react.js`);
+        const { default: ReactDOM } = await import(`/${cacheDir}/deps/react-dom_client.js`);
         const { VirtualTaskTable } = await import('/src/components/task-table/VirtualTaskTable.tsx');
         const sample = useAppStore.getState().tasks[0];
         useAppStore.setState({
@@ -280,7 +282,7 @@ try {
         host.id = 'virtual-task-check';
         document.body.appendChild(host);
         ReactDOM.createRoot(host).render(React.createElement(VirtualTaskTable, { height: 480, onTaskFocus: () => {} }));
-    });
+    }, testCacheDir);
     const virtualTable = page.locator('#virtual-task-check');
     await virtualTable.getByText('虚拟任务00', { exact: true }).waitFor();
     assert.ok(await virtualTable.locator('tbody tr').count() < 60, '虚拟表格只应渲染视口附近的任务');
