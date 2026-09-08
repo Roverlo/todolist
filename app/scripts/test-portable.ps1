@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$Executable, [switch]$EditorWorkflow, [switch]$WindowLifecycle)
+param([Parameter(Mandatory = $true)][string]$Executable, [switch]$EditorWorkflow, [switch]$WindowLifecycle, [ValidateSet('busy', 'crash')][string]$WindowRecovery)
 $ErrorActionPreference = 'Stop'
 
 $source = (Get-Item -LiteralPath $Executable).FullName
@@ -46,7 +46,7 @@ $started = $null
 try {
     $env:PROJECTTODO_TEST_DATA_DIR = $dataRoot
     $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $checkRoot 'webview'
-    if ($EditorWorkflow -or $WindowLifecycle) {
+    if ($EditorWorkflow -or $WindowLifecycle -or $WindowRecovery) {
         $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
         $probe.Start()
         $nativeDebugPort = $probe.LocalEndpoint.Port
@@ -75,11 +75,18 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Native window lifecycle check failed' }
         } finally { Pop-Location }
     }
+    if ($WindowRecovery) {
+        Push-Location (Split-Path -Parent $PSScriptRoot)
+        try {
+            & node (Join-Path $PSScriptRoot 'test-window-recovery.mjs') --cdp $nativeDebugPort --pid $started.Id --fault $WindowRecovery --output $checkRoot
+            if ($LASTEXITCODE -ne 0) { throw 'Native window recovery check failed' }
+        } finally { Pop-Location }
+    }
     foreach ($relative in $before.Keys) {
         if ((Get-FileHash -LiteralPath (Join-Path $userRoot $relative) -Algorithm SHA256).Hash -ne $before[$relative]) { throw 'Existing user data changed during the check; backup retained' }
     }
     [ordered]@{
-        result = 'PASS'; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; windowLifecycle = [bool]$WindowLifecycle; isolatedData = $dataPath; existingDataUnchanged = $true
+        result = 'PASS'; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; windowLifecycle = [bool]$WindowLifecycle; windowRecovery = $WindowRecovery; isolatedData = $dataPath; existingDataUnchanged = $true
         executable = $source; bytes = (Get-Item -LiteralPath $source).Length
         sha256 = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
     } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $checkRoot 'result.json')

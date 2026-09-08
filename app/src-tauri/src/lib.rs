@@ -6,6 +6,8 @@ use tauri::Manager;
 use tauri_plugin_log::Builder as LogBuilder;
 use ssh2::Session;
 
+mod close_guard;
+
 /// 获取统一的数据存储路径：用户文档目录下的 ProjectTodo/data.json
 /// 所有版本的 EXE 都会读写这个位置，确保数据共享
 fn get_unified_data_path() -> Option<PathBuf> {
@@ -406,6 +408,8 @@ pub fn run() {
     }));
 
     builder
+        .manage(close_guard::CloseGuard::default())
+        .on_window_event(close_guard::on_window_event)
         .plugin(tauri_plugin_process::init())
         .plugin(LogBuilder::default().level(log::LevelFilter::Info).build())
         .plugin(tauri_plugin_dialog::init())
@@ -462,10 +466,11 @@ pub fn run() {
                 #[cfg(debug_assertions)]
                 let _ = window.open_devtools();
             }
-            log::info!("Tauri app setup complete");
+            log::info!("Tauri app setup complete pid={}", std::process::id());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            close_guard::set_close_handler_ready, close_guard::respond_to_close_request,
             frontend_log, load_data, save_data, get_data_directory, open_data_directory,
             smb_test_connection, smb_upload, smb_download,
             ssh_test_connection, ssh_upload, ssh_download

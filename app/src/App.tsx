@@ -30,7 +30,8 @@ import { DueReminderModal } from './components/ui/DueReminderModal';
 import { StatsCard } from './components/ui/StatsCard';
 import { CloseConfirmModal } from './components/ui/CloseConfirmModal';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { isTauri } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { exit } from '@tauri-apps/plugin-process';
 import { Search, ListFilter, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -94,9 +95,10 @@ function App() {
     let disposed = false;
     let unlisten: (() => void) | undefined;
     const appWindow = getCurrentWindow();
-    void appWindow.onCloseRequested(async event => {
-      event.preventDefault();
+    void listen<number>('projecttodo-close-requested', async event => {
       try {
+        const accepted = await invoke<boolean>('respond_to_close_request', { requestId: event.payload });
+        if (!accepted) return;
         const savedChoice = localStorage.getItem('closeAction');
         if (savedChoice === 'minimize') {
           await appWindow.hide();
@@ -109,13 +111,17 @@ function App() {
         console.error('关闭操作失败:', error);
         setCloseConfirmOpen(true);
       }
-    }).then(stop => {
+    }).then(async stop => {
       if (disposed) stop();
-      else unlisten = stop;
+      else {
+        unlisten = stop;
+        await invoke('set_close_handler_ready', { ready: true });
+      }
     }).catch(error => console.error('关闭事件注册失败:', error));
     return () => {
       disposed = true;
       unlisten?.();
+      void invoke('set_close_handler_ready', { ready: false }).catch(console.error);
     };
   }, []);
 

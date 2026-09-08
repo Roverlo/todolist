@@ -9,7 +9,7 @@ import { NotesSearch } from './NotesSearch';
 import { NotesToolbar } from './NotesToolbar';
 import { Icon } from '../ui/Icon';
 import type { Note, NoteTreeNode } from '../../types';
-import { getNoteDate } from '../../utils/noteDate';
+import { compareNotes, getNoteDate } from '../../utils/noteDate';
 
 interface NotesSidebarProps {
     selectedNoteId: string | null;
@@ -69,7 +69,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
             );
         }
 
-        return result.sort((a, b) => getNoteDate(b).localeCompare(getNoteDate(a)) || b.updatedAt - a.updatedAt);
+        return result.sort(compareNotes);
     }, [notes, selectedDate, activeTagId, tags, searchText]);
 
     // 构建树形结构
@@ -263,7 +263,7 @@ function buildNoteTree(notes: Note[], expandedState: Record<string, boolean>): N
                     const monthId = `month-${year}-${String(month).padStart(2, '0')}`;
 
                     const noteChildren = monthNotes
-                        .sort((a, b) => getNoteDate(b).localeCompare(getNoteDate(a)) || b.updatedAt - a.updatedAt)
+                        .sort(compareNotes)
                         .map(note => {
                             const noteDate = dayjs(getNoteDate(note));
                             return {
