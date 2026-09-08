@@ -73,6 +73,23 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
         },
     });
 
+    useEffect(() => {
+        if (!editor) return;
+        const clearOutsideSelection = (event: PointerEvent) => {
+            const target = event.target;
+            if (event.button !== 0 || !(target instanceof Element) || editor.isDestroyed
+                || editor.state.selection.empty || editor.view.dom.contains(target)) return;
+            // Formatting controls retain the range; ordinary clicks elsewhere end it.
+            if (target.closest('.note-editor-content-wrapper, .editor-toolbar, .editor-search, .editor-insert-dialog, [data-richtext-portal]')) return;
+            const menu = target.closest('[role="listbox"]');
+            if (menu && Array.from(document.querySelectorAll('.editor-toolbar [aria-controls]'))
+                .some(trigger => trigger.getAttribute('aria-controls') === menu.id)) return;
+            editor.commands.setTextSelection(editor.state.selection.head);
+        };
+        document.addEventListener('pointerdown', clearOutsideSelection);
+        return () => document.removeEventListener('pointerdown', clearOutsideSelection);
+    }, [editor]);
+
     const saveDraft = useCallback(() => {
         if (!pendingSave.current) return false;
         try {
@@ -181,8 +198,8 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
                 <div
                 className="note-editor-content-wrapper"
                 onClick={(e) => {
-                    // Only focus if clicking the wrapper itself directly, not the editor content
-                    if (editor && e.target === e.currentTarget) {
+                    // The EditorContent container also fills the blank space below short notes.
+                    if (!editor.view.dom.contains(e.target as Node)) {
                         editor.commands.focus('end');
                     }
                 }}

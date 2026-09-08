@@ -183,6 +183,58 @@ try {
     assert.equal(await body.locator('.note-selection').count(), 0, 'Reload must not restore a stale visual selection');
     console.log('Passed: mouse/keyboard selection, eight themes, palette/input/font/link focus, exact formatting range, multiline/checklist/code selection, high contrast and clean persistence');
 
+    await openNote('<p>原文保留，点击空白不会替换。</p>', '空白点击取消选区');
+    const beforeBlankClicks = await body.evaluate(root => root.editor.getHTML());
+    const selectBlankTestText = async () => {
+        await body.click();
+        await body.press('Control+Home');
+        await page.waitForFunction(() => {
+            const selection = document.querySelector('.ProseMirror').editor.state.selection;
+            return selection.empty && selection.from === 1;
+        });
+        for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight');
+        await assertSelectionEdge();
+    };
+    const assertDeselected = async () => {
+        await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.state.selection.empty);
+        assert.equal(await body.locator('.note-selection').count(), 0);
+        assert.equal(await body.evaluate(root => root.editor.getHTML()), beforeBlankClicks, 'Deselecting must not edit the note');
+    };
+    await selectBlankTestText();
+    const contentBox = await page.locator('.editor-content').boundingBox();
+    const blankPoint = { x: contentBox.x + contentBox.width / 2, y: contentBox.y + contentBox.height - 20 };
+    assert.equal(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.className, blankPoint), 'editor-content',
+        'Reproduce the blank EditorContent container below a short note, outside the editable DOM');
+    await page.mouse.click(blankPoint.x, blankPoint.y);
+    await assertDeselected();
+    await page.waitForFunction(() => document.activeElement === document.querySelector('.ProseMirror'));
+    await page.keyboard.insertText('追加');
+    assert.equal(await body.textContent(), '原文保留，点击空白不会替换。追加', 'Typing after a blank click must append, not replace the former selection');
+    await body.press('Control+z');
+    await assertDeselected();
+
+    for (const target of ['.note-editor-title', '.note-editor-count', '.sidebar', '.notes-center-ai-panel']) {
+        await selectBlankTestText();
+        // Start with a toolbar-retained selection; the next unrelated click must end it.
+        await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
+        await assertRetainedSelection('原文保留');
+        const box = await page.locator(target).boundingBox();
+        const point = { x: box.x + 8, y: box.y + box.height - 8, target };
+        assert.ok(await page.evaluate(({ x, y, target }) => document.elementFromPoint(x, y)?.closest(target), point),
+            'The outside click must hit its target rather than an overlapping color swatch');
+        await page.mouse.click(point.x, point.y);
+        await assertDeselected();
+        assert.equal(await selectionPalette.count(), 0);
+        await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
+        await assertDeselected();
+        await page.keyboard.press('Escape');
+    }
+    await selectBlankTestText();
+    const paragraphBox = await body.locator('p').boundingBox();
+    await page.mouse.click(paragraphBox.x + paragraphBox.width - 5, paragraphBox.y + paragraphBox.height / 2);
+    await assertDeselected();
+    console.log('Passed: blank body/container, title/footer/sidebar/AI clicks dismiss the real selection, toolbar reopening cannot restore it, and subsequent typing preserves the original text');
+
     await openNote('<p><mark data-color="#2563eb" style="background-color:#2563eb"><span style="color:#fff">左侧未选  蓝底白字  右侧未选</span></mark></p>', '同色选区');
     const collisionHTML = await body.evaluate(root => root.editor.getHTML());
     const collisionBox = await body.locator('mark').boundingBox();
