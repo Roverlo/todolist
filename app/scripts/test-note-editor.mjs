@@ -87,6 +87,88 @@ try {
         else await menu.locator('[role="option"][data-value="' + value + '"]').click();
     };
 
+    // Real mouse/keyboard selection must stay readable over saved colors and after toolbar focus moves.
+    const selectionNoteId = await openNote('<p>前缀 <span style="color:#008000"><mark data-color="#ff0000" style="background-color:#ff0000">选区可见</mark></span> 后缀</p>'
+        + '<p>' + '多行文字也要保留清楚的选区提示。'.repeat(8) + '</p>'
+        + '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p><span style="color:red">已完成事项</span></p></li></ul>'
+        + '<p>行内 <code>selected</code></p><pre><code>const selected = true;</code></pre>', '选区显示回归');
+    const originalSelectionHTML = await body.evaluate(root => root.editor.getHTML());
+    for (const colors of await body.locator('code').evaluateAll(elements => elements.map(el => {
+        const css = getComputedStyle(el);
+        return [css.color, css.caretColor];
+    }))) assert.deepEqual(colors, ['rgb(55, 65, 81)', 'rgb(55, 65, 81)'], 'Code text and caret must be readable on the light editor background');
+    const selectedMark = body.locator('mark');
+    const dragBox = await selectedMark.boundingBox();
+    await page.mouse.move(dragBox.x + 1, dragBox.y + dragBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(dragBox.x + dragBox.width - 1, dragBox.y + dragBox.height / 2, { steps: 8 });
+    await page.mouse.up();
+    assert.equal(await page.evaluate(() => window.getSelection().toString()), '选区可见');
+    const selectionColors = ['rgb(37, 99, 235)', 'rgb(255, 255, 255)'];
+    const nativeSelectionColors = () => body.locator('mark').evaluate(el => {
+        const css = getComputedStyle(el, '::selection');
+        return [css.backgroundColor, css.color];
+    });
+    for (const theme of ['blue', 'green', 'purple', 'orange', 'mono', 'sky', 'rose', 'indigo']) {
+        await page.evaluate(async colorScheme => (await import('/src/state/appStore.ts')).useAppStore.getState().setSettings({ colorScheme }), theme);
+        await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
+        assert.deepEqual(await nativeSelectionColors(), selectionColors, `Selection must stay readable in ${theme}`);
+    }
+    await page.evaluate(async () => (await import('/src/state/appStore.ts')).useAppStore.getState().setSettings({ colorScheme: 'purple' }));
+    await page.screenshot({ path: 'ui-check.local/note-selection-active.png' });
+    const assertRetainedSelection = async (text, colors = selectionColors) => {
+        const retained = body.locator('.note-selection');
+        await retained.first().waitFor();
+        assert.equal((await retained.allTextContents()).join(''), text);
+        for (const actual of await retained.evaluateAll(elements => elements.flatMap(el => [el, ...el.querySelectorAll('*')]).map(el => {
+            const css = getComputedStyle(el);
+            return [css.backgroundColor, css.color];
+        }))) assert.deepEqual(actual, colors, 'Saved colors and completed-task gray must not hide the retained selection');
+        assert.doesNotMatch(await body.evaluate(root => root.editor.getHTML()), /note-selection/, 'Selection is a visual decoration, not saved formatting');
+    };
+    await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
+    const selectionPalette = page.getByRole('dialog', { name: '选择背景颜色', exact: true });
+    const selectionHex = selectionPalette.getByRole('textbox', { name: '背景颜色色号', exact: true });
+    await selectionHex.fill('#123456');
+    await selectionHex.press('Control+A');
+    await assertRetainedSelection('选区可见');
+    assert.equal(await body.evaluate(root => root.editor.getHTML()), originalSelectionHTML, 'Selecting text and opening a palette must not modify the document');
+    await page.screenshot({ path: 'ui-check.local/note-selection-palette.png' });
+    await selectionHex.press('Escape');
+    await page.getByRole('combobox', { name: '正文字体', exact: true }).click();
+    await assertRetainedSelection('选区可见');
+    await page.getByRole('listbox', { name: '正文字体', exact: true }).getByRole('option', { name: 'Arial', exact: true }).click();
+    await page.waitForFunction(() => document.activeElement === document.querySelector('.ProseMirror'));
+    assert.equal(await body.locator('.note-selection').count(), 0, 'Native selection takes over when editing resumes');
+    assert.equal(await body.locator('span[style*="Arial"]').innerText(), '选区可见', 'Formatting must affect only the visibly selected range');
+    await page.getByRole('button', { name: '插入链接', exact: true }).click();
+    await page.getByLabel('显示文字', { exact: true }).press('Control+A');
+    await assertRetainedSelection('选区可见');
+    await page.getByLabel('链接地址', { exact: true }).fill('https://example.com/selected');
+    await page.getByRole('button', { name: '应用链接', exact: true }).click();
+    assert.equal(await body.locator('a').innerText(), '选区可见');
+    await body.press('Control+A');
+    const allSelectedText = await body.evaluate(root => root.editor.state.doc.textContent);
+    await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
+    await assertRetainedSelection(allSelectedText);
+    await page.emulateMedia({ forcedColors: 'active' });
+    const systemSelectionColors = await nativeSelectionColors();
+    assert.notEqual(systemSelectionColors[0], systemSelectionColors[1], 'Windows high contrast must distinguish text and selection');
+    await assertRetainedSelection(allSelectedText, systemSelectionColors);
+    await page.emulateMedia({ forcedColors: 'none' });
+    await page.keyboard.press('Escape');
+    await body.press('ArrowRight');
+    assert.equal(await body.locator('.note-selection').count(), 0, 'Collapsing the selection must remove every retained highlight');
+    assert.deepEqual(await selectedMark.evaluate(el => [getComputedStyle(el).backgroundColor, getComputedStyle(el).color]),
+        ['rgb(255, 0, 0)', 'rgb(0, 128, 0)'], 'Deselecting must restore the original foreground and background');
+    await body.press('Control+A');
+    await page.getByRole('combobox', { name: '正文字体', exact: true }).focus();
+    await assertRetainedSelection(allSelectedText);
+    await saveAndReload();
+    assert.doesNotMatch((await storedNotes()).find(note => note.id === selectionNoteId).content, /note-selection/);
+    assert.equal(await body.locator('.note-selection').count(), 0, 'Reload must not restore a stale visual selection');
+    console.log('Passed: mouse/keyboard selection, eight themes, palette/input/font/link focus, exact formatting range, multiline/checklist/code selection, high contrast and clean persistence');
+
     // Highlights must decorate text without adding the dependency's padded, rounded block.
     await openNote('<p>普通文字 <span style="color:#008000"><mark data-color="#ff0000" style="background-color:#ff0000">哇水水水水</mark></span></p>'
         + '<p><mark>默认高亮</mark></p>', '文字颜色与高亮');
@@ -477,6 +559,9 @@ try {
         });
         root.editor.commands.setCellSelection({ anchorCell: positions[0], headCell: positions[1] });
     });
+    await page.getByRole('combobox', { name: '表格操作', exact: true }).focus();
+    assert.equal(await body.locator('.selectedCell').count(), 2);
+    assert.equal(await body.locator('.note-selection').count(), 0, 'Cell selection must keep its own overlay');
     await choose('表格操作', { label: '合并单元格' });
     assert.equal(await body.locator('td[colspan="2"]').count(), 1);
     await saveAndReload();

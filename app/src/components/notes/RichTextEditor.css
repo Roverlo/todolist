@@ -114,6 +114,8 @@ div[data-richtext-portal] { z-index: 1200; }
 .note-editor-content-wrapper { flex: 1; min-height: 0; overflow: auto; cursor: text; }
 .note-editor .editor-content { min-height: 100%; }
 .note-editor .ProseMirror.ProseMirror.ProseMirror {
+    --note-selection-background: #2563eb;
+    --note-selection-color: #fff;
     outline: none;
     min-height: 100%;
     padding: 8px 0 24px;
@@ -122,6 +124,27 @@ div[data-richtext-portal] { z-index: 1200; }
     line-height: 1.6;
     font-synthesis: style;
     overflow-wrap: anywhere;
+}
+/* The dependency forces a near-white selection with !important; override it within the app editor. */
+#root .note-editor .ProseMirror::selection,
+#root .note-editor .ProseMirror *::selection {
+    background-color: var(--note-selection-background) !important;
+    color: var(--note-selection-color) !important;
+    text-shadow: none;
+}
+/* Override saved inline colors and completed-task gray only inside the retained selection. */
+.note-editor .ProseMirror.ProseMirror.ProseMirror .note-selection,
+.note-editor .ProseMirror.ProseMirror.ProseMirror .note-selection * {
+    background-color: var(--note-selection-background) !important;
+    color: var(--note-selection-color) !important;
+    text-shadow: none !important;
+    forced-color-adjust: none;
+}
+@media (forced-colors: active) {
+    .note-editor .ProseMirror.ProseMirror.ProseMirror {
+        --note-selection-background: Highlight;
+        --note-selection-color: HighlightText;
+    }
 }
 .note-editor .ProseMirror p { margin: 0.5em 0; }
 .note-editor .ProseMirror p:empty { min-height: 1.6em; }
@@ -159,8 +182,8 @@ div[data-richtext-portal] { z-index: 1200; }
 .note-editor .ProseMirror :is(em,i) { font-style: italic !important; font-synthesis: style; }
 .note-editor .ProseMirror mark { padding: 0; border-radius: 0; background-color: #fff200; color: inherit; }
 .note-editor .ProseMirror a { color: #6d28d9; text-decoration: underline; cursor: pointer; }
-.note-editor .ProseMirror code { background: #f3f4f6; border-radius: 4px; padding: 0.15em 0.35em; font-family: Consolas, monospace; }
-.note-editor .ProseMirror pre { padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f8fafc; white-space: pre-wrap; }
+.note-editor .ProseMirror code { background: #f3f4f6; border-radius: 4px; padding: 0.15em 0.35em; font-family: Consolas, monospace; color: inherit; caret-color: auto; }
+.note-editor .ProseMirror pre { padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f8fafc; white-space: pre-wrap; color: inherit; caret-color: auto; }
 .note-editor .ProseMirror pre code { background: transparent; padding: 0; }
 .note-editor .ProseMirror blockquote { border-left: 3px solid #c4b5fd; margin: 1em 0; padding-left: 1em; color: #6b7280; }
 .note-editor .ProseMirror hr { border: 0; border-top: 1px solid #d1d5db; margin: 1.5em 0; }
