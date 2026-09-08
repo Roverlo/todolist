@@ -117,14 +117,47 @@ const NoteIndent = Indent.extend<IndentOptions>({
     },
 });
 
-// Outline the selection even when its text already has the same colors.
-// Decorations also retain it on blur without changing saved or copied HTML.
+// Retain toolbar selections without storing them in the note. Dark source highlights
+// use a light selection so matching colors remain distinguishable without a border.
 const NoteSelection = Extension.create({
     name: 'noteSelection',
     addProseMirrorPlugins() {
         const editor = this.editor;
+        const darkColors = new Map<string, boolean>();
+        let colorContext: CanvasRenderingContext2D | null | undefined;
+        const isDarkHighlight = (color: unknown) => {
+            if (typeof color !== 'string' || !CSS.supports('color', color)) return false;
+            if (darkColors.has(color)) return darkColors.get(color)!;
+            if (colorContext === undefined) {
+                // Let the browser parse legacy RGB, named colors and custom HEX values.
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 1;
+                colorContext = canvas.getContext('2d', { willReadFrequently: true });
+            }
+            if (!colorContext) return false;
+            colorContext.fillStyle = '#fff';
+            colorContext.fillRect(0, 0, 1, 1);
+            colorContext.fillStyle = color;
+            colorContext.fillRect(0, 0, 1, 1);
+            const [r, g, b] = Array.from(colorContext.getImageData(0, 0, 1, 1).data).slice(0, 3)
+                .map(value => value / 255 <= 0.04045 ? value / 255 / 12.92 : ((value / 255 + 0.055) / 1.055) ** 2.4);
+            const dark = 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.35;
+            darkColors.set(color, dark);
+            return dark;
+        };
         return [new Plugin({
             props: {
+                attributes({ doc, selection }) {
+                    let light = false;
+                    if (!selection.empty && (selection instanceof TextSelection || selection instanceof AllSelection)) {
+                        doc.nodesBetween(selection.from, selection.to, node => {
+                            if (light) return false;
+                            light = node.marks.some(mark => mark.type.name === 'highlight' && isDarkHighlight(mark.attrs.color));
+                            return !light;
+                        });
+                    }
+                    return { 'data-note-selection-tone': light ? 'light' : 'default' };
+                },
                 decorations({ doc, selection }) {
                     if (!editor.isEditable || editor.view.dragging || selection.empty
                         || !(selection instanceof TextSelection || selection instanceof AllSelection)) return null;

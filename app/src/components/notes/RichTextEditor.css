@@ -125,6 +125,10 @@ div[data-richtext-portal] { z-index: 1200; }
     font-synthesis: style;
     overflow-wrap: anywhere;
 }
+.note-editor .ProseMirror.ProseMirror.ProseMirror[data-note-selection-tone='light'] {
+    --note-selection-background: #dbeafe;
+    --note-selection-color: #172554;
+}
 /* The dependency forces a near-white selection with !important; override it within the app editor. */
 #root .note-editor .ProseMirror::selection,
 #root .note-editor .ProseMirror *::selection {
@@ -132,10 +136,8 @@ div[data-richtext-portal] { z-index: 1200; }
     color: var(--note-selection-color) !important;
     text-shadow: none;
 }
-/* A quiet inset edge separates matching highlights without framing the text. */
+/* Selection is only a fill: no outline, halo, or added text decoration. */
 .note-editor .ProseMirror .note-selection {
-    outline: 1px solid #c7d9fa;
-    outline-offset: -1px;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
     forced-color-adjust: none;
@@ -149,12 +151,10 @@ div[data-richtext-portal] { z-index: 1200; }
     forced-color-adjust: none;
 }
 @media (forced-colors: active) {
-    .note-editor .ProseMirror.ProseMirror.ProseMirror {
+    .note-editor .ProseMirror.ProseMirror.ProseMirror,
+    .note-editor .ProseMirror.ProseMirror.ProseMirror[data-note-selection-tone='light'] {
         --note-selection-background: Highlight;
         --note-selection-color: HighlightText;
-    }
-    .note-editor .ProseMirror .note-selection {
-        outline-color: HighlightText;
     }
 }
 .note-editor .ProseMirror p { margin: 0.5em 0; }

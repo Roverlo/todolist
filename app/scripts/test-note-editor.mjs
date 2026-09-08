@@ -105,19 +105,19 @@ try {
     await page.mouse.move(dragBox.x + dragBox.width - 1, dragBox.y + dragBox.height / 2, { steps: 8 });
     await page.mouse.up();
     assert.equal(await page.evaluate(() => window.getSelection().toString()), '选区可见');
-    const assertSelectionEdge = async () => {
+    const assertBorderlessSelection = async () => {
         const selected = body.locator('.note-selection');
         await selected.first().waitFor();
         for (const edge of await selected.evaluateAll(elements => elements.map(el => {
             const css = getComputedStyle(el);
-            return [css.outlineStyle, css.outlineWidth, css.outlineOffset, css.outlineColor, css.boxShadow];
+            return [css.outlineStyle, css.boxShadow, css.borderTopWidth];
         }))) {
-            assert.deepEqual(edge, ['solid', '1px', '-1px', 'rgb(199, 217, 250)', 'none'],
-                'A single light inset edge must distinguish matching colors without a dark frame or halo');
+            assert.deepEqual(edge, ['none', 'none', '0px'], 'Selection must not add white lines, dark frames or halos');
         }
     };
-    await assertSelectionEdge();
+    await assertBorderlessSelection();
     const selectionColors = ['rgb(37, 99, 235)', 'rgb(255, 255, 255)'];
+    const lightSelectionColors = ['rgb(219, 234, 254)', 'rgb(23, 37, 84)'];
     const nativeSelectionColors = () => body.locator('mark').evaluate(el => {
         const css = getComputedStyle(el, '::selection');
         return [css.backgroundColor, css.color];
@@ -125,7 +125,7 @@ try {
     for (const theme of ['blue', 'green', 'purple', 'orange', 'mono', 'sky', 'rose', 'indigo']) {
         await page.evaluate(async colorScheme => (await import('/src/state/appStore.ts')).useAppStore.getState().setSettings({ colorScheme }), theme);
         await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
-        assert.deepEqual(await nativeSelectionColors(), selectionColors, `Selection must stay readable in ${theme}`);
+        assert.deepEqual(await nativeSelectionColors(), lightSelectionColors, `Selection over a dark highlight must stay readable in ${theme}`);
     }
     await page.evaluate(async () => (await import('/src/state/appStore.ts')).useAppStore.getState().setSettings({ colorScheme: 'purple' }));
     await page.screenshot({ path: 'ui-check.local/note-selection-active.png' });
@@ -144,33 +144,32 @@ try {
     const selectionHex = selectionPalette.getByRole('textbox', { name: '背景颜色色号', exact: true });
     await selectionHex.fill('#123456');
     await selectionHex.press('Control+A');
-    await assertRetainedSelection('选区可见');
+    await assertRetainedSelection('选区可见', lightSelectionColors);
     assert.equal(await body.evaluate(root => root.editor.getHTML()), originalSelectionHTML, 'Selecting text and opening a palette must not modify the document');
     await page.screenshot({ path: 'ui-check.local/note-selection-palette.png' });
     await selectionHex.press('Escape');
     await page.getByRole('combobox', { name: '正文字体', exact: true }).click();
-    await assertRetainedSelection('选区可见');
+    await assertRetainedSelection('选区可见', lightSelectionColors);
     await page.getByRole('listbox', { name: '正文字体', exact: true }).getByRole('option', { name: 'Arial', exact: true }).click();
     await page.waitForFunction(() => document.activeElement === document.querySelector('.ProseMirror'));
-    await assertSelectionEdge();
+    await assertBorderlessSelection();
     assert.equal(await body.locator('span[style*="Arial"]').innerText(), '选区可见', 'Formatting must affect only the visibly selected range');
     await page.getByRole('button', { name: '插入链接', exact: true }).click();
     await page.getByLabel('显示文字', { exact: true }).press('Control+A');
-    await assertRetainedSelection('选区可见');
+    await assertRetainedSelection('选区可见', lightSelectionColors);
     await page.getByLabel('链接地址', { exact: true }).fill('https://example.com/selected');
     await page.getByRole('button', { name: '应用链接', exact: true }).click();
     assert.equal(await body.locator('a').innerText(), '选区可见');
     await body.press('Control+A');
     const allSelectedText = await body.evaluate(root => root.editor.state.doc.textContent);
     await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
-    await assertRetainedSelection(allSelectedText);
+    await assertRetainedSelection(allSelectedText, lightSelectionColors);
     await page.screenshot({ path: 'ui-check.local/note-selection-multiline.png' });
     await page.emulateMedia({ forcedColors: 'active' });
     const systemSelectionColors = await nativeSelectionColors();
     assert.notEqual(systemSelectionColors[0], systemSelectionColors[1], 'Windows high contrast must distinguish text and selection');
     await assertRetainedSelection(allSelectedText, systemSelectionColors);
-    assert.equal(await body.locator('.note-selection').first().evaluate(el => getComputedStyle(el).outlineColor), systemSelectionColors[1],
-        'The inset edge must follow the system selection text color in high contrast');
+    await assertBorderlessSelection();
     await page.emulateMedia({ forcedColors: 'none' });
     await page.keyboard.press('Escape');
     await body.press('ArrowRight');
@@ -180,7 +179,7 @@ try {
         ['rgb(255, 0, 0)', 'rgb(0, 128, 0)'], 'Deselecting must restore the original foreground and background');
     await body.press('Control+A');
     await page.getByRole('combobox', { name: '正文字体', exact: true }).focus();
-    await assertRetainedSelection(allSelectedText);
+    await assertRetainedSelection(allSelectedText, lightSelectionColors);
     await saveAndReload();
     assert.doesNotMatch((await storedNotes()).find(note => note.id === selectionNoteId).content, /note-selection/);
     assert.equal(await body.locator('.note-selection').count(), 0, 'Reload must not restore a stale visual selection');
@@ -196,7 +195,7 @@ try {
             return selection.empty && selection.from === 1;
         });
         for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight');
-        await assertSelectionEdge();
+        await assertBorderlessSelection();
     };
     const assertDeselected = async () => {
         await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.state.selection.empty);
@@ -245,16 +244,17 @@ try {
     for (let i = 0; i < '左侧未选  '.length; i++) await body.press('ArrowRight');
     for (let i = 0; i < '蓝底白字'.length; i++) await body.press('Shift+ArrowRight');
     assert.equal(await page.evaluate(() => window.getSelection().toString()), '蓝底白字');
-    await assertSelectionEdge();
-    const outlinedBox = await body.locator('mark').boundingBox();
+    await assertBorderlessSelection();
+    assert.deepEqual(await nativeSelectionColors(), lightSelectionColors, 'Identical blue/white source must use a contrasting fill');
+    const selectedBox = await body.locator('mark').boundingBox();
     // Inline text splitting can round glyph widths to the next subpixel.
-    for (const side of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(outlinedBox[side] - collisionBox[side]) < 0.5, 'Selection outlines must not shift text layout');
+    for (const side of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(selectedBox[side] - collisionBox[side]) < 0.5, 'Selection must not shift text layout');
     assert.equal(await body.evaluate(root => root.editor.getHTML()), collisionHTML);
     await page.screenshot({ path: 'ui-check.local/note-selection-same-color.png' });
     await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
     await selectionPalette.getByRole('textbox', { name: '背景颜色色号', exact: true }).press('Control+A');
-    await assertRetainedSelection('蓝底白字');
-    await assertSelectionEdge();
+    await assertRetainedSelection('蓝底白字', lightSelectionColors);
+    await assertBorderlessSelection();
     await page.screenshot({ path: 'ui-check.local/note-selection-same-color-blurred.png' });
     await page.keyboard.press('Escape');
     await body.press('ArrowRight');
@@ -264,7 +264,24 @@ try {
     await saveAndReload();
     assert.equal(await body.textContent(), '左侧未选  蓝底白字  右侧未选', 'Reload must preserve alignment spaces and the original text');
     assert.equal(await body.evaluate(root => root.editor.getHTML()), collisionHTML);
-    console.log('Passed: identical blue/white styling, partial keyboard selection, active/blurred inset edge, stable layout and original formatting');
+    console.log('Passed: identical blue/white styling, contrasting borderless active/blurred selection, stable layout and original formatting');
+
+    for (const [color, expected] of [
+        ['#2b5ee0', lightSelectionColors], ['rgb(37 99 235)', lightSelectionColors], ['blue', lightSelectionColors],
+        ['#dbeafe', selectionColors], ['#fff200', selectionColors], ['rgba(37,99,235,0.2)', selectionColors],
+    ]) {
+        await openNote(`<p><mark data-color="${color}" style="background-color:${color}">颜色兼容</mark></p>`, '选区底色兼容');
+        const html = await body.evaluate(root => root.editor.getHTML());
+        await body.press('Control+A');
+        await page.waitForFunction(() => !document.querySelector('.ProseMirror').editor.state.selection.empty);
+        assert.deepEqual(await nativeSelectionColors(), expected, `${color} must select a contrasting fill`);
+        await assertBorderlessSelection();
+        await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
+        await assertRetainedSelection('颜色兼容', expected);
+        assert.equal(await body.evaluate(root => root.editor.getHTML()), html);
+        await page.keyboard.press('Escape');
+    }
+    console.log('Passed: custom HEX, RGB, named, light and translucent highlights keep their original formatting with a contrasting borderless selection');
 
     // Highlights must decorate text without adding the dependency's padded, rounded block.
     await openNote('<p>普通文字 <span style="color:#008000"><mark data-color="#ff0000" style="background-color:#ff0000">哇水水水水</mark></span></p>'
