@@ -2832,7 +2832,7 @@ body {
 .create-dialog {
   width: 860px;
   max-width: 100%;
-  max-height: 90vh;
+  max-height: 100%;
   background: var(--surface);
   border-radius: 18px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
@@ -3898,14 +3898,18 @@ body {
 
 /* 空状态提示 */
 .subtask-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
   text-align: center;
-  padding: 40px 20px;
+  padding: 16px 20px;
   color: var(--text-subtle);
 }
 
 .subtask-empty-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
+  font-size: 24px;
   opacity: 0.5;
 }
 
@@ -3913,7 +3917,7 @@ body {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-main);
-  margin-bottom: 4px;
+  margin: 0;
 }
 
 .subtask-empty-hint {

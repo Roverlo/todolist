@@ -18,6 +18,19 @@ try {
     if (await reminder.isVisible()) await reminder.click();
     await page.getByPlaceholder('输入名称，点击新建').fill('QA项目');
     await page.getByRole('button', { name: '新建', exact: true }).click();
+    await page.setViewportSize({ width: 1280, height: 698 });
+    await page.getByRole('button', { name: '新建任务', exact: true }).click();
+    await page.getByRole('button', { name: /单次任务/ }).click();
+    const createDialog = page.locator('.create-dialog');
+    const createBox = await createDialog.boundingBox();
+    assert.ok(createBox.y >= 24 && createBox.y + createBox.height <= 674, 'Task dialog must leave room below its footer at short desktop heights');
+    assert.ok((await createDialog.locator('.subtask-empty-state').boundingBox()).height < 100, 'Empty subtasks must not crowd out task details');
+    const footerBox = await createDialog.locator('.create-dialog-footer').boundingBox();
+    assert.ok(footerBox.y + footerBox.height <= 674 && footerBox.height >= 40, 'Task creation actions must stay fully visible');
+    await createDialog.getByRole('button', { name: '+ 添加第一条子任务', exact: true }).click();
+    assert.equal(await createDialog.locator('.subtask-empty-state').count(), 0);
+    await createDialog.getByRole('button', { name: '关闭', exact: true }).click();
+    await page.setViewportSize({ width: 1538, height: 950 });
     await page.evaluate(async () => {
         const { useAppStore: store } = await import('/src/state/appStore.ts');
         window.qaStore = store;

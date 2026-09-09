@@ -42,6 +42,7 @@ try {
     assert.deepEqual(errors, [], 'Editor should initialize without runtime or duplicate-extension errors');
     const storedNotes = () => page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.notes);
     const openNote = async (content, title) => {
+        const previousBody = await body.elementHandle();
         const id = await page.evaluate(async ({ content, title }) => {
             const { useAppStore } = await import('/src/state/appStore.ts');
             const store = useAppStore.getState();
@@ -49,6 +50,8 @@ try {
             store.setSelectedNoteId(note.id);
             return note.id;
         }, { content, title });
+        await previousBody.waitForElementState('hidden');
+        await previousBody.dispose();
         await page.waitForFunction(title => document.querySelector('.note-editor-title')?.value === title, title);
         await body.waitFor();
         return id;
@@ -189,6 +192,7 @@ try {
     const beforeBlankClicks = await body.evaluate(root => root.editor.getHTML());
     const selectBlankTestText = async () => {
         await body.click();
+        await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.view.hasFocus());
         await body.press('Control+Home');
         await page.waitForFunction(() => {
             const selection = document.querySelector('.ProseMirror').editor.state.selection;
@@ -321,6 +325,7 @@ try {
     await body.evaluate(root => root.editor.commands.setTextSelection({ from: 6, to: 11 }));
     await page.getByRole('button', { name: '背景颜色菜单', exact: true }).click();
     await backgroundPalette.getByRole('button', { name: '无颜色', exact: true }).click();
+    await page.waitForFunction(() => document.activeElement === document.querySelector('.ProseMirror'));
     assert.equal(await body.getByText('哇水水水水', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(0, 128, 0)', 'Clearing background must preserve text color');
     assert.equal(await body.locator('mark').count(), 1);
     await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
@@ -329,10 +334,12 @@ try {
     await page.keyboard.press('End');
     assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), '字体颜色：粉色 5');
     await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.activeElement === document.querySelector('.ProseMirror'));
     assert.equal(await body.getByText('哇水水水水', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(157, 23, 77)');
     await page.getByRole('button', { name: '字体颜色菜单', exact: true }).click();
     await textPalette.getByLabel('字体颜色其他颜色', { exact: true }).fill('#123456');
     await textPalette.getByRole('button', { name: '应用', exact: true }).click();
+    await page.waitForFunction(() => document.activeElement === document.querySelector('.ProseMirror'));
     assert.equal(await body.getByText('哇水水水水', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(18, 52, 86)');
     await saveAndReload();
     assert.equal(await body.getByText('哇水水水水', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(18, 52, 86)');
@@ -859,6 +866,11 @@ try {
 } catch (error) {
     console.error('Browser errors:', errors);
     if (page) {
+        console.error('Editor selection:', await page.locator('.ProseMirror').evaluate(root => ({
+            from: root.editor.state.selection.from, to: root.editor.state.selection.to,
+            focused: root.editor.view.hasFocus(), active: document.activeElement?.tagName,
+            anchor: window.getSelection()?.anchorOffset, focus: window.getSelection()?.focusOffset,
+        })).catch(() => null));
         await page.screenshot({ path: 'ui-check.local/note-editor-failure.png' }).catch(() => {});
         console.error((await page.locator('.ProseMirror').innerHTML().catch(() => '')).slice(0, 2500));
         console.error((await page.locator('body').innerText().catch(() => '')).slice(0, 3000));

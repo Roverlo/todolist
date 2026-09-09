@@ -59,7 +59,7 @@ try {
     } else {
         server = await createViteServer({
             cacheDir: 'node_modules/.vite-test-note-workflow',
-            logLevel: 'error', server: { host: '127.0.0.1', port: 0 },
+            logLevel: 'error', server: { host: '127.0.0.1', port: 0, strictPort: false },
             plugins: [{ name: 'browser-only-native-http-test', enforce: 'pre', transform(code, id) {
                 if (id.replaceAll('\\', '/').endsWith('/src/services/ai/index.ts')) {
                     return code.replace("import { fetch } from '@tauri-apps/plugin-http';", 'const fetch = globalThis.fetch.bind(globalThis);');

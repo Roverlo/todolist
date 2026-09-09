@@ -329,7 +329,7 @@ export const SubtaskList = ({ subtasks, onChange, hideProgress, mainDueDate }: S
                 <div className='subtask-empty-state'>
                     <div className='subtask-empty-icon'>📝</div>
                     <p className='subtask-empty-text'>暂无子任务</p>
-                    <button onClick={handleAddEmpty} style={{ marginTop: '8px', cursor: 'pointer', color: 'var(--primary)', border: 'none', background: 'none' }}>+ 添加第一条子任务</button>
+                    <button onClick={handleAddEmpty} style={{ cursor: 'pointer', color: 'var(--primary)', border: 'none', background: 'none' }}>+ 添加第一条子任务</button>
                 </div>
             )}
 
