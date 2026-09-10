@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
@@ -36,10 +36,31 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
     });
 
     const [deleteNode, setDeleteNode] = useState<NoteTreeNode | null>(null);
+    const [renameNote, setRenameNote] = useState<{ id: string; title: string } | null>(null);
+    const renameDialogRef = useRef<HTMLDialogElement>(null);
+    const renameNoteId = renameNote?.id;
 
     const deleteNote = useAppStore((state) => state.deleteNote);
+    const updateNote = useAppStore((state) => state.updateNote);
     const toggleNotePin = useAppStore((state) => state.toggleNotePin);
     const notes = useAppStore((state) => state.notes);
+
+    useEffect(() => {
+        if (renameNoteId) {
+            renameDialogRef.current?.showModal();
+            renameDialogRef.current?.querySelector('input')?.select();
+        }
+    }, [renameNoteId]);
+
+    const startRename = (node: NoteTreeNode) => {
+        const note = notes.find(n => n.id === node.noteId && !n.deletedAt);
+        if (note) setRenameNote({ id: note.id, title: note.title });
+    };
+
+    const closeRename = () => {
+        renameDialogRef.current?.close();
+        setRenameNote(null);
+    };
 
     const [tagPopup, setTagPopup] = useState<{
         noteId: string;
@@ -69,6 +90,12 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                     },
                 },
                 { id: 'div1', label: '', divider: true },
+                {
+                    id: 'rename',
+                    label: '重命名',
+                    icon: 'edit',
+                    onClick: () => startRename(node),
+                },
                 {
                     id: 'pin',
                     label: isPinned ? '取消置顶' : '置顶',
@@ -175,6 +202,7 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                         selectedNoteId={selectedNoteId}
                         onNodeClick={onNodeClick}
                         onContextMenu={handleContextMenu}
+                        onRename={startRename}
                     />
                 ))}
 
@@ -188,7 +216,35 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                 )}
             </div>
 
-
+            {renameNote && (
+                <dialog ref={renameDialogRef} className="note-rename-dialog" aria-labelledby="note-rename-title"
+                    onCancel={() => setRenameNote(null)}>
+                    <form onSubmit={event => {
+                        event.preventDefault();
+                        const title = renameNote.title.trim();
+                        if (!title) return;
+                        updateNote(renameNote.id, { title });
+                        closeRename();
+                    }}>
+                        <header className="modal-header">
+                            <h3 id="note-rename-title">重命名随记</h3>
+                            <button type="button" className="create-btn-icon" aria-label="关闭" onClick={closeRename}>✕</button>
+                        </header>
+                        <label className="form-item">
+                            随记名称
+                            <input className="input-field" autoFocus value={renameNote.title} placeholder="输入随记名称"
+                                onChange={event => setRenameNote({ ...renameNote, title: event.target.value })}
+                                onKeyDown={event => {
+                                    if (event.key === 'Enter' && event.nativeEvent.isComposing) event.preventDefault();
+                                }} />
+                        </label>
+                        <footer className="modal-actions">
+                            <button type="button" className="btn btn-light" onClick={closeRename}>取消</button>
+                            <button type="submit" className="btn btn-primary" disabled={!renameNote.title.trim()}>保存</button>
+                        </footer>
+                    </form>
+                </dialog>
+            )}
 
             <ConfirmModal
                 open={!!deleteNode}
@@ -230,9 +286,10 @@ interface TreeNodeProps {
     selectedNoteId: string | null;
     onNodeClick: (node: NoteTreeNode) => void;
     onContextMenu: (e: React.MouseEvent, node: NoteTreeNode) => void;
+    onRename: (node: NoteTreeNode) => void;
 }
 
-function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu }: TreeNodeProps) {
+function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu, onRename }: TreeNodeProps) {
     const isSelected = node.type === 'note' && node.noteId === selectedNoteId;
     const hasChildren = !!node.children && node.children.length > 0;
     const indent = level * 16;
@@ -263,7 +320,7 @@ function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu }: T
                 {!hasChildren && <span className="tree-toggle-spacer" />}
 
                 <span className="tree-icon">{node.icon}</span>
-                <span className="tree-label">{node.label}</span>
+                <span className="tree-label" title={node.label}>{node.label}</span>
 
                 {node.tags && node.tags.length > 0 && (
                     <span className="tree-tags">
@@ -276,6 +333,11 @@ function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu }: T
                 {node.count > 0 && (
                     <span className="tree-count">({node.count})</span>
                 )}
+                {node.type === 'note' && <button type="button" className="tree-toggle tree-rename-btn"
+                    title="重命名" aria-label={`重命名：${node.label}`}
+                    onClick={event => { event.stopPropagation(); onRename(node); }}>
+                    <Icon name="edit" size={14} />
+                </button>}
             </div>
 
             {hasChildren && !node.collapsed && (
@@ -288,6 +350,7 @@ function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu }: T
                             selectedNoteId={selectedNoteId}
                             onNodeClick={onNodeClick}
                             onContextMenu={onContextMenu}
+                            onRename={onRename}
                         />
                     ))}
                 </div>

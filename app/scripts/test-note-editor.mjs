@@ -84,6 +84,59 @@ try {
     assert.deepEqual((await storedNotes()).find(note => note.id === legacyId).tags, ['兼容测试']);
     console.log('Passed: legacy HTML marks, headings, font size/color, lists, alignment, code and tags');
 
+    const renameId = await openNote('<p>原有正文</p>', '重命名前');
+    const beforeRename = (await storedNotes()).find(note => note.id === renameId);
+    const treeOrder = () => page.locator('.tree-node[data-node-id^="note-"]').evaluateAll(nodes => nodes.map(node => node.dataset.nodeId));
+    const originalOrder = await treeOrder();
+    const renameRow = () => page.locator(`[data-node-id="note-${renameId}"]`);
+    await page.getByRole('textbox', { name: '随记标题', exact: true }).fill('尚未自动保存的标题');
+    await body.fill('改名前尚未自动保存的正文');
+    await renameRow().getByRole('button', { name: /^重命名：/ }).click();
+    const renameDialog = page.getByRole('dialog', { name: '重命名随记', exact: true });
+    const renameInput = renameDialog.getByRole('textbox', { name: '随记名称', exact: true });
+    assert.equal(await renameInput.evaluate(input => document.activeElement === input && input.selectionStart === 0 && input.selectionEnd === input.value.length), true,
+        'Rename should focus and select the name');
+    await renameInput.fill('  改名后的随记  ');
+    await renameInput.press('Enter');
+    await renameDialog.waitFor({ state: 'hidden' });
+    assert.equal(await page.getByRole('textbox', { name: '随记标题', exact: true }).inputValue(), '改名后的随记');
+    assert.equal(await body.innerText(), '改名前尚未自动保存的正文');
+    await page.waitForFunction(() => document.querySelector('.ai-source-note strong')?.textContent === '改名后的随记');
+    await body.press('Control+End');
+    await page.keyboard.insertText('，改名后继续编辑');
+    await saveAndReload();
+    const renamed = (await storedNotes()).find(note => note.id === renameId);
+    assert.equal(renamed.title, '改名后的随记', 'A pending editor save must not overwrite the sidebar rename');
+    assert.match(renamed.content, /改名前尚未自动保存的正文，改名后继续编辑/);
+    assert.equal(renamed.date, beforeRename.date);
+    assert.equal(renamed.createdAt, beforeRename.createdAt);
+    assert.deepEqual(renamed.tags, beforeRename.tags);
+    // Reload clears the calendar filter, so compare the same day's original rows.
+    assert.deepEqual((await treeOrder()).filter(id => originalOrder.includes(id)), originalOrder,
+        'Renaming must keep daily notes in their original order');
+
+    const otherId = await openNote('<p>另一条随记</p>', '另一条随记');
+    await body.fill('另一条未保存的正文');
+    await renameRow().click({ button: 'right' });
+    await page.getByRole('button', { name: '重命名', exact: true }).click();
+    await renameInput.fill('   ');
+    assert.equal(await renameDialog.getByRole('button', { name: '保存', exact: true }).isDisabled(), true);
+    await renameInput.press('Enter');
+    assert.equal(await renameDialog.isVisible(), true, 'An empty name must not be submitted');
+    await renameInput.fill('取消的名称');
+    await renameInput.press('Escape');
+    assert.equal((await storedNotes()).find(note => note.id === renameId).title, '改名后的随记');
+    await renameRow().getByRole('button', { name: /^重命名：/ }).click();
+    await renameInput.fill('侧栏再次改名');
+    await renameDialog.getByRole('button', { name: '保存', exact: true }).click();
+    assert.equal(await page.getByRole('textbox', { name: '随记标题', exact: true }).inputValue(), '另一条随记', 'Renaming another note must not navigate away');
+    assert.equal(await body.innerText(), '另一条未保存的正文');
+    await renameRow().click();
+    await page.waitForFunction(() => document.querySelector('.note-editor-title')?.value === '侧栏再次改名');
+    assert.match((await storedNotes()).find(note => note.id === otherId).content, /另一条未保存的正文/);
+    await page.screenshot({ path: 'ui-check.local/note-rename.png' });
+    console.log('Passed: sidebar/context rename, focus, Enter/Escape, empty names, pending drafts, other-note rename, date/order and reload');
+
     const pasteText = (text, html = '') => body.evaluate((root, { text, html }) => {
         const clipboard = new DataTransfer();
         clipboard.setData('text/plain', text);
@@ -136,8 +189,14 @@ try {
     ]) {
         await openNote(content, `网址覆盖：${name}`);
         await body.locator('p, pre').first().click();
-        await body.press('Control+Home');
-        await body.press('Shift+End');
+        await body.locator('p, pre').first().evaluate(element => {
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        });
+        await page.waitForFunction(() => !document.querySelector('.ProseMirror').editor.state.selection.empty);
         assert.equal(await page.evaluate(() => window.getSelection().toString()), name === '普通文字' ? '替换这段文字' : oldURL);
         await pasteText(newURL, clipboardHTML);
         assert.equal((await body.innerText()).trim(), newURL, `${name}: URL paste must replace the selected text`);

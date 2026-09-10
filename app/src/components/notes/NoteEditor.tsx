@@ -47,6 +47,13 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
         draft.current = { title, tags, contentHtml, onSave };
     }, [title, tags, contentHtml, onSave]);
 
+    useLayoutEffect(() => {
+        // Sidebar renames must survive the next autosave without replacing the body draft.
+        const savedTitle = note?.title || '';
+        setTitle(savedTitle);
+        draft.current.title = savedTitle;
+    }, [note?.title]);
+
     const markChanged = useCallback(() => {
         pendingSave.current = true;
         setRevision(value => value + 1);
@@ -202,6 +209,8 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
                 className="note-editor-title"
                 type="text"
                 placeholder="标题（可选）"
+                aria-label="随记标题"
+                title="修改标题即可重命名随记"
                 value={title}
                 onChange={handleTitleChange}
             />
