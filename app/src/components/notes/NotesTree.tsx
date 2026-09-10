@@ -71,7 +71,10 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
     const handleContextMenu = (e: React.MouseEvent, node: NoteTreeNode) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenu({ x: e.clientX, y: e.clientY, node });
+        const rect = e.currentTarget.getBoundingClientRect();
+        setContextMenu(e.type === 'contextmenu'
+            ? { x: e.clientX, y: e.clientY, node }
+            : { x: rect.left, y: rect.bottom, node });
     };
 
     const getContextMenuItems = (node: NoteTreeNode): ContextMenuItem[] => {
@@ -108,7 +111,7 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                     icon: 'tag',
                     onClick: () => {
                         setContextMenu(null);
-                        // 使用最后的右键菜单位置
+                        // 在操作菜单的位置打开标签设置
                         if (contextMenu) {
                             setTagPopup({
                                 noteId: node.noteId!,
@@ -202,7 +205,6 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                         selectedNoteId={selectedNoteId}
                         onNodeClick={onNodeClick}
                         onContextMenu={handleContextMenu}
-                        onRename={startRename}
                     />
                 ))}
 
@@ -286,10 +288,9 @@ interface TreeNodeProps {
     selectedNoteId: string | null;
     onNodeClick: (node: NoteTreeNode) => void;
     onContextMenu: (e: React.MouseEvent, node: NoteTreeNode) => void;
-    onRename: (node: NoteTreeNode) => void;
 }
 
-function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu, onRename }: TreeNodeProps) {
+function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu }: TreeNodeProps) {
     const isSelected = node.type === 'note' && node.noteId === selectedNoteId;
     const hasChildren = !!node.children && node.children.length > 0;
     const indent = level * 16;
@@ -333,10 +334,10 @@ function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu, onR
                 {node.count > 0 && (
                     <span className="tree-count">({node.count})</span>
                 )}
-                {node.type === 'note' && <button type="button" className="tree-toggle tree-rename-btn"
-                    title="重命名" aria-label={`重命名：${node.label}`}
-                    onClick={event => { event.stopPropagation(); onRename(node); }}>
-                    <Icon name="edit" size={14} />
+                {node.type === 'note' && <button type="button" className="tree-toggle tree-menu-btn"
+                    title="更多操作" aria-label={`随记操作：${node.label}`}
+                    onClick={event => onContextMenu(event, node)}>
+                    <span aria-hidden="true">⋯</span>
                 </button>}
             </div>
 
@@ -350,7 +351,6 @@ function TreeNode({ node, level, selectedNoteId, onNodeClick, onContextMenu, onR
                             selectedNoteId={selectedNoteId}
                             onNodeClick={onNodeClick}
                             onContextMenu={onContextMenu}
-                            onRename={onRename}
                         />
                     ))}
                 </div>

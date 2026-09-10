@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Icon } from '../ui/Icon';
 import { useAppStore } from '../../state/appStore';
 
@@ -24,6 +24,22 @@ export function NoteTagPopup({ noteId, onClose, position }: NoteTagPopupProps) {
 
     // 可选标签（排除系统标签）
     const availableTags = allTags.filter(tag => !tag.isSystem);
+
+    useLayoutEffect(() => {
+        const popup = popupRef.current!;
+        const place = () => {
+            popup.style.left = Math.max(8, Math.min(position.x, window.innerWidth - popup.offsetWidth - 8)) + 'px';
+            popup.style.top = Math.max(8, Math.min(position.y, window.innerHeight - popup.offsetHeight - 8)) + 'px';
+        };
+        place();
+        const observer = new ResizeObserver(place);
+        observer.observe(popup);
+        window.addEventListener('resize', place);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', place);
+        };
+    }, [position.x, position.y]);
 
     // 点击外部关闭
     useEffect(() => {

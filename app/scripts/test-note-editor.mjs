@@ -89,9 +89,35 @@ try {
     const treeOrder = () => page.locator('.tree-node[data-node-id^="note-"]').evaluateAll(nodes => nodes.map(node => node.dataset.nodeId));
     const originalOrder = await treeOrder();
     const renameRow = () => page.locator(`[data-node-id="note-${renameId}"]`);
+    const noteMenu = page.locator('.context-menu');
+    const noteActions = renameRow().getByRole('button', { name: /^随记操作：/ });
+    await noteActions.click();
+    const actionLabels = await noteMenu.getByRole('button').allTextContents();
+    assert.deepEqual(actionLabels, ['新建相邻笔记', '重命名', '置顶', '标签设置', '删除']);
+    await page.keyboard.press('Escape');
+    await noteMenu.waitFor({ state: 'hidden' });
+    await renameRow().click({ button: 'right' });
+    assert.deepEqual(await noteMenu.getByRole('button').allTextContents(), actionLabels, 'Both note menu entry points must expose the same actions');
+    await page.keyboard.press('Escape');
+    await noteActions.focus();
+    await page.keyboard.press('Enter');
+    const menuBox = await noteMenu.boundingBox();
+    const buttonBox = await noteActions.boundingBox();
+    assert.ok(Math.abs(menuBox.x - buttonBox.x) < 1 && menuBox.y > 0 && menuBox.y + menuBox.height <= 840,
+        'Keyboard activation must anchor the menu beside the note and keep it in the viewport');
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({ width: 1186, height: 600 });
+    await noteActions.click();
+    await noteMenu.getByRole('button', { name: '标签设置', exact: true }).click();
+    const tagPopup = page.locator('.note-tag-popup');
+    const tagBox = await tagPopup.boundingBox();
+    assert.ok(tagBox.y >= 0 && tagBox.y + tagBox.height <= 600, `Tags must stay inside a short window: ${JSON.stringify(tagBox)}`);
+    await tagPopup.getByRole('textbox').press('Escape');
+    await page.setViewportSize({ width: 1280, height: 840 });
     await page.getByRole('textbox', { name: '随记标题', exact: true }).fill('尚未自动保存的标题');
     await body.fill('改名前尚未自动保存的正文');
-    await renameRow().getByRole('button', { name: /^重命名：/ }).click();
+    await noteActions.click();
+    await noteMenu.getByRole('button', { name: '重命名', exact: true }).click();
     const renameDialog = page.getByRole('dialog', { name: '重命名随记', exact: true });
     const renameInput = renameDialog.getByRole('textbox', { name: '随记名称', exact: true });
     assert.equal(await renameInput.evaluate(input => document.activeElement === input && input.selectionStart === 0 && input.selectionEnd === input.value.length), true,
@@ -126,7 +152,8 @@ try {
     await renameInput.fill('取消的名称');
     await renameInput.press('Escape');
     assert.equal((await storedNotes()).find(note => note.id === renameId).title, '改名后的随记');
-    await renameRow().getByRole('button', { name: /^重命名：/ }).click();
+    await noteActions.click();
+    await noteMenu.getByRole('button', { name: '重命名', exact: true }).click();
     await renameInput.fill('侧栏再次改名');
     await renameDialog.getByRole('button', { name: '保存', exact: true }).click();
     assert.equal(await page.getByRole('textbox', { name: '随记标题', exact: true }).inputValue(), '另一条随记', 'Renaming another note must not navigate away');
@@ -135,7 +162,7 @@ try {
     await page.waitForFunction(() => document.querySelector('.note-editor-title')?.value === '侧栏再次改名');
     assert.match((await storedNotes()).find(note => note.id === otherId).content, /另一条未保存的正文/);
     await page.screenshot({ path: 'ui-check.local/note-rename.png' });
-    console.log('Passed: sidebar/context rename, focus, Enter/Escape, empty names, pending drafts, other-note rename, date/order and reload');
+    console.log('Passed: ellipsis/right-click menu parity, keyboard anchoring, rename, Enter/Escape, empty names, pending drafts, other-note rename, date/order and reload');
 
     const pasteText = (text, html = '') => body.evaluate((root, { text, html }) => {
         const clipboard = new DataTransfer();
@@ -319,7 +346,10 @@ try {
             const selection = document.querySelector('.ProseMirror').editor.state.selection;
             return selection.empty && selection.from === 1;
         });
-        for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight');
+        for (let i = 0; i < 4; i++) {
+            await page.keyboard.press('Shift+ArrowRight');
+            await page.waitForFunction(to => document.querySelector('.ProseMirror').editor.state.selection.to === to, i + 2);
+        }
         await assertBorderlessSelection();
     };
     const assertDeselected = async () => {
