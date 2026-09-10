@@ -33,12 +33,14 @@ try {
     await page.locator('[data-table-grid-cell][data-rows="3"][data-cols="3"]').click();
     await body.locator('table').waitFor();
     assert.equal(await body.locator('tr').count(), 3);
+    assert.equal(await page.locator('.note-editor-count').innerText(), '字数: 0', 'An empty table must not count its structural separators as text');
     await body.locator('td').first().click();
     await page.waitForFunction(() => document.querySelector('.ProseMirror')?.editor.view.hasFocus());
     await page.keyboard.insertText('表格回归文字');
     await body.press('Home');
     await body.press('Shift+End');
     await page.waitForFunction(() => !document.querySelector('.ProseMirror').editor.state.selection.empty);
+    assert.equal(await page.locator('.note-editor-count').innerText(), '字数: 6');
 
     const hoverColumn = async label => {
         const box = await body.locator('td, th').first().boundingBox();
@@ -74,6 +76,7 @@ try {
     await body.waitFor();
     assert.equal(await body.locator('td').count(), 9);
     assert.ok((await body.innerText()).includes('表格回归文字'));
+    assert.equal(await page.locator('.note-editor-count').innerText(), '字数: 6', 'Character count must survive table save and reload');
     // Reproduce the unmount path from the reported stack, while table highlights are active.
     await body.evaluate(root => {
         root.editor.commands.setSearchTerm('表格');

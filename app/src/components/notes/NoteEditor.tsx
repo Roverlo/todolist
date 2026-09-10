@@ -181,7 +181,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
         );
     }
 
-    const charCount = editor?.getText().length ?? 0;
+    const charCount = Array.from(editor?.state.doc.textContent.replace(/\s/g, '') ?? '').length;
 
     return (
         <div className="note-editor">
@@ -216,7 +216,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
                         onChange={handleTagsChange}
                     />
 
-                    <span className="note-editor-count">
+                    <span className="note-editor-count" title="正文的字数，不含空格和换行">
                         字数: {charCount}
                     </span>
 
