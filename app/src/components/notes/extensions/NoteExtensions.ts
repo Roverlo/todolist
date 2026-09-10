@@ -4,6 +4,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Placeholder from '@tiptap/extension-placeholder';
+import { Table as TiptapTable, TableRow, TableHeader, TableCell } from '@tiptap/extension-table';
 import { Bold } from 'reactjs-tiptap-editor/bold';
 import { Italic } from 'reactjs-tiptap-editor/italic';
 import { TextUnderline } from 'reactjs-tiptap-editor/textunderline';
@@ -177,6 +178,28 @@ export async function insertNoteImages(editor: Editor, files: File[]) {
     }
 }
 
+// Use the same ProseMirror as the editor: the UI library bundles a second
+// DecorationSet in its table implementation, which crashes when highlights overlap.
+const NoteTable = TiptapTable.extend({
+    addOptions() {
+        return { ...TiptapTable.options, button: Table.options.button };
+    },
+    addExtensions() {
+        return [TableRow, TableHeader, TableCell.extend({
+            addAttributes() {
+                return {
+                    ...this.parent?.(),
+                    backgroundColor: {
+                        default: null,
+                        parseHTML: element => element.style.backgroundColor || null,
+                        renderHTML: attributes => attributes.backgroundColor ? { style: `background-color: ${attributes.backgroundColor}` } : {},
+                    },
+                };
+            },
+        })];
+    },
+});
+
 export const noteExtensions = [
     StarterKit.configure({
         bold: false, italic: false, underline: false, strike: false, heading: false,
@@ -234,7 +257,7 @@ export const noteExtensions = [
         upload: readNoteImage,
         onError: error => useToastStore.getState().addToast(error.message, 'error'),
     }),
-    Table.configure({ resizable: true, HTMLAttributes: { style: 'border: 1px solid #000; border-collapse: collapse;' } }),
+    NoteTable.configure({ resizable: true, HTMLAttributes: { style: 'border: 1px solid #000; border-collapse: collapse;' } }),
     SearchAndReplace.configure({ disableRegex: true }),
     Clear, History, Blockquote, Code, CodeBlock.configure({ enableTabIndentation: true }), HorizontalRule,
 ];

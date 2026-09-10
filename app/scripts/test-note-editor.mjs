@@ -609,7 +609,7 @@ try {
     // Legacy tables can have only some columns sized; shrinking must not stretch the remaining column.
     await page.setViewportSize({ width: 1538, height: 840 });
     await openNote('<table style="width: 100%; min-width: 744px"><tbody>'
-        + '<tr><td><p></p></td><td colwidth="243"><p>会议记录</p></td><td colwidth="196"><p></p></td><td colwidth="280"><p></p></td></tr>'
+        + '<tr><td style="background-color: #fff200"><p></p></td><td colwidth="243"><p>会议记录</p></td><td colwidth="196"><p></p></td><td colwidth="280"><p></p></td></tr>'
         + '<tr><td><p></p></td><td colwidth="243"><p>保留表格内容</p></td><td colwidth="196"><p></p></td><td colwidth="280"><p></p></td></tr>'
         + '</tbody></table>', '表格横向缩放');
     const hideAssistant = page.getByRole('button', { name: '隐藏 AI 助手', exact: true });
@@ -643,6 +643,7 @@ try {
     assert.ok(Math.abs((await resizeTable.boundingBox()).width - savedWidth) < 2, 'Saved table widths must survive reload');
     assert.equal(await resizeTable.locator('tr').count(), 2);
     assert.equal(await resizeTable.getByText('保留表格内容', { exact: true }).count(), 1);
+    assert.equal(await resizeTable.locator('td').first().evaluate(el => el.style.backgroundColor), 'rgb(255, 242, 0)', 'Legacy cell background colors must survive editing and reload');
     const tableDownload = page.waitForEvent('download');
     await page.getByTitle('导出为 HTML', { exact: true }).click();
     const tableHTML = await readFile(await (await tableDownload).path(), 'utf8');
