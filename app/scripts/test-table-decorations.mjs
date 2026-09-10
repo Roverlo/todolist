@@ -22,7 +22,7 @@ const output = `ui-check.local/table-decorations-${dev ? 'dev' : 'production'}`;
 await mkdir(output, { recursive: true });
 
 try {
-    await page.goto(server.resolvedUrls.local[0]);
+    await page.goto(server.resolvedUrls.local[0], { waitUntil: 'domcontentloaded', timeout: 90000 });
     const reminder = page.getByRole('button', { name: '我知道了' });
     if (await reminder.isVisible()) await reminder.click();
     await page.getByTitle('切换到随记中心', { exact: true }).click();
@@ -160,12 +160,23 @@ try {
     await body.evaluate(root => {
         root.editor.commands.setSearchTerm('');
         const canvas = document.createElement('canvas');
-        canvas.width = 120;
-        canvas.height = 40;
+        canvas.width = 1280;
+        canvas.height = 840;
         root.editor.chain().focus('end').insertContent({ type: 'imageBlock', attrs: { src: canvas.toDataURL(), alt: '组合检查图片' } }).run();
-        root.editor.commands.selectAll();
     });
     await body.locator('img').waitFor();
+    await body.locator('.image-view__body').click();
+    const imageWidth = (await body.locator('img').boundingBox()).width;
+    assert.ok(await body.evaluate(root => root.scrollWidth <= root.clientWidth + 1), 'Full-width image handles must not add a horizontal scrollbar');
+    const handle = body.locator('.image-resizer__handler--br');
+    await handle.scrollIntoViewIfNeeded();
+    const corner = await handle.boundingBox();
+    await page.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(corner.x - 80, corner.y - 50, { steps: 8 });
+    await page.mouse.up();
+    assert.ok((await body.locator('img').boundingBox()).width < imageWidth - 20, 'The fully visible corner handle must still resize the image');
+    await body.evaluate(root => root.editor.commands.selectAll());
     await checkDecorationIdentity();
     const saved = await body.evaluate(root => root.editor.getHTML());
     await page.getByRole('button', { name: '保存', exact: true }).click();
@@ -182,10 +193,10 @@ try {
     assert.equal(await body.evaluate(root => root.editor.getHTML()), saved, 'Unmount/remount must preserve the mixed document');
     assert.deepEqual(errors, [], 'No uncaught editor errors');
     console.log(`Passed (${dev ? 'dev' : 'production'}): insert, text/cell/search selections with resize handles, merge/split, save/reload and unmount/reinsert`);
-    console.log(`Passed: ${inventory.extensions.length} unique extensions, ${sources.length} compatible decoration sources, syntax highlighting, cross-node replacement/undo/redo, image, persistence and mixed-node unmount`);
+    console.log(`Passed: ${inventory.extensions.length} unique extensions, ${sources.length} compatible decoration sources, syntax highlighting, cross-node replacement/undo/redo, full-width image handles/resize, persistence and mixed-node unmount`);
 } catch (error) {
     console.error('Editor errors:', errors);
-    await page.screenshot({ path: `${output}/failure.png` });
+    await page.screenshot({ path: `${output}/failure.png` }).catch(captureError => console.error('Failure screenshot:', captureError.message));
     throw error;
 } finally {
     await browser.close();

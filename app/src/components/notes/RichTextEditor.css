@@ -199,6 +199,11 @@ div[data-richtext-portal] { z-index: 1200; }
 .note-editor .ProseMirror blockquote { border-left: 3px solid #c4b5fd; margin: 1em 0; padding-left: 1em; color: #6b7280; }
 .note-editor .ProseMirror hr { border: 0; border-top: 1px solid #d1d5db; margin: 1.5em 0; }
 .note-editor .ProseMirror img { max-width: 100%; height: auto; }
+/* Keep full-width image handles inside the editor's scroll area and fully clickable. */
+.note-editor .ProseMirror.ProseMirror.ProseMirror .image-resizer :is(.image-resizer__handler--tl,.image-resizer__handler--bl) { left: 0; }
+.note-editor .ProseMirror.ProseMirror.ProseMirror .image-resizer :is(.image-resizer__handler--tr,.image-resizer__handler--br) { right: 0; }
+.note-editor .ProseMirror.ProseMirror.ProseMirror .image-resizer :is(.image-resizer__handler--tl,.image-resizer__handler--tr) { top: 0; }
+.note-editor .ProseMirror.ProseMirror.ProseMirror .image-resizer :is(.image-resizer__handler--bl,.image-resizer__handler--br) { bottom: 0; }
 .note-editor .ProseMirror table { border-collapse: collapse; table-layout: fixed; margin: 1em 0; }
 /* Respect resizable column widths instead of the library's full-width table rule. */
 .note-editor .ProseMirror.ProseMirror.ProseMirror .tableWrapper table { width: auto; }
