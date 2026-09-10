@@ -223,7 +223,8 @@ export const noteExtensions = [
         HTMLAttributes: { 'data-type': 'taskItem' },
         a11y: { checkboxLabel: node => `${node.attrs.checked ? '标记为未完成' : '标记为已完成'}：${node.firstChild?.textContent || '待办'}` },
     } }),
-    Link.configure({ openOnClick: false }),
+    // Ctrl+V replaces selected text; changing only its href belongs in the link dialog.
+    Link.configure({ openOnClick: false, linkOnPaste: false }),
     Image.extend<IImageOptions & { allowBase64: boolean }>({
         addProseMirrorPlugins() {
             const editor = this.editor;

@@ -63,10 +63,23 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
         extensions: noteExtensions,
         content: note?.content || '',
         parseOptions: { preserveWhitespace: 'full' },
-        editorProps: { attributes: {
-            'aria-label': '随记正文', role: 'textbox', 'aria-multiline': 'true',
-            'aria-description': 'Tab 插入空格，列表内调整层级；按 Escape 后可用 Tab 离开编辑区。',
-        } },
+        editorProps: {
+            attributes: {
+                'aria-label': '随记正文', role: 'textbox', 'aria-multiline': 'true',
+                'aria-description': 'Tab 插入空格，列表内调整层级；按 Escape 后可用 Tab 离开编辑区。Ctrl+单击打开链接。',
+            },
+            handleDOMEvents: {
+                click: (view, event) => {
+                    // Tauri's shell plugin opens _blank links on body clicks, ignoring defaultPrevented.
+                    if (view.editable && !event.ctrlKey && !event.metaKey
+                        && event.target instanceof Element && event.target.closest('a[href]')) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    return false;
+                },
+            },
+        },
         onUpdate: ({ editor }) => {
             setContentHtml(editor.getHTML());
             markChanged();

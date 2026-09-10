@@ -84,6 +84,68 @@ try {
     assert.deepEqual((await storedNotes()).find(note => note.id === legacyId).tags, ['兼容测试']);
     console.log('Passed: legacy HTML marks, headings, font size/color, lists, alignment, code and tags');
 
+    const pasteText = (text, html = '') => body.evaluate((root, { text, html }) => {
+        const clipboard = new DataTransfer();
+        clipboard.setData('text/plain', text);
+        if (html) clipboard.setData('text/html', html);
+        root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }));
+    }, { text, html });
+    const oldURL = 'https://example.com/old?ref=1';
+    const newURL = 'https://example.org/new?ref=2';
+    await openNote('<p></p>', '网址粘贴覆盖');
+    await body.click();
+    await pasteText(oldURL);
+    assert.equal(await body.innerText(), oldURL);
+    assert.equal(await body.locator('a').getAttribute('href'), oldURL, 'Pasted URLs should still become links');
+    assert.equal(await body.locator('a').evaluate(link => !link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))), true,
+        'A plain link click must cancel native navigation so the text can be edited');
+    for (const ctrlKey of [false, true]) {
+        const reachedShell = await body.locator('a').evaluate((link, ctrlKey) => {
+            let reachedBody = false;
+            const shellListener = event => { reachedBody = true; event.preventDefault(); };
+            document.body.addEventListener('click', shellListener);
+            link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey }));
+            document.body.removeEventListener('click', shellListener);
+            return reachedBody;
+        }, ctrlKey);
+        assert.equal(reachedShell, ctrlKey, 'Only Ctrl+click should reach the desktop shell link opener');
+    }
+    await saveAndReload();
+    await body.locator('a').click();
+    await body.press('Control+Home');
+    await body.press('Shift+End');
+    assert.equal(await page.evaluate(() => window.getSelection().toString()), oldURL);
+    await pasteText(newURL);
+    assert.equal(await body.innerText(), newURL, 'Pasting a URL over a selected URL must replace its visible text');
+    assert.equal(await body.locator('a').getAttribute('href'), newURL, 'The displayed URL and destination must match');
+    await body.press('Control+z');
+    assert.equal(await body.innerText(), oldURL);
+    assert.equal(await body.locator('a').getAttribute('href'), oldURL);
+    await body.press('Control+y');
+    assert.equal(await body.innerText(), newURL);
+    await saveAndReload();
+    assert.equal(await body.locator('a').getAttribute('href'), newURL);
+    console.log('Passed: URL auto-formatting, selected URL replacement, matching destination, undo/redo and reload');
+
+    for (const [name, content, clipboardHTML, isCode] of [
+        ['普通文字', '<p>替换这段文字</p>', '', false],
+        ['网页富文本', `<p><a href="${oldURL}">${oldURL}</a></p>`, `<a href="${newURL}">${newURL}</a>`, false],
+        ['表格', `<table><tbody><tr><td><p><a href="${oldURL}">${oldURL}</a></p></td></tr></tbody></table>`, '', false],
+        ['待办', `<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p><a href="${oldURL}">${oldURL}</a></p></li></ul>`, '', false],
+        ['代码块', `<pre><code>${oldURL}</code></pre>`, '', true],
+    ]) {
+        await openNote(content, `网址覆盖：${name}`);
+        await body.locator('p, pre').first().click();
+        await body.press('Control+Home');
+        await body.press('Shift+End');
+        assert.equal(await page.evaluate(() => window.getSelection().toString()), name === '普通文字' ? '替换这段文字' : oldURL);
+        await pasteText(newURL, clipboardHTML);
+        assert.equal((await body.innerText()).trim(), newURL, `${name}: URL paste must replace the selected text`);
+        if (isCode) assert.equal(await body.locator('a').count(), 0, 'Code should remain literal text');
+        else assert.equal(await body.locator('a').getAttribute('href'), newURL, `${name}: URL text and destination must agree`);
+    }
+    console.log('Passed: plain/HTML URL paste over labels and links, including tables, checklists and literal code');
+
     const choose = async (label, value) => {
         await page.getByRole('combobox', { name: label, exact: true }).click();
         const menu = page.getByRole('listbox', { name: label, exact: true });
@@ -566,7 +628,6 @@ try {
     console.log('Passed: format painter copies text styling through mouse selection');
 
     await openNote('<p>苹果 苹果 香蕉</p>', '查找替换');
-    await page.getByLabel('更多工具', { exact: true }).click();
     await page.getByRole('button', { name: '查找替换', exact: true }).click();
     const searchDialog = page.getByRole('search', { name: '查找替换' });
     await searchDialog.getByLabel('查找内容').fill('苹果');
@@ -578,7 +639,6 @@ try {
     assert.equal((await body.innerText()).trim(), '苹果 苹果 香蕉');
     await page.getByRole('button', { name: '重做', exact: true }).click();
     assert.equal((await body.innerText()).trim(), '橙子 橙子 香蕉');
-    await page.getByLabel('更多工具', { exact: true }).click();
     await page.getByRole('button', { name: '查找替换', exact: true }).click();
     await searchDialog.getByLabel('查找内容').fill('橙子');
     await searchDialog.getByLabel('替换内容').fill('临时替换');
@@ -726,7 +786,6 @@ try {
     assert.match(await body.locator('img').getAttribute('src'), /^data:image\/png;base64,/);
     await body.locator('.image-view__body').click();
     const imageWidth = await body.evaluate(root => Math.round(root.clientWidth / 2));
-    await page.getByLabel('更多工具', { exact: true }).click();
     await choose('图片宽度', '50%');
     await saveAndReload();
     assert.equal(await body.locator('img').evaluate(img => img.style.width), `${imageWidth}px`);
@@ -777,13 +836,12 @@ try {
     assert.equal(await page.locator('.notes-center-header').count(), 0, 'Editing must not reserve a separate title bar');
     assert.equal(await page.getByRole('toolbar').getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'AI actions must be integrated into the toolbar');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
-    await page.getByLabel('更多工具', { exact: true }).click();
-    await page.getByRole('button', { name: '分隔线', exact: true }).click();
+    assert.equal(await page.getByLabel('更多工具', { exact: true }).count(), 0, 'Tools should be directly accessible');
+    for (const name of ['查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线']) {
+        assert.equal(await page.getByRole('toolbar').getByRole('button', { name, exact: true }).isVisible(), true, `${name} should be visible without opening a menu`);
+    }
+    await page.getByRole('button', { name: '分隔线', exact: true }).press('Enter');
     await body.locator('hr').waitFor();
-    assert.equal(await page.locator('.editor-more').evaluate(el => el.open), false);
-    await page.getByLabel('更多工具', { exact: true }).press('Enter');
-    await page.keyboard.press('Escape');
-    assert.equal(await page.locator('.editor-more').evaluate(el => el.open), false);
     await body.press('Control+End');
     await page.getByRole('button', { name: '插入表格', exact: true }).press('Enter');
     await body.locator('table').waitFor();
@@ -795,9 +853,7 @@ try {
     await (await tableImageChooser).setFiles({ name: '表格图片.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
     await page.getByRole('dialog').getByRole('button', { name: '插入图片', exact: true }).click();
     await body.locator('table .image-view__body').click();
-    await page.getByLabel('更多工具', { exact: true }).click();
     await page.getByRole('combobox', { name: '图片宽度', exact: true }).waitFor();
-    await page.getByLabel('更多工具', { exact: true }).press('Escape');
     await page.getByRole('combobox', { name: '表格操作', exact: true }).waitFor();
     assert.equal(await page.locator('.ai-panel-header').count(), 0, 'Do not add a second title bar for the assistant');
     for (const width of [1100, 1186, 1280, 1538, 1920]) {
@@ -814,7 +870,8 @@ try {
                 titleTop: el.querySelector('.note-editor-title').getBoundingClientRect().top,
             }));
             closedLayout ??= layout;
-            assert.equal(layout.topBars[1].height, toolbarHeight, `Image and table tools must stay within two rows at ${width}px`);
+            if (width >= 1186) assert.equal(layout.topBars[1].height, toolbarHeight, `Image and table tools must stay within two rows at ${width}px`);
+            else assert.ok(layout.topBars[1].height <= 120, 'Narrow windows may wrap contextual image tools to one additional row');
             assert.deepEqual(layout, closedLayout, `Header, toolbar and note top must not jump when toggling AI at ${width}px`);
             assert.ok(await page.locator('.notes-main-root').evaluate(el =>
                 el.getBoundingClientRect().left >= document.querySelector('.sidebar').getBoundingClientRect().right),
@@ -823,10 +880,9 @@ try {
                 const bounds = el.getBoundingClientRect();
                 const groupsFit = [...el.querySelectorAll('.editor-toolbar-row')].every(row => {
                     const groups = [...row.children].map(group => group.getBoundingClientRect());
-                    return groups.every((group, i) => !i || group.left >= groups[i - 1].right);
+                    return groups.every((group, i) => !i || group.top >= groups[i - 1].bottom || group.left >= groups[i - 1].right);
                 });
-                return groupsFit && [...el.querySelectorAll('button, select, summary')].every(control => {
-                    if (control.closest('details:not([open])') && control.tagName !== 'SUMMARY') return true;
+                return groupsFit && [...el.querySelectorAll('button, select')].every(control => {
                     const rect = control.getBoundingClientRect();
                     if (!rect.width || !rect.height) return true;
                     return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1
@@ -848,18 +904,14 @@ try {
             if ([1186, 1538].includes(width)) await page.screenshot({ path: `ui-check.local/compact-toolbar-${width}-${panelOpen ? 'open' : 'closed'}.png` });
         }
     }
-    await page.getByLabel('更多工具', { exact: true }).click();
-    const menuBox = await page.locator('.editor-more-menu').boundingBox();
-    assert.ok(menuBox.y + menuBox.height <= 698, 'Expanded tools must remain within the viewport');
     assert.equal(await page.getByRole('button', { name: '打开图片文件夹', exact: true }).isVisible(), true);
-    await page.getByLabel('更多工具', { exact: true }).press('Escape');
     await page.getByRole('button', { name: /^回收站/ }).click();
     await page.locator('.notes-center-header').waitFor();
     assert.equal(await page.getByRole('toolbar').count(), 0, 'Trash must not retain editing tools');
     assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'Trash must retain settings access');
     await page.evaluate(async () => (await import('/src/state/appStore.ts')).useAppStore.getState().setNoteViewMode('tree'));
     await body.waitFor();
-    console.log(`Passed: integrated two-row toolbar (${toolbarHeight}px), empty/trash views, image/table controls and stable AI toggle at five desktop widths`);
+    console.log(`Passed: directly accessible two-row toolbar (${toolbarHeight}px), narrow-window wrapping, image/table controls, empty/trash views and stable AI toggle at five desktop widths`);
     assert.deepEqual(errors, []);
     await page.setViewportSize({ width: 1280, height: 840 });
     await page.screenshot({ path: 'ui-check.local/note-editor.png' });
