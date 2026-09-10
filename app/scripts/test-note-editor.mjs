@@ -238,6 +238,8 @@ try {
     ]) {
         await openNote(content, `网址覆盖：${name}`);
         await body.locator('p, pre').first().click();
+        // Let the editor's click-focus frame finish before creating the paste selection.
+        await page.evaluate(() => new Promise(requestAnimationFrame));
         await body.locator('p, pre').first().evaluate(element => {
             const range = document.createRange();
             range.selectNodeContents(element);
@@ -363,6 +365,7 @@ try {
     const selectBlankTestText = async () => {
         await body.click();
         await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.view.hasFocus());
+        await page.evaluate(() => new Promise(requestAnimationFrame));
         await body.press('Control+Home');
         await page.waitForFunction(() => {
             const selection = document.querySelector('.ProseMirror').editor.state.selection;
@@ -824,6 +827,11 @@ try {
     await page.setViewportSize({ width: 1280, height: 840 });
 
     await openNote('<p>表格操作示例</p>', '表格编辑');
+    await page.getByText('回收站', { exact: true }).click();
+    await page.getByTitle('返回随记列表').waitFor();
+    await page.locator('.tree-node.level-2').filter({ hasText: '表格编辑' }).locator('.tree-label').click();
+    await body.waitFor();
+    assert.equal(await page.getByTitle('返回随记列表').count(), 0, 'Selecting a note from the trash view must return to its editor');
     await body.press('Control+End');
     await body.press('Enter');
     await page.getByRole('button', { name: '插入表格', exact: true }).click();
@@ -831,7 +839,9 @@ try {
     await body.locator('table').waitFor();
     assert.equal(await body.locator('tr').count(), 3);
     assert.equal(await body.locator('tr').first().locator('td, th').count(), 3);
-    await body.locator('td, th').first().click();
+    await page.waitForFunction(() => document.querySelector('.ProseMirror') === document.activeElement, undefined, { timeout: 3000 });
+    await page.keyboard.insertText('插入后直接输入');
+    assert.equal(await body.locator('td, th').first().innerText(), '插入后直接输入', 'Closing the table picker must keep typing in the first cell');
     await body.press('Shift+Tab');
     assert.ok(await body.evaluate(el => document.activeElement === el), 'Reverse Tab in the first cell must not jump to the footer');
     await body.press('Tab');
@@ -902,6 +912,9 @@ try {
     assert.equal(await body.locator('img').evaluate(img => img.style.width), `${imageWidth}px`);
     assert.ok(Math.abs((await body.locator('img').boundingBox()).width - imageWidth) <= 1);
     assert.ok(await body.locator('img').evaluate(img => img.complete && img.naturalWidth === 240));
+    // A restored document may initially select its first image. Append at the caret, not over that image.
+    await body.press('Control+End');
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.state.selection.empty);
     const pasted = await body.evaluate((root, png) => {
         const bytes = Uint8Array.from(atob(png), character => character.charCodeAt(0));
         const transfer = new DataTransfer();

@@ -1416,7 +1416,7 @@ export const useAppStore = create<AppStore>()(
 
       setActiveView: (view) => set({ activeView: view }),
       setNoteViewMode: (mode) => set({ noteViewMode: mode }),
-      setSelectedNoteId: (id) => set({ selectedNoteId: id }),
+      setSelectedNoteId: (id) => set(state => ({ selectedNoteId: id, noteViewMode: id ? 'tree' : state.noteViewMode })),
 
       restoreNote: (id: string) => {
         set(produce((state: AppStore) => {

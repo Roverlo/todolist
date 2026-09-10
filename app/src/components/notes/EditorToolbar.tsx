@@ -188,6 +188,7 @@ function Tool({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: ReactNode }) {
+    const tablePickerCommitted = useRef(false);
     const [searchOpen, setSearchOpen] = useState(false);
     const [insertDialog, setInsertDialog] = useState<'link' | 'image' | null>(null);
     const [textColor, setTextColor] = useState('#000000');
@@ -312,7 +313,16 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                 <div className="editor-toolbar-group" role="group" aria-label="插入">
                     <button type="button" className="editor-toolbar-btn" aria-label="插入链接" title="插入链接" onClick={() => setInsertDialog('link')}><Link size={18} /></button>
                     <button type="button" className="editor-toolbar-btn" aria-label="插入图片" title="插入图片" onClick={() => setInsertDialog('image')}><ImagePlus size={18} /></button>
-                    <span onKeyDownCapture={event => {
+                    <span onPointerUpCapture={event => {
+                        tablePickerCommitted.current = event.target instanceof Element
+                            && !!event.target.closest('.table-grid-size-editor');
+                    }} onFocusCapture={event => {
+                        // The picker restores its trigger after inserting; typing belongs in the new cell.
+                        if (tablePickerCommitted.current && event.target instanceof HTMLButtonElement) {
+                            tablePickerCommitted.current = false;
+                            editor.commands.focus();
+                        }
+                    }} onKeyDownCapture={event => {
                         if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLButtonElement) {
                             event.preventDefault();
                             event.stopPropagation();
