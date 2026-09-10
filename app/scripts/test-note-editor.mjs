@@ -164,6 +164,28 @@ try {
     await page.screenshot({ path: 'ui-check.local/note-rename.png' });
     console.log('Passed: ellipsis/right-click menu parity, keyboard anchoring, rename, Enter/Escape, empty names, pending drafts, other-note rename, date/order and reload');
 
+    for (const adding of [true, false]) {
+        const draftTitle = adding ? '添加标签时的标题草稿' : '移除标签时的标题草稿';
+        await page.getByRole('textbox', { name: '随记标题', exact: true }).fill(draftTitle);
+        await body.fill('设置标签时未保存的正文');
+        await noteActions.click();
+        await noteMenu.getByRole('button', { name: '标签设置', exact: true }).click();
+        await tagPopup.getByText('工作', { exact: true }).click();
+        const expectedTags = adding ? [...beforeRename.tags, '工作'] : beforeRename.tags;
+        assert.deepEqual(await page.locator('.note-tag-chip-name').allTextContents(), expectedTags,
+            'Menu tag changes must immediately appear in the active editor');
+        await tagPopup.getByRole('textbox').press('Escape');
+        assert.equal(await page.getByRole('textbox', { name: '随记标题', exact: true }).inputValue(), draftTitle);
+        assert.equal(await body.innerText(), '设置标签时未保存的正文');
+        await saveAndReload();
+        const saved = (await storedNotes()).find(note => note.id === renameId);
+        assert.deepEqual(saved.tags, expectedTags, 'A stale editor draft must not overwrite menu tag changes');
+        assert.equal(saved.title, draftTitle);
+        assert.equal(saved.date, beforeRename.date);
+        assert.match(saved.content, /设置标签时未保存的正文/);
+    }
+    console.log('Passed: menu tag add/remove survives draft save/reload while preserving unsaved title/body and original date');
+
     const pasteText = (text, html = '') => body.evaluate((root, { text, html }) => {
         const clipboard = new DataTransfer();
         clipboard.setData('text/plain', text);

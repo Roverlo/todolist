@@ -54,6 +54,13 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
         draft.current.title = savedTitle;
     }, [note?.title]);
 
+    useLayoutEffect(() => {
+        // Menu tag changes must also update the draft used by manual and automatic saves.
+        const savedTags = note?.tags || [];
+        setTags(savedTags);
+        draft.current.tags = savedTags;
+    }, [note?.tags]);
+
     const markChanged = useCallback(() => {
         pendingSave.current = true;
         setRevision(value => value + 1);
