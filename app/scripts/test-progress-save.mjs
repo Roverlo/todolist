@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 import { createServer } from 'vite';
 
 // A fresh browser context keeps all test edits separate from the user's data.
-const server = await createServer({ logLevel: 'error', server: { host: '127.0.0.1', port: 0 } });
+const server = await createServer({ cacheDir: 'node_modules/.vite-test-progress', logLevel: 'error', server: { host: '127.0.0.1', port: 0, strictPort: false } });
 let browser;
 try {
     await server.listen();
