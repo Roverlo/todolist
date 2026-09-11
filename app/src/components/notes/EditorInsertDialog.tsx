@@ -90,8 +90,8 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
                         <div className="editor-image-storage">
                             <strong>图片存在哪里？</strong>
                             <p>{source === 'url' ? '网络图片引用原网址，需要联网查看。'
-                                : isTauri() ? '本地图片会保存到“文档 / ProjectTodo / images”，笔记内也保留副本，备份和导出仍包含图片。'
-                                    : '网页预览中的图片保存在当前浏览器。免安装 EXE 版会保存到“文档 / ProjectTodo / images”。'}</p>
+                                : isTauri() ? '本地图片另存到数据文件夹下的 images，data.json 的随记正文内也保留副本；可在“设置 → 数据”查看实际位置。'
+                                    : '网页预览中的图片内嵌在当前浏览器的随记数据中，与 EXE 版独立。'}</p>
                             <button type="button" disabled={!isTauri()} onClick={() => void openNoteImageFolder().catch(error => setError(String(error)))}>
                                 <FolderOpen size={15} />打开图片文件夹
                             </button>

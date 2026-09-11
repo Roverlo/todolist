@@ -64,6 +64,10 @@
 .editor-toolbar-btn svg { width: 17px; height: 17px; stroke-width: 1.75; }
 .editor-toolbar .editor-tool > button svg.lucide-chevron-down { width: 12px; }
 .editor-toolbar .editor-todo-btn { width: auto; gap: 4px; padding: 0 7px; }
+@container note-document (max-width: 860px) {
+    .editor-toolbar .editor-todo-btn { width: 28px; padding: 0; }
+    .editor-toolbar .editor-todo-btn span { display: none; }
+}
 .editor-toolbar .editor-tool[data-tool='段落标题'] > button { width: 82px; justify-content: space-between; padding: 0 8px; }
 .editor-toolbar .editor-tool[data-tool='字号'] > button { width: 64px; justify-content: space-between; padding: 0 8px; }
 .editor-toolbar .editor-tool[data-tool='行距'] > button { width: 40px; gap: 2px; }

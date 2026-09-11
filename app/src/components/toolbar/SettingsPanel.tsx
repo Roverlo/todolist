@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { useAppStoreShallow } from '../../state/appStore';
 import { checkForUpdate, CURRENT_VERSION, BUILD_TIME } from '../../utils/updateChecker';
 import type { UpdateInfo } from '../../utils/updateChecker';
 import { UpdateModal } from './UpdateModal';
 import { VersionListModal } from './VersionListModal';
+import { openNoteImageFolder } from '../../utils/noteImages';
 
 interface SettingsPanelProps {
     open: boolean;
@@ -34,6 +35,14 @@ export const SettingsPanel = ({
     }));
 
     const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+    const [dataDirectory, setDataDirectory] = useState('');
+
+    useEffect(() => {
+        if (open && activeTab === 'data' && isTauri()) {
+            void invoke<string>('get_data_directory').then(setDataDirectory)
+                .catch(() => setDataDirectory('路径读取失败，请点击打开文件夹重试'));
+        }
+    }, [open, activeTab]);
 
     // 版本更新检测状态
     const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'latest' | 'available' | 'error'>('idle');
@@ -159,6 +168,14 @@ export const SettingsPanel = ({
     }) => (
         <div
             onClick={onClick}
+            role={onClick ? 'button' : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onKeyDown={event => {
+                if (onClick && event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                    event.preventDefault();
+                    onClick();
+                }
+            }}
             style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -187,7 +204,7 @@ export const SettingsPanel = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-main)' }}>{title}</div>
                     {description && (
-                        <div style={{ fontSize: 12, color: 'var(--text-subtle)' }}>{description}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-subtle)', overflowWrap: 'anywhere' }}>{description}</div>
                     )}
                 </div>
             </div>
@@ -466,9 +483,21 @@ export const SettingsPanel = ({
                             <SettingCard
                                 icon="📂"
                                 title="数据存储位置"
-                                description="打开默认数据文件夹（系统文档\ProjectTodo）"
-                                onClick={handleOpenDataDirectory}
+                                description={isTauri() ? dataDirectory || '系统“文档”文件夹 / ProjectTodo（点击打开）'
+                                    : '网页预览：数据保存在当前浏览器，与 EXE 版独立'}
+                                onClick={isTauri() ? handleOpenDataDirectory : undefined}
                             />
+                            <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--text-subtle)', padding: '0 16px' }}>
+                                <p><strong>{isTauri() ? 'data.json' : '随记数据'}</strong>：保存任务、随记文字、表格、插入的时间，以及本地图片的内嵌副本。</p>
+                                <p><strong>网络图片和链接</strong>：只保存网址，不会下载目标内容，离线时可能无法查看。</p>
+                                <p>目前支持插入图片和链接，尚不支持将任意文件作为附件保存。迁移随记可使用“本地备份”，其中包含内嵌图片；旧版图片可能只有内嵌副本。</p>
+                            </div>
+                            {isTauri() && <SettingCard
+                                icon="🖼️"
+                                title="图片文件夹"
+                                description="images：新上传、粘贴或拖入的本地图片会额外保存在这里；仅复制此文件夹不能恢复随记。"
+                                onClick={() => void openNoteImageFolder().catch(error => window.alert(String(error)))}
+                            />}
 
                             <div
                                 style={{

@@ -954,6 +954,26 @@ try {
     assert.match(await readFile(await (await downloadPromise).path(), 'utf8'), /data:image\/png;base64,/);
     console.log('Passed: image upload, sizing, paste/drop, validation, persistence and HTML export');
 
+    const timeNoteId = await openNote('<p>前后</p>', '插入时间检查');
+    await body.click();
+    await page.keyboard.press('Control+Home');
+    await page.keyboard.press('ArrowRight');
+    const beforeInsert = Date.now();
+    await page.getByRole('button', { name: '插入时间', exact: true }).click();
+    const insertedTime = (await body.innerText()).slice(1, -1);
+    assert.match(insertedTime, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+    const insertedAt = await page.evaluate(value => new Date(value.replace(' ', 'T')).getTime(), insertedTime);
+    assert.ok(insertedAt >= beforeInsert - 60000 && insertedAt <= Date.now(), 'Use the current local date/time at the caret');
+    assert.equal(await body.innerText(), `前${insertedTime}后`);
+    assert.equal(await body.evaluate(root => root.editor.isFocused), true);
+    await page.keyboard.press('Control+z');
+    assert.equal(await body.innerText(), '前后');
+    await page.keyboard.press('Control+y');
+    await saveAndReload();
+    assert.equal(await body.innerText(), `前${insertedTime}后`, 'The inserted time is fixed text, preserved on reload');
+    assert.equal((await storedNotes()).find(note => note.id === timeNoteId).date, '2026-09-06', 'Inserting today must not move the note to today');
+    console.log('Passed: local date/time at caret, focus, undo/redo, persistence and unchanged note date');
+
     await openNote('<p>工具栏布局检查</p>', '工具栏布局');
     const toolbarHeight = (await page.getByRole('toolbar').boundingBox()).height;
     assert.ok(toolbarHeight <= 82, 'The toolbar should occupy only two compact rows');
@@ -961,7 +981,7 @@ try {
     assert.equal(await page.getByRole('toolbar').getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'AI actions must be integrated into the toolbar');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
     assert.equal(await page.getByLabel('更多工具', { exact: true }).count(), 0, 'Tools should be directly accessible');
-    for (const name of ['查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线']) {
+    for (const name of ['插入时间', '查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线']) {
         assert.equal(await page.getByRole('toolbar').getByRole('button', { name, exact: true }).isVisible(), true, `${name} should be visible without opening a menu`);
     }
     await page.getByRole('button', { name: '分隔线', exact: true }).press('Enter');
