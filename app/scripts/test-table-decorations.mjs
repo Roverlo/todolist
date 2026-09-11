@@ -25,7 +25,19 @@ try {
     await page.goto(server.resolvedUrls.local[0], { waitUntil: 'domcontentloaded', timeout: 90000 });
     const reminder = page.getByRole('button', { name: '我知道了' });
     if (await reminder.isVisible()) await reminder.click();
+    let releaseEditor;
+    const editorLoading = new Promise(resolve => { releaseEditor = resolve; });
+    if (!dev) await page.route('**/assets/NotesMain-*.js', async route => { await editorLoading; await route.continue(); });
     await page.getByTitle('切换到随记中心', { exact: true }).click();
+    if (!dev) {
+        try {
+            await page.getByRole('status').filter({ hasText: '正在打开随记' }).waitFor();
+            assert.equal(await page.locator('.notes-calendar-grid').evaluate(el => getComputedStyle(el).display), 'grid',
+                'Sidebar styles must be ready while the lazy editor is still loading');
+            await page.screenshot({ path: `${output}/styled-sidebar-during-load.png` });
+        } finally { releaseEditor(); }
+        console.log('Passed: sidebar retains its layout while the editor bundle is delayed');
+    }
     await page.getByRole('button', { name: '创建新随记' }).click();
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     await body.waitFor();

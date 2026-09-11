@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef, lazy, Suspense } fro
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import dayjs from 'dayjs';
 import './App.css';
+import './components/notes/NotesCenter.css';
 import { AppSidebar } from './components/sidebar/AppSidebar';
 import { PrimaryToolbar } from './components/toolbar/PrimaryToolbar';
 import { TaskTable } from './components/task-table/TaskTable';

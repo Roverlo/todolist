@@ -7,7 +7,6 @@ import { AISettingsModal } from './AISettingsModal';
 import { Icon } from '../ui/Icon';
 import { PanelRight, Settings } from 'lucide-react';
 import type { Note } from '../../types';
-import './NotesCenter.css';
 
 export function NotesMain() {
     const { notes, updateNote, addNote, refreshNoteTagCounts, selectedNoteId, setSelectedNoteId } = useAppStoreShallow(state => ({
