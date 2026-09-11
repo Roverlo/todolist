@@ -25,6 +25,11 @@ try {
     await page.goto(server.resolvedUrls.local[0], { waitUntil: 'domcontentloaded', timeout: 90000 });
     const reminder = page.getByRole('button', { name: '我知道了' });
     if (await reminder.isVisible()) await reminder.click();
+    const taskButtonStyle = () => page.getByRole('button', { name: '新建任务', exact: true }).evaluate(el => {
+        const style = getComputedStyle(el);
+        return ['borderRadius', 'padding', 'fontSize', 'fontWeight'].map(key => style[key]);
+    });
+    const beforeNotes = await taskButtonStyle();
     let releaseEditor;
     const editorLoading = new Promise(resolve => { releaseEditor = resolve; });
     if (!dev) await page.route('**/assets/NotesMain-*.js', async route => { await editorLoading; await route.continue(); });
@@ -41,6 +46,11 @@ try {
     await page.getByRole('button', { name: '创建新随记' }).click();
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     await body.waitFor();
+    await page.getByTitle('切换到待办事项', { exact: true }).click();
+    assert.deepEqual(await taskButtonStyle(), beforeNotes, 'AI settings styles must not change task buttons after visiting notes');
+    await page.getByTitle('切换到随记中心', { exact: true }).click();
+    await body.waitFor();
+    console.log('Passed: task button appearance is unchanged after visiting notes');
     await page.locator('.note-editor-title').fill('表格交互回归');
     await body.click();
     await page.waitForFunction(() => document.querySelector('.ProseMirror')?.editor.view.hasFocus());

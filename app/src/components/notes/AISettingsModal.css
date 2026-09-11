@@ -498,7 +498,7 @@
 }
 
 /* Button Overrides */
-.btn {
+.ai-settings-modal .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -511,35 +511,35 @@
     border: 1px solid transparent;
 }
 
-.btn-primary {
+.ai-settings-modal .btn-primary {
     background-color: var(--primary);
     border-color: var(--primary);
     color: white;
 }
 
-.btn-primary:hover {
+.ai-settings-modal .btn-primary:hover {
     background-color: var(--primary-hover);
     border-color: var(--primary-hover);
 }
 
-.btn-danger-ghost {
+.ai-settings-modal .btn-danger-ghost {
     color: #dc2626;
     background: transparent;
     border-color: #fecaca;
     gap: 6px;
 }
 
-.btn-danger-ghost:hover {
+.ai-settings-modal .btn-danger-ghost:hover {
     background: #fef2f2;
 }
 
-.btn-light {
+.ai-settings-modal .btn-light {
     background-color: white;
     border: 1px solid #d1d5db;
     color: #374151;
 }
 
-.btn-light:hover {
+.ai-settings-modal .btn-light:hover {
     background-color: #f9fafb;
     border-color: #9ca3af;
 }
