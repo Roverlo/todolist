@@ -700,6 +700,82 @@ try {
     await page.screenshot({ path: 'ui-check.local/note-checklist.png' });
     console.log('Passed: checklist entry, Enter, completion/reopen, nested states, autosave/reload and task-board isolation');
 
+    const deletionChecklist = '<ul data-type="taskList">'
+        + '<li data-type="taskItem" data-checked="true"><p>保留上项</p></li>'
+        + '<li data-type="taskItem" data-checked="false"><p>删除中项</p></li>'
+        + '<li data-type="taskItem" data-checked="false"><p>保留下项</p></li></ul>';
+    const rowDistance = () => items.evaluateAll(nodes => nodes[1].getBoundingClientRect().top - nodes[0].getBoundingClientRect().top);
+    const assertDeletedChecklist = async distance => {
+        assert.equal(await items.count(), 2, 'Deleting an empty middle task must remove the item');
+        assert.equal(await body.locator('ul[data-type="taskList"]').count(), 1, 'Deletion must keep a single continuous checklist');
+        assert.equal(await body.locator('p').count(), 2, 'Deletion must not leave a blank paragraph inside or between tasks');
+        assert.deepEqual(await items.locator('p').allTextContents(), ['保留上项', '保留下项']);
+        assert.deepEqual(await items.evaluateAll(nodes => nodes.map(node => node.dataset.checked)), ['true', 'false']);
+        assert.ok(Math.abs(await rowDistance() - distance) < 1, 'Remaining task spacing must match the original adjacent rows');
+    };
+    for (const key of ['Backspace', 'Delete', 'Control+Backspace', 'Control+Delete']) {
+        const id = await openNote(deletionChecklist, `待办删除 ${key}`);
+        const distance = await rowDistance();
+        await items.nth(1).locator('p').click();
+        await body.press('Home');
+        await body.press('Shift+End');
+        await body.press('Backspace');
+        assert.equal(await items.count(), 3, 'Clearing task text should leave an editable empty task');
+        await body.press(key);
+        await assertDeletedChecklist(distance);
+        await body.press('Control+z');
+        assert.equal(await items.count(), 3, 'Undo must restore the removed task');
+        await body.press('Control+y');
+        await assertDeletedChecklist(distance);
+        if (key === 'Backspace') {
+            await saveAndReload();
+            await assertDeletedChecklist(distance);
+            assert.equal((await storedNotes()).find(note => note.id === id).date, '2026-09-06');
+            await page.screenshot({ path: 'ui-check.local/note-checklist-middle-deleted.png' });
+        }
+    }
+    // Selecting through the following row boundary must also close the gap.
+    await openNote(deletionChecklist, '整行删除待办');
+    const wholeRowDistance = await rowDistance();
+    await items.nth(1).locator('p').click();
+    await body.press('Home');
+    await body.press('Shift+ArrowDown');
+    await body.press('Delete');
+    await assertDeletedChecklist(wholeRowDistance);
+
+    for (const index of [0, 2]) {
+        await openNote(deletionChecklist, `删除边界待办 ${index}`);
+        await items.nth(index).locator('p').click();
+        await body.press('Home');
+        await body.press('Shift+End');
+        await body.press('Backspace');
+        await body.press('Backspace');
+        assert.equal(await items.count(), 2);
+        assert.equal(await body.locator('p').count(), 2, 'Removing the first/last empty task must not introduce a paragraph');
+    }
+    await openNote('<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p>父待办</p>'
+        + '<ul data-type="taskList"><li data-type="taskItem"><p></p></li><li data-type="taskItem"><p>保留子项</p></li></ul>'
+        + '</li></ul>', '嵌套待办删除');
+    await items.nth(1).locator('p').click();
+    await body.press('Backspace');
+    assert.equal(await items.count(), 2);
+    assert.equal(await body.locator('ul ul li').innerText(), '保留子项');
+    assert.equal(await items.first().getAttribute('data-checked'), 'true');
+    // A blank parent may still own a child task; deleting it must preserve that content.
+    await items.first().locator(':scope > div > p').click();
+    await body.press('Home');
+    await body.press('Shift+End');
+    await body.press('Backspace');
+    await body.press('Backspace');
+    assert.equal(await body.getByText('保留子项', { exact: true }).count(), 1);
+    await openNote('<ul data-type="taskList"><li data-type="taskItem"><p></p></li></ul>', '删除最后待办');
+    await items.first().locator('p').click();
+    await body.press('Backspace');
+    assert.equal(await items.count(), 0, 'Deleting the only empty task should leave an ordinary editable paragraph');
+    await page.keyboard.insertText('仍可继续写随记');
+    assert.equal(await body.innerText(), '仍可继续写随记');
+    console.log('Passed: checklist deletion spacing, four delete shortcuts, whole-row/boundary/nested deletion, undo/redo and reload');
+
     await openNote('<p>排版文字</p>', '排版工具');
     await body.press('Control+A');
     await choose('正文字体', { label: '宋体' });

@@ -118,6 +118,29 @@ const NoteIndent = Indent.extend<IndentOptions>({
     },
 });
 
+const NoteTaskList = TaskList.extend({
+    // The default list keymap lifts empty items into paragraphs and splits the list.
+    priority: 110,
+    addKeyboardShortcuts() {
+        const deleteEmptyItem = () => {
+            const { empty, $from } = this.editor.state.selection;
+            if (!empty || $from.depth < 3 || $from.parent.type.name !== 'paragraph'
+                || $from.parent.content.size || $from.node(-1).type.name !== 'taskItem') return false;
+            const item = $from.node(-1);
+            // Keep nested children and intentional extra paragraphs; the last item can still exit the list.
+            if (item.childCount !== 1 || $from.node(-2).childCount === 1) return false;
+            return this.editor.commands.deleteRange({ from: $from.before(-1), to: $from.after(-1) });
+        };
+        return {
+            ...this.parent?.(),
+            Backspace: deleteEmptyItem,
+            Delete: deleteEmptyItem,
+            'Mod-Backspace': deleteEmptyItem,
+            'Mod-Delete': deleteEmptyItem,
+        };
+    },
+});
+
 // Retain toolbar selections without storing them in the note. Dark source highlights
 // use a light selection so matching colors remain distinguishable without a border.
 const NoteSelection = Extension.create({
@@ -218,7 +241,7 @@ export const noteExtensions = [
     NoteIndent,
     LineHeight.configure({ lineHeights: ['Default', '1', '1.25', '1.5', '1.75', '2', '2.5', '3'] }),
     ListStyles,
-    TaskList.configure({ taskItem: {
+    NoteTaskList.configure({ taskItem: {
         nested: true,
         HTMLAttributes: { 'data-type': 'taskItem' },
         a11y: { checkboxLabel: node => `${node.attrs.checked ? '标记为未完成' : '标记为已完成'}：${node.firstChild?.textContent || '待办'}` },
