@@ -1,47 +1,31 @@
-# 项目技术方案（去除导入功能后）
+# ProjectTodo 技术方案
 
-## 1. 技术栈
-- 前端：React 18 + TypeScript + Vite；状态管理：Zustand（persist + immer）；日期：dayjs；ID：nanoid；样式：手写 CSS。
-- 桌面：Tauri 2（Rust 2021），插件：dialog、fs、log，用于目录选择与文件写入。
-- 打包：Tauri 生成裸 exe、NSIS、MSI，便携版从 release exe 复制到 `portable/`。
+本文记录当前代码入口与数据边界。依赖版本、构建命令和产物路径见 [开发说明](../README.md)；完整 Windows 验收见 [RELEASE_QA.md](RELEASE_QA.md)。
 
-## 2. 主要数据模型（types.ts）
-- Task：id、projectId、title、status(todo/doing/done)、priority(high/medium/low)、dueDate、createdAt/updatedAt、onsiteOwner、lineOwner、nextStep、notes、tags[]、attachments[]、extras。
-- Project：id、name、archived、createdAt/updatedAt。
-- Filters：projectId、statuses[]、priority、onsiteOwner/lineOwner、dueRange、tags、search。
-- ColumnConfig：columns、pinned、density、templates。
-- RecurringTemplate：projectId、title、status、priority、schedule(weekly|monthly)、defaults、active。
-- Settings：dateFormat、overdueThresholdDays、colorScheme、undoDepth、trashRetentionDays。
-- SavedFilter / SortRule / Dictionary（责任人、标签自动补全）。
+## 结构与职责
 
-## 3. 状态与持久化（state/appStore.ts）
-- 使用 Zustand + persist（localStorage JSON），启动时写入示例项目与任务。
-- 状态分片：projects、tasks、filters/groupBy/sortRules、savedFilters、columnConfig、dictionary、settings、recurringTemplates、sortSchemes。
-- 业务方法：add/update/delete Task，项目 CRUD，过滤/分组/排序更新，导出，周期任务生成，字典自动补全等。
+| 范围 | 当前入口 |
+|---|---|
+| 类型和数据结构 | [src/types.ts](../src/types.ts) |
+| 状态、迁移与持久化 | [src/state/appStore.ts](../src/state/appStore.ts)、src/state/slices/ |
+| 任务筛选与排序 | [src/hooks/useVisibleTasks.ts](../src/hooks/useVisibleTasks.ts) |
+| 项目、任务与周期任务 | src/components/sidebar/、src/components/task-table/、src/components/toolbar/ |
+| 随记编辑与 AI 交互 | src/components/notes/、src/services/、src/utils/noteAI.ts |
+| 备份、图片与恢复 | src/utils/backupUtils.ts、src/utils/noteImages.ts、src/components/toolbar/BackupModal.tsx |
+| 导入、导出与远程同步 | src/components/toolbar/ImportModal.tsx、src/components/toolbar/ExportModal.tsx、src/components/toolbar/CloudSyncModal.tsx |
+| 原生存储、同步命令与窗口生命周期 | [src-tauri/src/lib.rs](../src-tauri/src/lib.rs)、src-tauri/src/ |
+| 前端入口与关闭协调 | [src/App.tsx](../src/App.tsx) |
 
-## 4. UI 模块
-- Sidebar：项目选择、系统视图、项目 CRUD。
-- PrimaryToolbar：新建单次/周期任务、导出、筛选器、分组开关。
-- RecurringTaskModal：周期模板（默认状态=进行中），周/月截止日选择，自动续期。
-- ExportModal：CSV 导出；Tauri 走插件写文件，Web 走 Blob 下载。
-- TaskTable：自适应列宽、固定列（项目/标题/创建时间）、分组折叠、行内编辑、底部详情行（状态/优先级/截止日/责任人/创建时间等）。
-- 样式：`App.css` 定义变量、密度模式、高对比主题；表格有右侧安全区与固定 actions 宽度，近期对卡片/表单间距做过压缩。
+上表路径均相对 app/，链接相对本文。模型字段与方法直接查当前类型和实现，不维护一份容易与代码脱节的完整字段副本。
 
-## 5. 数据流与交互
-- 加载：persist -> 初始化示例数据。
-- 展示：`useVisibleTasks` 根据 filters/sort/groupBy 输出分组任务；TaskTable 渲染 + 伸缩列 + 斑马纹。
-- 编辑：双击行编辑，Ctrl+S 保存，Esc 取消；批量操作在 toolbar。
-- 导出：CSV 固定表头，UTF-8 BOM，Tauri 写文件，Web 触发下载。
-- 周期任务：模板计算当前周/月截止日，生成 Task，支持自动续期标记（extras）。
+## 持久化与平台差异
 
-## 6. 平台与产物
-- Web：纯前端，无后端依赖。
-- Desktop：Tauri 2，`src-tauri/src/lib.rs` 挂载 dialog/fs/log 插件，`tauri.conf.json` 定义 bundler。
-- 产物：`app/src-tauri/target/release/app.exe`（裸），`bundle/nsis`/`bundle/msi` 安装包，`portable/ProjectTodo-*.exe` 便携版。
+状态使用 Zustand persist + Immer。桌面存储通过 `load_data` / `save_data` 命令读写系统 Documents/ProjectTodo/data.json，`PROJECTTODO_TEST_DATA_DIR` 可切换到隔离目录。localStorage 用于旧数据迁移及备份/回退，浏览器环境也可能走该路径；网页与桌面结果需分别验证。
 
-## 7. 非功能与约束
-- 离线可用（localStorage + 本地导出）；暂无云同步。
-- 性能目标：~2k 条任务下过滤/排序 <200ms，表格自动调整密度。
-- 可访问性：高对比主题钩子，固定列阴影和右侧 gutter 防遮挡。
+应用已有任务/随记、导入导出、备份恢复和远程同步相关入口，不能再按早期“去除导入、暂无云同步”的假设开发。同步是否实际可用取决于配置、网络、服务端与原生环境；测试记录必须区分模拟服务与真实端点。
 
+调整存储或恢复时，保留兼容迁移和校验失败不覆盖的行为，验证随记、标签、图片与任务往返完整性。先备份用户目录，再使用隔离数据；不同进程不得共用测试数据和 WebView 目录。
 
+## 验证与交付
+
+日常迭代运行受影响模块的检查；数据、备份、恢复、窗口关闭和单实例改动需要对应失败场景回归。发布前执行 [Windows 验收](RELEASE_QA.md)，网页构建通过不能代替被交付 EXE 的真实运行结果。本文中的技术步骤不授权合并主分支或发布。
