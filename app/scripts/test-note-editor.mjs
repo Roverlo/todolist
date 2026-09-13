@@ -3,6 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { createServer as createTcpServer } from 'node:net';
 import { chromium } from 'playwright';
 import { createServer as createViteServer } from 'vite';
+import { checkNoteToolbar } from './check-note-toolbar.mjs';
 
 const tauriConfig = JSON.parse(await readFile(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
 assert.ok(tauriConfig.app.windows.every(window => window.dragDropEnabled === false),
@@ -41,6 +42,7 @@ try {
     await body.waitFor();
     assert.deepEqual(errors, [], 'Editor should initialize without runtime or duplicate-extension errors');
     const storedNotes = () => page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.notes);
+    await checkNoteToolbar(page, body);
     const openNote = async (content, title) => {
         const previousBody = await body.elementHandle();
         const id = await page.evaluate(async ({ content, title }) => {
@@ -186,12 +188,23 @@ try {
     }
     console.log('Passed: menu tag add/remove survives draft save/reload while preserving unsaved title/body and original date');
 
-    const pasteText = (text, html = '') => body.evaluate((root, { text, html }) => {
-        const clipboard = new DataTransfer();
-        clipboard.setData('text/plain', text);
-        if (html) clipboard.setData('text/html', html);
-        root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }));
-    }, { text, html });
+    // Synthetic paste dispatches immediately; wait for the native selectionchange
+    // that a real clipboard action lets ProseMirror observe first.
+    const waitForEditorSelection = () => page.waitForFunction(() => {
+        const editor = document.querySelector('.ProseMirror').editor, native = window.getSelection();
+        return native?.anchorNode && native.focusNode
+            && editor.view.posAtDOM(native.anchorNode, native.anchorOffset) === editor.state.selection.anchor
+            && editor.view.posAtDOM(native.focusNode, native.focusOffset) === editor.state.selection.head;
+    });
+    const pasteText = async (text, html = '') => {
+        await waitForEditorSelection();
+        return body.evaluate((root, { text, html }) => {
+            const clipboard = new DataTransfer();
+            clipboard.setData('text/plain', text);
+            if (html) clipboard.setData('text/html', html);
+            root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }));
+        }, { text, html });
+    };
     const oldURL = 'https://example.com/old?ref=1';
     const newURL = 'https://example.org/new?ref=2';
     await openNote('<p></p>', '网址粘贴覆盖');
@@ -214,6 +227,7 @@ try {
     }
     await saveAndReload();
     await body.locator('a').click();
+    await waitForEditorSelection();
     await body.press('Control+Home');
     await body.press('Shift+End');
     assert.equal(await page.evaluate(() => window.getSelection().toString()), oldURL);
@@ -705,6 +719,20 @@ try {
         + '<li data-type="taskItem" data-checked="false"><p>删除中项</p></li>'
         + '<li data-type="taskItem" data-checked="false"><p>保留下项</p></li></ul>';
     const rowDistance = () => items.evaluateAll(nodes => nodes[1].getBoundingClientRect().top - nodes[0].getBoundingClientRect().top);
+    const checklistHome = async () => {
+        await waitForEditorSelection();
+        await body.press('Home');
+        await page.waitForFunction(() => {
+            const { empty, $from } = document.querySelector('.ProseMirror').editor.state.selection;
+            return empty && $from.parentOffset === 0;
+        });
+    };
+    // Native Home/Shift+End updates the DOM before ProseMirror's selection observer runs.
+    const waitForChecklistSelection = () => page.waitForFunction(() => {
+        const editor = document.querySelector('.ProseMirror').editor;
+        const { from, to } = editor.state.selection;
+        return from !== to && editor.state.doc.textBetween(from, to).replace(/\s/g, '') === window.getSelection()?.toString().replace(/\s/g, '');
+    });
     const assertDeletedChecklist = async distance => {
         assert.equal(await items.count(), 2, 'Deleting an empty middle task must remove the item');
         assert.equal(await body.locator('ul[data-type="taskList"]').count(), 1, 'Deletion must keep a single continuous checklist');
@@ -717,8 +745,9 @@ try {
         const id = await openNote(deletionChecklist, `待办删除 ${key}`);
         const distance = await rowDistance();
         await items.nth(1).locator('p').click();
-        await body.press('Home');
+        await checklistHome();
         await body.press('Shift+End');
+        await waitForChecklistSelection();
         await body.press('Backspace');
         assert.equal(await items.count(), 3, 'Clearing task text should leave an editable empty task');
         await body.press(key);
@@ -738,16 +767,18 @@ try {
     await openNote(deletionChecklist, '整行删除待办');
     const wholeRowDistance = await rowDistance();
     await items.nth(1).locator('p').click();
-    await body.press('Home');
+    await checklistHome();
     await body.press('Shift+ArrowDown');
+    await waitForChecklistSelection();
     await body.press('Delete');
     await assertDeletedChecklist(wholeRowDistance);
 
     for (const index of [0, 2]) {
         await openNote(deletionChecklist, `删除边界待办 ${index}`);
         await items.nth(index).locator('p').click();
-        await body.press('Home');
+        await checklistHome();
         await body.press('Shift+End');
+        await waitForChecklistSelection();
         await body.press('Backspace');
         await body.press('Backspace');
         assert.equal(await items.count(), 2);
@@ -757,19 +788,22 @@ try {
         + '<ul data-type="taskList"><li data-type="taskItem"><p></p></li><li data-type="taskItem"><p>保留子项</p></li></ul>'
         + '</li></ul>', '嵌套待办删除');
     await items.nth(1).locator('p').click();
+    await waitForEditorSelection();
     await body.press('Backspace');
     assert.equal(await items.count(), 2);
     assert.equal(await body.locator('ul ul li').innerText(), '保留子项');
     assert.equal(await items.first().getAttribute('data-checked'), 'true');
     // A blank parent may still own a child task; deleting it must preserve that content.
     await items.first().locator(':scope > div > p').click();
-    await body.press('Home');
+    await checklistHome();
     await body.press('Shift+End');
+    await waitForChecklistSelection();
     await body.press('Backspace');
     await body.press('Backspace');
     assert.equal(await body.getByText('保留子项', { exact: true }).count(), 1);
     await openNote('<ul data-type="taskList"><li data-type="taskItem"><p></p></li></ul>', '删除最后待办');
     await items.first().locator('p').click();
+    await waitForEditorSelection();
     await body.press('Backspace');
     assert.equal(await items.count(), 0, 'Deleting the only empty task should leave an ordinary editable paragraph');
     await page.keyboard.insertText('仍可继续写随记');
@@ -911,6 +945,7 @@ try {
     await body.press('Control+End');
     await body.press('Enter');
     await page.getByRole('button', { name: '插入表格', exact: true }).click();
+    await page.getByRole('checkbox', { name: '首行作为表头', exact: true }).uncheck();
     await page.locator('[data-table-grid-cell][data-rows="3"][data-cols="3"]').click();
     await body.locator('table').waitFor();
     assert.equal(await body.locator('tr').count(), 3);
@@ -1041,10 +1076,13 @@ try {
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     }, offset);
     await body.click();
+    await waitForEditorSelection();
     await page.keyboard.press('Control+Home');
     await page.keyboard.press('ArrowRight');
+    await waitForEditorSelection();
     await dateButton.click();
     assert.equal(await body.innerText(), '前后', 'Opening the date picker must not insert the current time');
+    assert.equal(await dateInput.evaluate(el => el === document.activeElement), true, 'Opening the dialog must focus the date field');
     assert.equal(await dateInput.getAttribute('type'), 'date', 'Use the native calendar picker and editable date field');
     assert.equal(await dateInput.inputValue(), await localDate(0));
     await dateInput.fill('');
@@ -1067,6 +1105,8 @@ try {
     await body.press('Control+Home');
     await page.keyboard.press('ArrowRight');
     for (let index = 0; index < 10; index++) await page.keyboard.press('Shift+ArrowRight');
+    assert.equal(await page.evaluate(() => window.getSelection().toString()), '2000-12-31');
+    await waitForEditorSelection();
     await dateButton.click();
     await dateInput.fill('2032-02-29');
     await insertDateButton.click();
@@ -1074,6 +1114,7 @@ try {
     await saveAndReload();
     assert.equal(await body.innerText(), '前2032-02-29后');
     await body.press('Control+End');
+    await waitForEditorSelection();
     await dateButton.press('Enter');
     await dateInput.fill('1999-01-01');
     await page.keyboard.press('Escape');
@@ -1088,6 +1129,7 @@ try {
 
     for (const [label, offset] of [['昨天', -1], ['今天', 0], ['明天', 1]]) {
         await body.press('Control+End');
+        await waitForEditorSelection();
         const original = await body.innerText();
         await dateButton.click();
         const expected = await localDate(offset);

@@ -1,0 +1,43 @@
+.editor-control { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; }
+.editor-tool-button.editor-tool-button {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 28px; min-width: 0; height: 30px; min-height: 30px; padding: 0;
+  border: 1px solid transparent; border-radius: 6px; background: transparent;
+  color: var(--text-secondary, #475467); box-shadow: none; font: inherit; font-size: 12px; font-weight: 400;
+  cursor: pointer; transition: background-color 120ms, border-color 120ms, color 120ms;
+}
+.editor-tool-button > svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.75; }
+.editor-tool-button.editor-tool-button:hover:not(:disabled) { background: var(--primary-soft); border-color: var(--border); transform: none; }
+.editor-tool-button.editor-tool-button[data-state='on'] { background: var(--primary-soft); border-color: rgb(var(--primary-rgb)); color: rgb(var(--primary-rgb)); }
+.editor-tool-button.editor-tool-button:focus-visible { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 2px; }
+.editor-tool-button.editor-tool-button:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
+.editor-tool-button.editor-toolbar-text-button { width: auto; padding: 0 7px; gap: 5px; }
+.editor-tool-button.editor-color-menu { width: 16px; }
+.editor-tool-button.editor-color-menu > svg { width: 12px; height: 12px; }
+.editor-tooltip {
+  position: fixed; z-index: 11000; box-sizing: border-box; width: 260px; max-width: calc(100vw - 16px);
+  padding: 10px 12px; border: 1px solid #344054; border-radius: 8px;
+  background: #1d2939; color: #fff; box-shadow: 0 6px 20px #10182824;
+  font-family: var(--font-family, system-ui, sans-serif); font-size: 12px; line-height: 1.5;
+}
+.editor-tooltip-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 500; }
+.editor-tooltip kbd { padding: 1px 5px; border: 1px solid #667085; border-radius: 4px; color: #eaecf0; font: 11px ui-monospace, monospace; white-space: nowrap; }
+.editor-tooltip p { margin: 5px 0 0; color: #d0d5dd; font-size: 12px; line-height: 1.5; }
+.editor-popover-anchor { position: relative; display: inline-flex; }
+.editor-popover {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 1100; box-sizing: border-box;
+  width: 282px; max-width: calc(100vw - 24px); max-height: calc(100vh - 140px); overflow-y: auto;
+  padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text-main); box-shadow: 0 10px 28px #10182824;
+}
+.editor-popover-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px; }
+.editor-popover-heading strong { font-weight: 600; }
+.editor-popover-heading span { color: var(--text-secondary); }
+.editor-table-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; touch-action: none; }
+.editor-table-grid button { height: 22px; min-width: 0; padding: 0; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); cursor: pointer; }
+.editor-table-grid button[data-highlighted='true'] { border-color: rgb(var(--primary-rgb)); background: var(--primary-soft); }
+.editor-table-grid button:focus-visible { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 1px; }
+.editor-table-options { display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 12px; cursor: pointer; }
+.editor-table-options input { accent-color: rgb(var(--primary-rgb)); }
+.editor-table-hint { margin: 10px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .editor-tool-button.editor-tool-button { transition: none; } }

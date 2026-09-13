@@ -11,9 +11,10 @@ interface CustomSelectProps {
   placeholder?: string;
   className?: string;
   'aria-label'?: string;
+  'aria-describedby'?: string;
 }
 
-export const CustomSelect = ({ value, options, onChange, placeholder, className, 'aria-label': label }: CustomSelectProps) => {
+export const CustomSelect = ({ value, options, onChange, placeholder, className, 'aria-label': label, 'aria-describedby': descriptionId }: CustomSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [position, setPosition] = useState<CSSProperties>({});
@@ -61,7 +62,7 @@ export const CustomSelect = ({ value, options, onChange, placeholder, className,
   return (
     <div className={['custom-select-container', className].filter(Boolean).join(' ')}>
       <button type="button" ref={triggerRef} className={'custom-select-trigger' + (isOpen ? ' is-open' : '')}
-        role="combobox" aria-label={label || placeholder || '请选择'} aria-expanded={isOpen}
+        role="combobox" aria-label={label || placeholder || '请选择'} aria-describedby={descriptionId} aria-expanded={isOpen}
         aria-controls={listId} aria-haspopup="listbox" aria-activedescendant={isOpen ? listId + '-' + activeIndex : undefined}
         onClick={() => isOpen ? setIsOpen(false) : openMenu()}
         onKeyDown={event => {

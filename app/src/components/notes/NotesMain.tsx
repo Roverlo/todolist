@@ -6,6 +6,7 @@ import { AIAssistantPanel } from './AIAssistantPanel';
 import { AISettingsModal } from './AISettingsModal';
 import { Icon } from '../ui/Icon';
 import { PanelRight, Settings } from 'lucide-react';
+import { EditorToolButton } from './EditorToolbarControls';
 import type { Note } from '../../types';
 
 export function NotesMain() {
@@ -43,14 +44,11 @@ export function NotesMain() {
 
     const toolbarActions = (
         <div className="notes-center-actions">
-            <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className="btn btn-light" aria-pressed={aiPanelOpen}
-                aria-label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} title="AI助手：一键生成待办事项">
-                <PanelRight size={16} />
+            <EditorToolButton onClick={() => setAiPanelOpen(!aiPanelOpen)} className="editor-toolbar-text-button" active={aiPanelOpen}
+                label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} icon={PanelRight} description="根据随记内容生成待办事项。">
                 <span>AI助手<span className="notes-ai-description">：一键生成待办事项</span></span>
-            </button>
-            <button onClick={() => setAiSettingsOpen(true)} className="btn btn-light notes-settings-btn" aria-label="AI 设置" title="AI 设置">
-                <Settings size={17} />
-            </button>
+            </EditorToolButton>
+            <EditorToolButton onClick={() => setAiSettingsOpen(true)} label="AI 设置" icon={Settings} aria-haspopup="dialog" />
         </div>
     );
 

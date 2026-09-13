@@ -27,11 +27,12 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
 
     const close = () => {
         onClose();
-        if (kind === 'date') editor.commands.focus();
+        editor.commands.focus();
     };
 
     useEffect(() => {
         dialogRef.current?.showModal();
+        dialogRef.current?.querySelector<HTMLElement>('[data-insert-autofocus]')?.focus();
     }, []);
     useEffect(() => {
         if (!file) return;
@@ -84,10 +85,10 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
                 </header>
                 <div className="editor-dialog-body">
                     {kind === 'link' ? <>
-                        <label>显示文字<input autoFocus value={text} onChange={event => setText(event.target.value)} placeholder="留空则显示链接地址" /></label>
+                        <label>显示文字<input data-insert-autofocus value={text} onChange={event => setText(event.target.value)} placeholder="留空则显示链接地址" /></label>
                         <label>链接地址<input value={url} onChange={event => setUrl(event.target.value)} placeholder="https://example.com" required /></label>
                     </> : kind === 'date' ? <>
-                        <label>选择日期<input type="date" autoFocus required value={date} min="0001-01-01" max="9999-12-31"
+                        <label>选择日期<input type="date" data-insert-autofocus required value={date} min="0001-01-01" max="9999-12-31"
                             onChange={event => { setDate(event.target.value); setError(''); }} /></label>
                         <p className="editor-dialog-hint">可选择过去或未来的日期，或使用下方快捷插入。</p>
                         <div className="editor-date-shortcuts" role="group" aria-label="快捷插入日期">
@@ -104,7 +105,7 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
                         {source === 'local' ? <>
                             <input ref={fileRef} type="file" accept={IMAGE_TYPES.join(',')} hidden aria-label="选择本地图片"
                                 onChange={event => { setFile(event.target.files?.[0] || null); setError(''); }} />
-                            <button type="button" className="editor-image-picker" onClick={() => fileRef.current?.click()}>
+                            <button type="button" data-insert-autofocus className="editor-image-picker" onClick={() => fileRef.current?.click()}>
                                 {file && preview ? <img src={preview} alt="待插入图片预览" /> : <ImagePlus size={28} />}
                                 <strong>{file ? file.name : '选择图片'}</strong>
                                 <span>{file ? '点击可重新选择' : 'PNG、JPG、WebP、GIF · 单张不超过 2 MB'}</span>

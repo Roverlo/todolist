@@ -99,7 +99,8 @@ try {
     await page.getByRole('button', { name: '保存', exact: true }).click();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await body.waitFor();
-    assert.equal(await body.locator('td').count(), 9);
+    assert.equal(await body.locator('td').count(), 6);
+    assert.equal(await body.locator('th').count(), 3, 'The shared mouse/keyboard header default must survive reload');
     assert.ok((await body.innerText()).includes('表格回归文字'));
     assert.equal(await page.locator('.note-editor-count').innerText(), '字数: 6', 'Character count must survive table save and reload');
     // Reproduce the unmount path from the reported stack, while table highlights are active.
