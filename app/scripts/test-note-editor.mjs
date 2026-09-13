@@ -1030,25 +1030,74 @@ try {
     assert.match(await readFile(await (await downloadPromise).path(), 'utf8'), /data:image\/png;base64,/);
     console.log('Passed: image upload, sizing, paste/drop, validation, persistence and HTML export');
 
-    const timeNoteId = await openNote('<p>前后</p>', '插入时间检查');
+    const dateNoteId = await openNote('<p>前后</p>', '插入日期检查');
+    const dateButton = page.getByRole('toolbar').getByRole('button', { name: '插入日期', exact: true });
+    const dateDialog = page.getByRole('dialog', { name: '插入日期', exact: true });
+    const dateInput = dateDialog.getByLabel('选择日期', { exact: true });
+    const insertDateButton = dateDialog.getByRole('button', { name: '插入日期', exact: true });
+    const localDate = offset => page.evaluate(offset => {
+        const date = new Date();
+        date.setDate(date.getDate() + offset);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }, offset);
     await body.click();
     await page.keyboard.press('Control+Home');
     await page.keyboard.press('ArrowRight');
-    const beforeInsert = Date.now();
-    await page.getByRole('button', { name: '插入时间', exact: true }).click();
-    const insertedTime = (await body.innerText()).slice(1, -1);
-    assert.match(insertedTime, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
-    const insertedAt = await page.evaluate(value => new Date(value.replace(' ', 'T')).getTime(), insertedTime);
-    assert.ok(insertedAt >= beforeInsert - 60000 && insertedAt <= Date.now(), 'Use the current local date/time at the caret');
-    assert.equal(await body.innerText(), `前${insertedTime}后`);
-    assert.equal(await body.evaluate(root => root.editor.isFocused), true);
+    await dateButton.click();
+    assert.equal(await body.innerText(), '前后', 'Opening the date picker must not insert the current time');
+    assert.equal(await dateInput.getAttribute('type'), 'date', 'Use the native calendar picker and editable date field');
+    assert.equal(await dateInput.inputValue(), await localDate(0));
+    await dateInput.fill('');
+    assert.equal(await insertDateButton.isDisabled(), true, 'An empty date cannot be inserted');
+    await dateInput.fill('10000-01-01');
+    assert.equal(await insertDateButton.isDisabled(), true, 'Dates must fit the YYYY-MM-DD format');
+    await dateInput.fill('2000-12-31');
+    await page.screenshot({ path: 'ui-check.local/note-date-picker.png' });
+    await insertDateButton.click();
+    await dateDialog.waitFor({ state: 'hidden' });
+    assert.equal(await body.innerText(), '前2000-12-31后', 'Insert the chosen past date at the original caret');
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.isFocused);
     await page.keyboard.press('Control+z');
     assert.equal(await body.innerText(), '前后');
     await page.keyboard.press('Control+y');
     await saveAndReload();
-    assert.equal(await body.innerText(), `前${insertedTime}后`, 'The inserted time is fixed text, preserved on reload');
-    assert.equal((await storedNotes()).find(note => note.id === timeNoteId).date, '2026-09-06', 'Inserting today must not move the note to today');
-    console.log('Passed: local date/time at caret, focus, undo/redo, persistence and unchanged note date');
+    assert.equal(await body.innerText(), '前2000-12-31后', 'The chosen date stays fixed after reload');
+    assert.equal((await storedNotes()).find(note => note.id === dateNoteId).date, '2026-09-06', 'Inserting a date must not move the note');
+
+    await body.press('Control+Home');
+    await page.keyboard.press('ArrowRight');
+    for (let index = 0; index < 10; index++) await page.keyboard.press('Shift+ArrowRight');
+    await dateButton.click();
+    await dateInput.fill('2032-02-29');
+    await insertDateButton.click();
+    assert.equal(await body.innerText(), '前2032-02-29后', 'A future leap day replaces only the original selection');
+    await saveAndReload();
+    assert.equal(await body.innerText(), '前2032-02-29后');
+    await body.press('Control+End');
+    await dateButton.press('Enter');
+    await dateInput.fill('1999-01-01');
+    await page.keyboard.press('Escape');
+    await dateDialog.waitFor({ state: 'hidden' });
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.isFocused);
+    assert.equal(await body.innerText(), '前2032-02-29后', 'Escape cancels without changing the note');
+    await dateButton.click();
+    await dateDialog.getByRole('button', { name: '取消', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.isFocused);
+    await page.keyboard.insertText('继续');
+    assert.equal(await body.innerText(), '前2032-02-29后继续', 'Cancel restores the original caret for continued typing');
+
+    for (const [label, offset] of [['昨天', -1], ['今天', 0], ['明天', 1]]) {
+        await body.press('Control+End');
+        const original = await body.innerText();
+        await dateButton.click();
+        const expected = await localDate(offset);
+        await dateDialog.getByRole('button', { name: label, exact: true }).click();
+        await dateDialog.waitFor({ state: 'hidden' });
+        assert.equal(await body.innerText(), `${original}${expected}`, `${label} inserts a local date in one click`);
+    }
+    await saveAndReload();
+    assert.equal((await storedNotes()).find(note => note.id === dateNoteId).date, '2026-09-06');
+    console.log('Passed: date picker, past/future/leap dates, shortcuts, caret/selection, cancel, undo/redo and persistence');
 
     await openNote('<p>工具栏布局检查</p>', '工具栏布局');
     const toolbarHeight = (await page.getByRole('toolbar').boundingBox()).height;
@@ -1057,7 +1106,7 @@ try {
     assert.equal(await page.getByRole('toolbar').getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'AI actions must be integrated into the toolbar');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
     assert.equal(await page.getByLabel('更多工具', { exact: true }).count(), 0, 'Tools should be directly accessible');
-    for (const name of ['插入时间', '查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线']) {
+    for (const name of ['插入日期', '查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线']) {
         assert.equal(await page.getByRole('toolbar').getByRole('button', { name, exact: true }).isVisible(), true, `${name} should be visible without opening a menu`);
     }
     await page.getByRole('button', { name: '分隔线', exact: true }).press('Enter');

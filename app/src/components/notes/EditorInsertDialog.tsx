@@ -3,9 +3,11 @@ import { createPortal } from 'react-dom';
 import { getMarkRange, type Editor } from '@tiptap/core';
 import { isTauri } from '@tauri-apps/api/core';
 import { FolderOpen, ImagePlus, X } from 'lucide-react';
+import dayjs from 'dayjs';
 import { IMAGE_TYPES, readNoteImage, openNoteImageFolder } from '../../utils/noteImages';
+import { isNoteDate } from '../../utils/noteDate';
 
-export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; kind: 'link' | 'image'; onClose: () => void }) {
+export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; kind: 'link' | 'image' | 'date'; onClose: () => void }) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const selection = useRef(kind === 'link'
@@ -20,6 +22,13 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
     const [description, setDescription] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
+    const [date, setDate] = useState(() => dayjs().format('YYYY-MM-DD'));
+    const dialogTitle = { link: '插入链接', image: '插入图片', date: '插入日期' }[kind];
+
+    const close = () => {
+        onClose();
+        if (kind === 'date') editor.commands.focus();
+    };
 
     useEffect(() => {
         dialogRef.current?.showModal();
@@ -31,10 +40,16 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
         return () => URL.revokeObjectURL(url);
     }, [file]);
 
-    const submit = async () => {
+    const submit = async (selectedDate = date) => {
         setError('');
         setBusy(true);
         try {
+            if (kind === 'date') {
+                if (!isNoteDate(selectedDate)) throw new Error('请选择有效日期');
+                editor.chain().focus().setTextSelection(selection.current).insertContent(selectedDate).run();
+                close();
+                return;
+            }
             let address = url.trim();
             if (kind === 'link' || source === 'url') {
                 if (!address) throw new Error('请输入链接地址');
@@ -61,16 +76,26 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
 
     return createPortal(
         <dialog className="editor-insert-dialog" ref={dialogRef} aria-labelledby="editor-insert-title"
-            onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
+            onCancel={event => { event.preventDefault(); if (!busy) close(); }}>
             <form onSubmit={event => { event.preventDefault(); void submit(); }}>
                 <header>
-                    <h2 id="editor-insert-title">{kind === 'link' ? '插入链接' : '插入图片'}</h2>
-                    <button type="button" className="editor-dialog-close" aria-label="关闭插入窗口" disabled={busy} onClick={onClose}><X size={18} /></button>
+                    <h2 id="editor-insert-title">{dialogTitle}</h2>
+                    <button type="button" className="editor-dialog-close" aria-label="关闭插入窗口" disabled={busy} onClick={close}><X size={18} /></button>
                 </header>
                 <div className="editor-dialog-body">
                     {kind === 'link' ? <>
                         <label>显示文字<input autoFocus value={text} onChange={event => setText(event.target.value)} placeholder="留空则显示链接地址" /></label>
                         <label>链接地址<input value={url} onChange={event => setUrl(event.target.value)} placeholder="https://example.com" required /></label>
+                    </> : kind === 'date' ? <>
+                        <label>选择日期<input type="date" autoFocus required value={date} min="0001-01-01" max="9999-12-31"
+                            onChange={event => { setDate(event.target.value); setError(''); }} /></label>
+                        <p className="editor-dialog-hint">可选择过去或未来的日期，或使用下方快捷插入。</p>
+                        <div className="editor-date-shortcuts" role="group" aria-label="快捷插入日期">
+                            {([['昨天', -1], ['今天', 0], ['明天', 1]] as const).map(([label, offset]) =>
+                                <button key={label} type="button" disabled={busy} onClick={() => void submit(dayjs().add(offset, 'day').format('YYYY-MM-DD'))}>
+                                    {label}
+                                </button>)}
+                        </div>
                     </> : <>
                         <div className="editor-image-sources" role="group" aria-label="图片来源">
                             <button type="button" aria-pressed={source === 'local'} onClick={() => { setSource('local'); setError(''); }}>本地图片</button>
@@ -103,9 +128,9 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
                     {kind === 'link' && editor.isActive('link') && <button type="button" onClick={() => {
                         editor.chain().focus().setTextSelection(selection.current).unsetLink().run(); onClose();
                     }}>移除链接</button>}
-                    <button type="button" disabled={busy} onClick={onClose}>取消</button>
-                    <button type="submit" className="editor-dialog-primary" disabled={busy || (kind === 'image' && source === 'local' && !file)}>
-                        {busy ? '正在插入…' : kind === 'link' ? '应用链接' : '插入图片'}
+                    <button type="button" disabled={busy} onClick={close}>取消</button>
+                    <button type="submit" className="editor-dialog-primary" disabled={busy || (kind === 'image' && source === 'local' && !file) || (kind === 'date' && !isNoteDate(date))}>
+                        {busy ? '正在插入…' : kind === 'link' ? '应用链接' : dialogTitle}
                     </button>
                 </footer>
             </form>

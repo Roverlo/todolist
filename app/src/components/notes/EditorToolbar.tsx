@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
-import dayjs from 'dayjs';
-import { ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, Link, ImagePlus, FolderOpen, Clock, ListTodo, type LucideIcon } from 'lucide-react';
+import { ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, Link, ImagePlus, FolderOpen, CalendarDays, ListTodo, type LucideIcon } from 'lucide-react';
 import { RichTextBold } from 'reactjs-tiptap-editor/bold';
 import { RichTextItalic } from 'reactjs-tiptap-editor/italic';
 import { RichTextUnderline } from 'reactjs-tiptap-editor/textunderline';
@@ -191,7 +190,7 @@ function Tool({ label, children }: { label: string; children: ReactNode }) {
 export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: ReactNode }) {
     const tablePickerCommitted = useRef(false);
     const [searchOpen, setSearchOpen] = useState(false);
-    const [insertDialog, setInsertDialog] = useState<'link' | 'image' | null>(null);
+    const [insertDialog, setInsertDialog] = useState<'link' | 'image' | 'date' | null>(null);
     const [textColor, setTextColor] = useState('#000000');
     const [highlightColor, setHighlightColor] = useState('#fff200');
     const lists = useEditorState({
@@ -332,8 +331,8 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                     }} title="选择表格大小；键盘 Enter 可插入 3×3 表格">
                         <Tool label="插入表格"><RichTextTable /></Tool>
                     </span>
-                    <button type="button" className="editor-toolbar-btn editor-todo-btn" aria-label="插入时间" title="插入当前日期和时间（年-月-日 时:分）"
-                        onClick={() => editor.chain().focus().insertContent(dayjs().format('YYYY-MM-DD HH:mm')).run()}><Clock size={17} aria-hidden="true" /><span>时间</span></button>
+                    <button type="button" className="editor-toolbar-btn editor-todo-btn" aria-label="插入日期" title="选择日期插入正文（年-月-日）" aria-haspopup="dialog"
+                        onClick={() => setInsertDialog('date')}><CalendarDays size={17} aria-hidden="true" /><span>日期</span></button>
                     <Tool label="引用"><RichTextBlockquote /></Tool>
                     <Tool label="行内代码"><RichTextCode /></Tool>
                     <Tool label="代码块"><RichTextCodeBlock /></Tool>

@@ -374,6 +374,8 @@ div[data-richtext-portal] { z-index: 1200; }
 .editor-dialog-body label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; }
 .editor-dialog-body input:not([type=file]) { box-sizing: border-box; width: 100%; height: 38px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font: inherit; color: var(--text-main); background: var(--surface); }
 .editor-insert-dialog .editor-dialog-hint { margin: -8px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-subtle); }
+.editor-date-shortcuts { display: flex; gap: 8px; }
+.editor-date-shortcuts button { flex: 1; }
 .editor-image-sources { display: flex; padding: 3px; gap: 4px; border-radius: 8px; background: var(--primary-soft); }
 .editor-image-sources button { flex: 1; background: transparent; border-color: transparent; }
 .editor-image-sources button[aria-pressed=true] { color: var(--primary); background: var(--surface); border-color: var(--border); }
