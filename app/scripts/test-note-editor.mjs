@@ -193,6 +193,7 @@ try {
     const waitForEditorSelection = () => page.waitForFunction(() => {
         const editor = document.querySelector('.ProseMirror').editor, native = window.getSelection();
         return native?.anchorNode && native.focusNode
+            && editor.view.dom.contains(native.anchorNode) && editor.view.dom.contains(native.focusNode)
             && editor.view.posAtDOM(native.anchorNode, native.anchorOffset) === editor.state.selection.anchor
             && editor.view.posAtDOM(native.focusNode, native.focusOffset) === editor.state.selection.head;
     });
@@ -809,6 +810,65 @@ try {
     await page.keyboard.insertText('仍可继续写随记');
     assert.equal(await body.innerText(), '仍可继续写随记');
     console.log('Passed: checklist deletion spacing, four delete shortcuts, whole-row/boundary/nested deletion, undo/redo and reload');
+
+    await openNote('<ul data-type="taskList">'
+        + ['项目发布', '核对配置', '验证数据库连接', '通知项目组'].map((text, index) =>
+            `<li data-type="taskItem" data-checked="${index === 0}"><p>${text}</p></li>`).join('') + '</ul>', '子待办层级');
+    const focusTask = async text => { await body.getByText(text, { exact: true }).click(); await waitForEditorSelection(); };
+    const nestedTasks = body.locator('ul[data-type="taskList"] ul[data-type="taskList"]');
+    await focusTask('项目发布');
+    assert.equal(await page.getByRole('button', { name: '设为子待办', exact: true }).isDisabled(), true,
+        'The first sibling cannot become a child without a preceding task');
+    assert.equal(await page.getByRole('button', { name: '退出待办列表', exact: true }).isVisible(), true);
+    await focusTask('核对配置');
+    await page.getByRole('button', { name: '设为子待办', exact: true }).click();
+    await focusTask('验证数据库连接');
+    await page.getByRole('button', { name: '设为子待办', exact: true }).click();
+    await waitForEditorSelection();
+    await body.press('Tab');
+    assert.equal(await nestedTasks.count(), 2, 'Buttons and Tab must create three genuine task levels');
+    const hierarchyHTML = await body.evaluate(root => root.editor.getHTML());
+    const positions = await items.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().left));
+    assert.ok(positions[1] - positions[0] >= 48 && positions[2] - positions[1] >= 48,
+        'Each child level must be visibly separated from its parent');
+    assert.equal(positions[3], positions[0], 'An unrelated sibling must remain at the top level');
+    assert.ok(await nestedTasks.evaluateAll(lists => lists.every(list => parseFloat(getComputedStyle(list).borderLeftWidth) > 0)),
+        'Child groups must have a visible hierarchy guide');
+    assert.notEqual(await body.getByText('核对配置', { exact: true }).evaluate(el => getComputedStyle(el).color), 'rgb(107, 114, 128)',
+        'A completed parent must not dim its unfinished child');
+    const taskStrikethrough = () => items.evaluateAll(nodes => nodes.map(node => {
+        // Text decoration can paint descendants even when their computed value is "none".
+        for (let element = node.querySelector(':scope > div > p'); element && !element.classList.contains('ProseMirror'); element = element.parentElement) {
+            if (getComputedStyle(element).textDecorationLine.includes('line-through')) return true;
+        }
+        return false;
+    }));
+    assert.deepEqual(await taskStrikethrough(), [true, false, false, false], 'Only completed task text may appear struck through');
+    await items.nth(1).locator(':scope > label input').check();
+    assert.deepEqual(await taskStrikethrough(), [true, true, false, false], 'Completing a child must not strike its unfinished grandchild');
+    await items.nth(1).locator(':scope > label input').uncheck();
+    // Keep hierarchy setup outside the editor's 500 ms undo-history group.
+    await page.waitForTimeout(550);
+    await focusTask('核对配置');
+    await page.getByRole('button', { name: '提升一级', exact: true }).click();
+    assert.equal(await nestedTasks.count(), 1);
+    assert.equal(await body.locator(':scope > ul > li').count(), 3);
+    assert.equal(await nestedTasks.getByText('验证数据库连接', { exact: true }).count(), 1,
+        'Promoting a parent must carry its existing child');
+    await body.press('Control+z');
+    assert.equal(await body.evaluate(root => root.editor.getHTML()), hierarchyHTML);
+    await body.press('Control+y');
+    assert.equal(await nestedTasks.count(), 1);
+    await body.press('Control+z');
+    await saveAndReload();
+    assert.equal(await body.evaluate(root => root.editor.getHTML()), hierarchyHTML, 'Hierarchy must survive undo, redo and reload');
+    assert.deepEqual(await items.evaluateAll(nodes => nodes.map(node => node.dataset.checked)), ['true', 'false', 'false', 'false']);
+    await page.screenshot({ path: 'ui-check.local/note-task-hierarchy.png' });
+    await page.setViewportSize({ width: 1100, height: 698 });
+    assert.ok(await body.evaluate(root => root.scrollWidth <= root.clientWidth + 1), 'Nested tasks must fit the narrow document');
+    await page.screenshot({ path: 'ui-check.local/note-task-hierarchy-narrow.png' });
+    await page.setViewportSize({ width: 1280, height: 840 });
+    console.log('Passed: clear three-level checklists, contextual indent actions, parent/child moves, independent completion, undo/redo and persistence');
 
     await openNote('<p>排版文字</p>', '排版工具');
     await body.press('Control+A');

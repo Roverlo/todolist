@@ -123,9 +123,39 @@ div[data-richtext-portal] { z-index: 1200; }
 .note-editor .ProseMirror li[data-type='taskItem'] > label { display: flex; flex: 0 0 auto; padding: 7px 2px; cursor: pointer; }
 .note-editor .ProseMirror li[data-type='taskItem'] > div { flex: 1; min-width: 0; }
 .note-editor .ProseMirror li[data-type='taskItem'] > div > p { margin: 0.2em 0; }
+/* Draw hierarchy from the existing list structure; nothing extra is saved in the note. */
+.note-editor .ProseMirror li[data-type='taskItem'] > div > ul[data-type='taskList'] {
+    --note-task-guide: rgba(var(--primary-rgb), 0.3);
+    margin: 4px 0 8px;
+    padding: 2px 0 2px 20px;
+    border-left: 2px solid var(--note-task-guide);
+    border-radius: 0 6px 6px 0;
+    background: rgba(var(--primary-rgb), 0.025);
+}
+.note-editor .ProseMirror li[data-type='taskItem'] > div > ul[data-type='taskList']:focus-within {
+    --note-task-guide: rgba(var(--primary-rgb), 0.65);
+}
+.note-editor .ProseMirror ul[data-type='taskList'] ul[data-type='taskList'] > li[data-type='taskItem'] { position: relative; }
+.note-editor .ProseMirror ul[data-type='taskList'] ul[data-type='taskList'] > li[data-type='taskItem']::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 15px;
+    width: 14px;
+    border-top: 2px solid var(--note-task-guide);
+    pointer-events: none;
+}
+.note-editor .ProseMirror li[data-type='taskItem']:has(> div > ul[data-type='taskList']) > div > p:first-child { font-weight: 600; }
+@media (forced-colors: active) {
+    .note-editor .ProseMirror li[data-type='taskItem'] > div > ul[data-type='taskList'],
+    .note-editor .ProseMirror li[data-type='taskItem'] > div > ul[data-type='taskList']:focus-within { --note-task-guide: CanvasText; }
+}
 .note-editor .ProseMirror li[data-type='taskItem'] input[type='checkbox'] { width: 17px; height: 17px; margin: 0; accent-color: rgb(var(--primary-rgb)); cursor: pointer; }
 .note-editor .ProseMirror li[data-type='taskItem'] input[type='checkbox']:focus-visible { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 2px; }
 .note-editor .ProseMirror li[data-type='taskItem'][data-checked='true'] > label input { accent-color: #6b7280; }
+/* The library strikes the whole li, which also crosses unfinished descendants. */
+.note-editor .ProseMirror li[data-type='taskItem'][data-checked='true'] { text-decoration-line: none; }
+.note-editor .ProseMirror li[data-type='taskItem'][data-checked='true'] > div > p { text-decoration-line: line-through; }
 .note-editor .ProseMirror li[data-type='taskItem'][data-checked='true'] > div > p,
 .note-editor .ProseMirror li[data-type='taskItem'][data-checked='true'] > div > p * { color: #6b7280 !important; }
 .note-editor .ProseMirror h1 { font-size: 2em; }

@@ -154,6 +154,10 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
             bullet: editor.isActive('bulletList') ? editor.getAttributes('bulletList').listStyle || 'disc' : '',
             ordered: editor.isActive('orderedList') ? editor.getAttributes('orderedList').listStyle || 'decimal' : '',
             task: editor.isActive('taskList'),
+            canIndent: editor.can().indent(),
+            canOutdent: editor.can().outdent(),
+            taskDepth: Array.from({ length: editor.state.selection.$from.depth }, (_, index) =>
+                editor.state.selection.$from.node(index + 1).type.name).filter(name => name === 'taskItem').length,
             table: editor.isActive('table'),
             canMerge: editor.can().mergeCells(),
             canSplit: editor.can().splitCell(),
@@ -277,9 +281,13 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                     <EditorSelect className="editor-line-select" aria-label="行距" description="调整当前段落的行间距。" value={lists.lineHeight}
                         options={[{ value: '', label: '行距' }, ...['1', '1.25', '1.5', '1.75', '2', '2.5', '3'].map(value => ({ value, label: `${value} 倍` }))]}
                         onChange={value => value ? editor.chain().focus().setLineHeight(value).run() : editor.chain().focus().unsetLineHeight().run()} />
-                    <EditorToolButton label="增加缩进" icon={IndentIncrease} description="增加段落缩进；列表中也可按 Tab。"
+                    <EditorToolButton label={lists.task ? '设为子待办' : '增加缩进'} icon={IndentIncrease} disabled={!lists.canIndent}
+                        shortcut={lists.task ? 'Tab' : undefined}
+                        description={lists.task ? lists.canIndent ? '移入上一个同级待办下面，成为它的子项；已有子项一起移动。' : '前面需要有同级待办，才能将当前项设为它的子项。' : '增加段落缩进；列表中也可按 Tab。'}
                         onClick={() => editor.chain().focus().indent().run()} />
-                    <EditorToolButton label="减少缩进" icon={IndentDecrease} description="减少段落缩进；列表中也可按 Shift+Tab。"
+                    <EditorToolButton label={lists.task ? lists.taskDepth > 1 ? '提升一级' : '退出待办列表' : '减少缩进'} icon={IndentDecrease} disabled={!lists.canOutdent}
+                        shortcut={lists.task ? 'Shift+Tab' : undefined}
+                        description={lists.task ? lists.taskDepth > 1 ? '将当前子待办提升一级，已有子项一起移动。' : '当前已在最外层，继续减少缩进会转为普通段落。' : '减少段落缩进；列表中也可按 Shift+Tab。'}
                         onClick={() => editor.chain().focus().outdent().run()} />
                 </div>
                 <div className="editor-toolbar-group" role="group" aria-label="列表">
