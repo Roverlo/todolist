@@ -66,17 +66,24 @@ export function withTaskCompletion(taskItem: TiptapNode) {
             const key = new PluginKey<DecorationSet>('noteTaskCompletionTime');
             const decorate = (doc: Node) => {
                 const widgets: Decoration[] = [];
+                const today = dayjs();
                 doc.descendants((node, pos) => {
                     const completedAt = completionTime(node.attrs.completedAt);
                     if (node.type.name !== 'taskItem' || !node.attrs.checked || !completedAt || !node.firstChild) return;
-                    widgets.push(Decoration.widget(pos + 1 + node.firstChild.nodeSize, () => {
+                    const completed = dayjs(completedAt);
+                    const label = completed.format(completed.isSame(today, 'day') ? 'HH:mm'
+                        : completed.isSame(today, 'year') ? 'MM-DD HH:mm' : 'YYYY-MM-DD HH:mm');
+                    // Keep the metadata at the end of the first paragraph, outside its text marks.
+                    widgets.push(Decoration.widget(pos + node.firstChild.nodeSize, () => {
                         const time = document.createElement('time');
                         time.className = 'note-task-completed-at';
                         time.dateTime = completedAt;
-                        time.textContent = `完成于 ${dayjs(completedAt).format('YYYY-MM-DD HH:mm:ss')}`;
+                        time.textContent = label;
+                        time.title = `完成于 ${completed.format('YYYY-MM-DD HH:mm:ss')}`;
+                        time.setAttribute('aria-label', time.title);
                         time.contentEditable = 'false';
                         return time;
-                    }, { key: `${pos}:${completedAt}`, side: -1 }));
+                    }, { key: `${pos}:${completedAt}:${label}`, side: 1, marks: [] }));
                 });
                 return DecorationSet.create(doc, widgets);
             };
@@ -84,9 +91,24 @@ export function withTaskCompletion(taskItem: TiptapNode) {
                 key,
                 state: {
                     init: (_, state) => decorate(state.doc),
-                    apply: (tr, previous) => tr.docChanged ? decorate(tr.doc) : previous,
+                    apply: (tr, previous) => tr.docChanged || tr.getMeta(key) ? decorate(tr.doc) : previous,
                 },
                 props: { decorations: state => key.getState(state) },
+                view: view => {
+                    let day = dayjs().format('YYYY-MM-DD');
+                    const refreshDay = () => {
+                        const currentDay = dayjs().format('YYYY-MM-DD');
+                        if (currentDay === day) return;
+                        day = currentDay;
+                        view.dispatch(view.state.tr.setMeta(key, true));
+                    };
+                    const timer = window.setInterval(refreshDay, 60_000);
+                    window.addEventListener('focus', refreshDay);
+                    return { destroy() {
+                        window.clearInterval(timer);
+                        window.removeEventListener('focus', refreshDay);
+                    } };
+                },
             })];
         },
     });

@@ -11,9 +11,13 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     const noteId = await openNote(html, '待办排序回归');
     const menu = page.getByRole('combobox', { name: '待办排序', exact: true });
     const firstList = body.locator(':scope > ul[data-type="taskList"]').first();
-    const names = list => list.locator(':scope > li > div > p').allTextContents();
+    const names = list => list.locator(':scope > li > div > p').evaluateAll(nodes => nodes.map(node => {
+        const paragraph = node.cloneNode(true);
+        paragraph.querySelectorAll('time').forEach(time => time.remove());
+        return paragraph.textContent;
+    }));
     const focus = async text => {
-        await body.getByText(text, { exact: true }).click();
+        await body.locator('p').filter({ hasText: text }).click();
         await page.waitForFunction(text => {
             const editor = document.querySelector('.ProseMirror').editor;
             return editor.state.selection.$from.parent.textContent === text;
