@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 import { checkNoteCompletion } from './check-note-completion.mjs';
+import { checkNoteTaskListMerge } from './check-note-task-list-merge.mjs';
 import { mkdir, readFile } from 'node:fs/promises';
 import { createServer as createTcpServer } from 'node:net';
 import { chromium } from 'playwright';
@@ -876,6 +877,7 @@ try {
 
     await checkNoteTaskSort(page, body, openNote, saveAndReload);
     await checkNoteCompletion(page, body, openNote, saveAndReload);
+    await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
 
     await openNote('<p>排版文字</p>', '排版工具');
     await body.press('Control+A');

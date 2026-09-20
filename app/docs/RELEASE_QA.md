@@ -10,6 +10,7 @@
 4. 运行下表的功能流程；自动化补充边界组合。记录实际执行方式：CUA（Windows 界面）、AUTO（脚本）、LIMIT（环境限制）、FAIL（未解决）。没有执行的检查不能写 PASS。
 5. 问题先记录复现步骤、实际结果和预期结果，在当前已授权分支修复，留下最小回归检查。重新执行失败步骤及相关检查；最终源码有变化时重新打包与复核。日常修改验证后提交并推送 main，发布与分发仍需单独授权。
 6. 验证退出后测试进程消失、用户数据哈希未变化、交付 EXE 与被测产物哈希一致。保留报告、日志和必要截图；测试记录及备份不提交仓库。
+7. 新 EXE 验收通过后，清理仓库 `portable/01_Offline_Portable/`：按 `ProjectTodo_YYYYMMDD_HHmm.exe` 文件名的构建时间降序保留最新 4 个，只删除该目录下更早的匹配 EXE。删除前核对解析后的绝对路径、保留名单及目标未被进程使用；用 PowerShell `Remove-Item -LiteralPath` 逐个删除，不递归、不删除其他文件。记录删除数量、释放空间及最终保留名单。
 
 ## 功能检查表
 
@@ -76,7 +77,7 @@ node scripts/test-note-workflow.mjs
 ./scripts/test-portable.ps1 -Executable '<交付 EXE 绝对路径>' -EditorWorkflow
 ```
 
-待办联动与完成时间可单独运行 `node scripts/test-note-completion.mjs` 检查生产网页构建，或运行 `./scripts/test-portable.ps1 -Executable '<被测 EXE 绝对路径>' -NoteCompletion` 检查隔离原生数据的写入与重载。`npm run test:notes` 也包含这组编辑器回归。
+待办联动、完成时间、排序及列表合并可单独运行 `node scripts/test-note-completion.mjs` 检查生产网页构建，或运行 `./scripts/test-portable.ps1 -Executable '<被测 EXE 绝对路径>' -NoteCompletion` 检查隔离原生数据的写入与重载。`npm run test:notes` 也包含这组编辑器回归。删除间隔后相邻同级待办应合并，间距与单个列表一致；撤销恢复间隔，子项、格式和完成时间保持，仍有段落或位于不同父项/单元格的列表保持独立。
 
 原生工作流测试前退出其他 ProjectTodo 进程，避免单实例锁唤醒用户窗口。Computer-use 会话中窗口生命周期直接用其 API 操作；不要混用其他 Windows UI 自动化接口。
 

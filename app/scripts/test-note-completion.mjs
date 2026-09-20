@@ -4,6 +4,7 @@ import { chromium } from 'playwright';
 import { preview } from 'vite';
 import { checkNoteCompletion } from './check-note-completion.mjs';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
+import { checkNoteTaskListMerge } from './check-note-task-list-merge.mjs';
 
 const arg = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const cdp = arg('--cdp');
@@ -41,6 +42,7 @@ try {
         await page.reload();
         await body.waitFor();
     };
+    await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
     await checkNoteCompletion(page, body, openNote, saveAndReload);
     await checkNoteTaskSort(page, body, openNote, saveAndReload);
     assert.deepEqual(errors, []);

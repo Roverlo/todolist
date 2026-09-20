@@ -1,5 +1,6 @@
 import { Extension, type CommandProps, type Editor, type Node as TiptapNode } from '@tiptap/core';
 import { AllSelection, Plugin, TextSelection } from '@tiptap/pm/state';
+import { canJoin } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -122,9 +123,31 @@ const NoteIndent = Indent.extend<IndentOptions>({
 const NoteTaskList = TaskList.extend({
     // The default list keymap lifts empty items into paragraphs and splits the list.
     priority: 110,
+    onCreate() {
+        // Repair legacy adjacent lists on opening without adding an undo step.
+        this.editor.view.dispatch(this.editor.state.tr.setMeta('normalizeTaskLists', true).setMeta('addToHistory', false));
+    },
     addExtensions() {
         return (this.parent?.() || []).map(extension => extension.name === 'taskItem'
             ? withTaskCompletion(extension as TiptapNode) : extension);
+    },
+    addProseMirrorPlugins() {
+        return [...(this.parent?.() || []), new Plugin({
+            appendTransaction: (transactions, _oldState, state) => {
+                if (!transactions.some(tr => tr.docChanged || tr.getMeta('normalizeTaskLists'))) return null;
+                const boundaries: number[] = [];
+                state.doc.descendants((node, pos, parent, index) => {
+                    if (node.type.name === 'taskList' && index > 0 && parent?.child(index - 1).sameMarkup(node)) {
+                        boundaries.push(pos);
+                    }
+                });
+                const tr = state.tr;
+                // Join from the end so earlier positions stay valid, including nested lists.
+                // Appending keeps the joins in the originating edit's undo/redo step.
+                for (const pos of boundaries.reverse()) if (canJoin(tr.doc, pos)) tr.join(pos);
+                return tr.docChanged ? tr : null;
+            },
+        })];
     },
     addKeyboardShortcuts() {
         const deleteEmptyItem = () => {
