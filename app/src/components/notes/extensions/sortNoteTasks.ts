@@ -1,36 +1,57 @@
 import type { Command } from '@tiptap/core';
-import type { Node } from '@tiptap/pm/model';
+import { Fragment, type Node } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { closeHistory } from '@tiptap/pm/history';
 
-// Reorder whole sibling nodes so their formatting and child lists travel together.
+// Sort sibling lists together, leaving intervening blocks in their document slots.
+// Whole task nodes travel together, including formatting, timestamps and children.
 export const sortNoteTasks = (completedFirst: boolean): Command => ({ tr, dispatch }) => {
     const { selection } = tr;
     const { $from, $to } = selection;
     let depth = $from.depth;
     while (depth > 0 && ($from.node(depth).type.name !== 'taskList'
-        || $to.depth < depth || $from.start(depth) !== $to.start(depth))) depth--;
+        || $to.depth < depth - 1 || $from.start(depth - 1) !== $to.start(depth - 1))) depth--;
     if (!depth) return false;
 
-    const list = $from.node(depth);
-    const start = $from.start(depth);
-    const items: { node: Node; offset: number }[] = [];
-    list.forEach((node, offset) => items.push({ node, offset }));
+    const parent = $from.node(depth - 1);
+    const start = $from.start(depth - 1);
+    const items: { node: Node; position: number }[] = [];
+    parent.forEach((node, offset) => {
+        if (node.type.name === 'taskList') {
+            node.forEach((item, itemOffset) => items.push({ node: item, position: start + offset + 1 + itemOffset }));
+        }
+    });
     const sorted = [...items].sort((a, b) => (Number(a.node.attrs.checked) - Number(b.node.attrs.checked))
         * (completedFirst ? -1 : 1));
     if (sorted.every((item, index) => item === items[index])) return false;
     if (!dispatch) return true;
 
-    const movePosition = (position: number) => {
-        let offset = start;
-        for (const item of sorted) {
-            const original = start + item.offset;
-            if (position >= original && position < original + item.node.nodeSize) return offset + position - original;
-            offset += item.node.nodeSize;
+    const blocks: Node[] = [];
+    const positions: { from: number; to: number; moved: number }[] = [];
+    let nextItem = 0;
+    let nextPosition = start;
+    parent.forEach((node, offset) => {
+        if (node.type.name === 'taskList') {
+            const replacements = sorted.slice(nextItem, nextItem + node.childCount);
+            nextItem += node.childCount;
+            let itemPosition = nextPosition + 1;
+            for (const item of replacements) {
+                positions.push({ from: item.position, to: item.position + item.node.nodeSize, moved: itemPosition });
+                itemPosition += item.node.nodeSize;
+            }
+            // Keep each list's attributes and item count; only the task order changes.
+            node = node.copy(Fragment.fromArray(replacements.map(item => item.node)));
+        } else {
+            positions.push({ from: start + offset, to: start + offset + node.nodeSize, moved: nextPosition });
         }
-        return position;
+        blocks.push(node);
+        nextPosition += node.nodeSize;
+    });
+    const movePosition = (position: number) => {
+        const range = positions.find(({ from, to }) => position >= from && position < to);
+        return range ? range.moved + position - range.from : tr.mapping.map(position);
     };
-    tr.replaceWith(start, start + list.content.size, sorted.map(item => item.node));
+    tr.replaceWith(start, start + parent.content.size, blocks);
     tr.setSelection(selection instanceof NodeSelection
         ? NodeSelection.create(tr.doc, movePosition(selection.anchor))
         : TextSelection.create(tr.doc, movePosition(selection.anchor), movePosition(selection.head)));

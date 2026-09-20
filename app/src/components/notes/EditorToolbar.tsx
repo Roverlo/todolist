@@ -304,7 +304,7 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                         description="回车新增一项，空行回车结束列表。"
                         onClick={() => editor.chain().focus().toggleTaskList().run()}><span>待办</span></EditorToolButton>
                     {lists.task && <EditorSelect className="editor-list-select" aria-label="待办排序" value="" placeholder="待办排序"
-                        description="按完成状态整理当前列表的同级待办；同状态保持原顺序，子项随父项移动。可用撤销恢复。"
+                        description="同一层级的待办跨空行和文字一起排序；说明文字保留原位，同状态保持原顺序，子项随父项移动。可撤销。"
                         options={[
                             { value: 'unfinished', label: '未完成在前', disabled: !lists.canSortUnfinished },
                             { value: 'completed', label: '已完成在前', disabled: !lists.canSortCompleted },

@@ -3,6 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { preview } from 'vite';
 import { checkNoteCompletion } from './check-note-completion.mjs';
+import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 
 const arg = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const cdp = arg('--cdp');
@@ -26,6 +27,7 @@ try {
     const openNote = async (html, title) => {
         await page.getByRole('textbox', { name: '随记标题', exact: true }).fill(title);
         await body.evaluate((root, html) => root.editor.commands.setContent(html), html);
+        return page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.selectedNoteId);
     };
     const saveAndReload = async () => {
         const expected = await body.evaluate(root => root.editor.getHTML());
@@ -40,6 +42,7 @@ try {
         await body.waitFor();
     };
     await checkNoteCompletion(page, body, openNote, saveAndReload);
+    await checkNoteTaskSort(page, body, openNote, saveAndReload);
     assert.deepEqual(errors, []);
     console.log(cdp ? 'Native completion workflow and isolated data.json persistence passed' : 'Production completion workflow passed');
 } catch (error) {
