@@ -44,6 +44,29 @@ try {
     const dismissReminder = page.getByRole('button', { name: '我知道了' });
     if (await dismissReminder.isVisible()) await dismissReminder.click();
 
+    // Native windows can shrink to 1100px: wrapped header actions must remain clickable.
+    for (const width of [1100, 1280, 1500]) {
+        await page.setViewportSize({ width, height: 900 });
+        const header = await page.locator('.main-header').boundingBox();
+        const dashboard = await page.locator('.dashboard-row').boundingBox();
+        for (const name of ['新建任务', '展开/收起筛选', '设置']) {
+            const action = page.getByRole('button', { name, exact: true });
+            const bounds = await action.boundingBox();
+            assert.ok(bounds.y >= header.y && bounds.y + bounds.height <= header.y + header.height + 1,
+                `${width}px: ${name} must fit inside the header`);
+            assert.ok(bounds.y + bounds.height <= dashboard.y,
+                `${width}px: ${name} must not overlap the dashboard`);
+            assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width,
+                `${width}px: ${name} must stay inside the window`);
+            await action.click({ trial: true });
+        }
+        const filter = page.getByRole('button', { name: '展开/收起筛选', exact: true });
+        await filter.click();
+        assert.equal(await filter.getAttribute('aria-expanded'), 'true');
+        await filter.click();
+        assert.equal(await filter.getAttribute('aria-expanded'), 'false');
+    }
+
     await page.locator('[title="切换到随记中心"]').click();
     await page.getByRole('button', { name: '创建新随记' }).click();
 

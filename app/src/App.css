@@ -6281,9 +6281,10 @@ body {
 
 /* --- Row 1: Main Header Polish --- */
 .main-header {
-  height: 56px;
-  /* Reduced height for tighter feel */
-  padding: 0 20px;
+  height: auto;
+  min-height: 56px;
+  /* Wrapped actions must stay above the dashboard in narrow windows. */
+  padding: 10px 20px;
   gap: 16px;
   background: var(--surface);
 }
