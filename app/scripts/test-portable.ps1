@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$Executable, [switch]$EditorWorkflow, [switch]$WindowLifecycle, [ValidateSet('busy', 'crash')][string]$WindowRecovery)
+param([Parameter(Mandatory = $true)][string]$Executable, [switch]$EditorWorkflow, [switch]$NoteCompletion, [switch]$WindowLifecycle, [ValidateSet('busy', 'crash')][string]$WindowRecovery)
 $ErrorActionPreference = 'Stop'
 
 $source = (Get-Item -LiteralPath $Executable).FullName
@@ -46,7 +46,7 @@ $started = $null
 try {
     $env:PROJECTTODO_TEST_DATA_DIR = $dataRoot
     $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $checkRoot 'webview'
-    if ($EditorWorkflow -or $WindowLifecycle -or $WindowRecovery) {
+    if ($EditorWorkflow -or $NoteCompletion -or $WindowLifecycle -or $WindowRecovery) {
         $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
         $probe.Start()
         $nativeDebugPort = $probe.LocalEndpoint.Port
@@ -68,6 +68,13 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Packaged note workflow failed' }
         } finally { Pop-Location }
     }
+    if ($NoteCompletion) {
+        Push-Location (Split-Path -Parent $PSScriptRoot)
+        try {
+            & node (Join-Path $PSScriptRoot 'test-note-completion.mjs') --cdp $nativeDebugPort --data $dataPath
+            if ($LASTEXITCODE -ne 0) { throw 'Packaged note completion check failed' }
+        } finally { Pop-Location }
+    }
     if ($WindowLifecycle) {
         Push-Location (Split-Path -Parent $PSScriptRoot)
         try {
@@ -86,7 +93,7 @@ try {
         if ((Get-FileHash -LiteralPath (Join-Path $userRoot $relative) -Algorithm SHA256).Hash -ne $before[$relative]) { throw 'Existing user data changed during the check; backup retained' }
     }
     [ordered]@{
-        result = 'PASS'; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; windowLifecycle = [bool]$WindowLifecycle; windowRecovery = $WindowRecovery; isolatedData = $dataPath; existingDataUnchanged = $true
+        result = 'PASS'; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; noteCompletion = [bool]$NoteCompletion; windowLifecycle = [bool]$WindowLifecycle; windowRecovery = $WindowRecovery; isolatedData = $dataPath; existingDataUnchanged = $true
         executable = $source; bytes = (Get-Item -LiteralPath $source).Length
         sha256 = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
     } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $checkRoot 'result.json')

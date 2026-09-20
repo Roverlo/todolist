@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
+import { checkNoteCompletion } from './check-note-completion.mjs';
 import { mkdir, readFile } from 'node:fs/promises';
 import { createServer as createTcpServer } from 'node:net';
 import { chromium } from 'playwright';
@@ -700,7 +701,7 @@ try {
     await body.press('Tab');
     assert.equal(await body.locator('ul ul li').count(), 1);
     assert.notEqual(await items.nth(2).locator('p').evaluate(el => getComputedStyle(el).color), 'rgb(107, 114, 128)',
-        'Completing a parent must not gray an unchecked child');
+        'Adding a new child under an already completed parent must leave it unchecked');
     await body.press('Shift+Tab');
     await body.press('Enter');
     await body.press('Enter');
@@ -846,8 +847,10 @@ try {
     }));
     assert.deepEqual(await taskStrikethrough(), [true, false, false, false], 'Only completed task text may appear struck through');
     await items.nth(1).locator(':scope > label input').check();
-    assert.deepEqual(await taskStrikethrough(), [true, true, false, false], 'Completing a child must not strike its unfinished grandchild');
+    assert.deepEqual(await taskStrikethrough(), [true, true, true, false], 'Completing a child also completes its grandchild');
     await items.nth(1).locator(':scope > label input').uncheck();
+    assert.deepEqual(await taskStrikethrough(), [true, false, true, false], 'Reopening a child leaves its completed grandchild intact');
+    await items.nth(2).locator(':scope > label input').uncheck();
     // Keep hierarchy setup outside the editor's 500 ms undo-history group.
     await page.waitForTimeout(550);
     await focusTask('核对配置');
@@ -869,9 +872,10 @@ try {
     assert.ok(await body.evaluate(root => root.scrollWidth <= root.clientWidth + 1), 'Nested tasks must fit the narrow document');
     await page.screenshot({ path: 'ui-check.local/note-task-hierarchy-narrow.png' });
     await page.setViewportSize({ width: 1280, height: 840 });
-    console.log('Passed: clear three-level checklists, contextual indent actions, parent/child moves, independent completion, undo/redo and persistence');
+    console.log('Passed: clear three-level checklists, contextual indent actions, parent/child moves, cascading completion, independent reopening, undo/redo and persistence');
 
     await checkNoteTaskSort(page, body, openNote, saveAndReload);
+    await checkNoteCompletion(page, body, openNote, saveAndReload);
 
     await openNote('<p>排版文字</p>', '排版工具');
     await body.press('Control+A');

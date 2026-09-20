@@ -1,4 +1,4 @@
-import { Extension, type CommandProps, type Editor } from '@tiptap/core';
+import { Extension, type CommandProps, type Editor, type Node as TiptapNode } from '@tiptap/core';
 import { AllSelection, Plugin, TextSelection } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
@@ -31,6 +31,7 @@ import { CodeBlock } from 'reactjs-tiptap-editor/codeblock';
 import { HorizontalRule } from 'reactjs-tiptap-editor/horizontalrule';
 import { useToastStore } from '../../../state/toastStore';
 import { readNoteImage, IMAGE_TYPES, MAX_IMAGE_BYTES } from '../../../utils/noteImages';
+import { withTaskCompletion } from './taskCompletion';
 
 export const BULLET_STYLES = [
     ['disc', '● 实心圆'], ['circle', '○ 空心圆'], ['square', '■ 方块'],
@@ -121,6 +122,10 @@ const NoteIndent = Indent.extend<IndentOptions>({
 const NoteTaskList = TaskList.extend({
     // The default list keymap lifts empty items into paragraphs and splits the list.
     priority: 110,
+    addExtensions() {
+        return (this.parent?.() || []).map(extension => extension.name === 'taskItem'
+            ? withTaskCompletion(extension as TiptapNode) : extension);
+    },
     addKeyboardShortcuts() {
         const deleteEmptyItem = () => {
             const { empty, $from } = this.editor.state.selection;
