@@ -9,6 +9,7 @@ import { EditorTablePicker } from './EditorTablePicker';
 import { EditorInsertDialog } from './EditorInsertDialog';
 import { openNoteImageFolder } from '../../utils/noteImages';
 import { useToastStore } from '../../state/toastStore';
+import { sortNoteTasks } from './extensions/sortNoteTasks';
 
 const COLOR_PALETTE = [
     ['黑色', '#000000'], ['深灰', '#595959'], ['灰色', '#a5a5a5'], ['浅灰', '#d9d9d9'], ['白色', '#ffffff'],
@@ -154,6 +155,8 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
             bullet: editor.isActive('bulletList') ? editor.getAttributes('bulletList').listStyle || 'disc' : '',
             ordered: editor.isActive('orderedList') ? editor.getAttributes('orderedList').listStyle || 'decimal' : '',
             task: editor.isActive('taskList'),
+            canSortUnfinished: editor.can().command(sortNoteTasks(false)),
+            canSortCompleted: editor.can().command(sortNoteTasks(true)),
             canIndent: editor.can().indent(),
             canOutdent: editor.can().outdent(),
             taskDepth: Array.from({ length: editor.state.selection.$from.depth }, (_, index) =>
@@ -300,6 +303,13 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                     <EditorToolButton label="待办列表" icon={ListTodo} active={lists.task} className="editor-toolbar-text-button editor-todo-btn"
                         description="回车新增一项，空行回车结束列表。"
                         onClick={() => editor.chain().focus().toggleTaskList().run()}><span>待办</span></EditorToolButton>
+                    {lists.task && <EditorSelect className="editor-list-select" aria-label="待办排序" value="" placeholder="待办排序"
+                        description="按完成状态整理当前列表的同级待办；同状态保持原顺序，子项随父项移动。可用撤销恢复。"
+                        options={[
+                            { value: 'unfinished', label: '未完成在前', disabled: !lists.canSortUnfinished },
+                            { value: 'completed', label: '已完成在前', disabled: !lists.canSortCompleted },
+                        ]}
+                        onChange={value => editor.chain().focus().command(sortNoteTasks(value === 'completed')).run()} />}
                 </div>
                 <div className="editor-toolbar-group" role="group" aria-label="插入">
                     <EditorToolButton label="插入链接" icon={Link} description="为选中文字添加链接。" aria-haspopup="dialog" onClick={() => setInsertDialog('link')} />

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 import { mkdir, readFile } from 'node:fs/promises';
 import { createServer as createTcpServer } from 'node:net';
 import { chromium } from 'playwright';
@@ -870,6 +871,8 @@ try {
     await page.setViewportSize({ width: 1280, height: 840 });
     console.log('Passed: clear three-level checklists, contextual indent actions, parent/child moves, independent completion, undo/redo and persistence');
 
+    await checkNoteTaskSort(page, body, openNote, saveAndReload);
+
     await openNote('<p>排版文字</p>', '排版工具');
     await body.press('Control+A');
     await choose('正文字体', { label: '宋体' });
@@ -1163,8 +1166,13 @@ try {
     assert.equal((await storedNotes()).find(note => note.id === dateNoteId).date, '2026-09-06', 'Inserting a date must not move the note');
 
     await body.press('Control+Home');
+    await waitForEditorSelection();
     await page.keyboard.press('ArrowRight');
-    for (let index = 0; index < 10; index++) await page.keyboard.press('Shift+ArrowRight');
+    await waitForEditorSelection();
+    for (let index = 0; index < 10; index++) {
+        await page.keyboard.press('Shift+ArrowRight');
+        await waitForEditorSelection();
+    }
     assert.equal(await page.evaluate(() => window.getSelection().toString()), '2000-12-31');
     await waitForEditorSelection();
     await dateButton.click();
