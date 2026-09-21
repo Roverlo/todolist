@@ -11,6 +11,7 @@ import { openNoteImageFolder } from '../../utils/noteImages';
 import { useToastStore } from '../../state/toastStore';
 import { insertNoteFiles } from './extensions/NoteAttachments';
 import { sortNoteTasks } from './extensions/sortNoteTasks';
+import { clearNoteFormatting } from './extensions/clearNoteFormatting';
 
 const COLOR_PALETTE = [
     ['黑色', '#000000'], ['深灰', '#595959'], ['灰色', '#a5a5a5'], ['浅灰', '#d9d9d9'], ['白色', '#ffffff'],
@@ -262,8 +263,8 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                     <EditorToolButton label="格式刷" icon={PaintRoller} active={lists.painter} disabled={!lists.painter && !lists.canPaint}
                         description="从带格式的文字中取样，再选择目标文字；再次点击可取消。"
                         onClick={() => lists.painter ? editor.commands.unsetPainter() : editor.chain().focus().setPainter().run()} />
-                    <EditorToolButton label="清除格式" icon={Eraser} description="清除选中文字和段落的格式。"
-                        onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} />
+                    <EditorToolButton label="清除格式" icon={Eraser} description="恢复默认字体、字号和行距，将选中的换行统一为正文段落；保留空行，可撤销。"
+                        onClick={() => editor.chain().focus().command(clearNoteFormatting).run()} />
                     <EditorToolButton label="查找替换" icon={Search} shortcut="Ctrl+F" active={searchOpen}
                         onClick={() => { if (searchOpen) editor.commands.focus(); setSearchOpen(value => !value); }} />
                 </div>

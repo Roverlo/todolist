@@ -7,6 +7,7 @@ import { createServer as createTcpServer } from 'node:net';
 import { chromium } from 'playwright';
 import { createServer as createViteServer } from 'vite';
 import { checkNoteToolbar } from './check-note-toolbar.mjs';
+import { checkNoteFormatting } from './check-note-formatting.mjs';
 
 const tauriConfig = JSON.parse(await readFile(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
 assert.ok(tauriConfig.app.windows.every(window => window.dragDropEnabled === false),
@@ -1302,6 +1303,7 @@ try {
     await page.evaluate(async () => (await import('/src/state/appStore.ts')).useAppStore.getState().setNoteViewMode('tree'));
     await body.waitFor();
     console.log(`Passed: directly accessible two-row toolbar (${toolbarHeight}px), narrow-window wrapping, image/table controls, empty/trash views and stable AI toggle at five desktop widths`);
+    await checkNoteFormatting(page, body, saveAndReload);
     assert.deepEqual(errors, []);
     await page.setViewportSize({ width: 1280, height: 840 });
     await page.screenshot({ path: 'ui-check.local/note-editor.png' });

@@ -82,6 +82,8 @@ node scripts/test-note-workflow.mjs
 
 待办联动、完成时间、排序及列表合并可单独运行 `node scripts/test-note-completion.mjs` 检查生产网页构建，或运行 `./scripts/test-portable.ps1 -Executable '<被测 EXE 绝对路径>' -NoteCompletion` 检查隔离原生数据的写入与重载。这两个入口还覆盖日历定位、跨日期新建、搜索/标签组合与清除、回收站计数及重载；`npm run test:notes` 包含编辑器回归。排序使用两个带文字的直接按钮“未完成在前”“已完成在前”，支持键盘操作，已排序时对应按钮禁用，1100px 窗口仍完整可见。删除间隔后相邻同级待办应合并，间距与单个列表一致；撤销恢复间隔，子项、格式和完成时间保持，仍有段落或位于不同父项/单元格的列表保持独立。
 
+清除格式专项可运行 `node scripts/test-note-formatting.mjs`，原生版本使用 `./scripts/test-portable.ps1 -Executable '<被测 EXE 绝对路径>' -ClearFormatting`。覆盖不同字体/字号/行距粘贴后统一正文样式、软换行与段落的实际行距、部分选区、表格单元格、代码换行与保留空行、重复清除、独立撤销/重做、继续输入及保存重载；`npm run test:notes` 同样包含这些检查。普通粘贴保留格式，只有显式清除时才把选中的软换行统一为正文段落，不合并或删除原有空行。
+
 原生工作流测试前退出其他 ProjectTodo 进程，避免单实例锁唤醒用户窗口。Computer-use 会话中窗口生命周期直接用其 API 操作；不要混用其他 Windows UI 自动化接口。
 
 `-Attachments` 会依次弹出备份保存、备份打开和附件另存为原生对话框；用 Computer Use 或人工在 180 秒内输入脚本打印的隔离路径。脚本自动验证恢复前后文件哈希，Windows 资源管理器真实复制粘贴另行验收。
