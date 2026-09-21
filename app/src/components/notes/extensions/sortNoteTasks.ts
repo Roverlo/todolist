@@ -11,19 +11,23 @@ export const sortNoteTasks = (completedFirst: boolean): Command => ({ tr, dispat
     let depth = $from.depth;
     while (depth > 0 && ($from.node(depth).type.name !== 'taskList'
         || $to.depth < depth - 1 || $from.start(depth - 1) !== $to.start(depth - 1))) depth--;
-    if (!depth) return false;
-
-    const parent = $from.node(depth - 1);
-    const start = $from.start(depth - 1);
+    let scopeDepth = depth ? depth - 1 : $from.sharedDepth($to.pos);
+    // From ordinary text, sort its document/quote/cell without requiring a task click.
+    if (!depth) {
+        while (scopeDepth > 0 && !['blockquote', 'tableCell', 'tableHeader'].includes($from.node(scopeDepth).type.name)) scopeDepth--;
+    }
+    const parent = $from.node(scopeDepth);
+    const start = $from.start(scopeDepth);
     const items: { node: Node; position: number }[] = [];
     parent.forEach((node, offset) => {
         if (node.type.name === 'taskList') {
             node.forEach((item, itemOffset) => items.push({ node: item, position: start + offset + 1 + itemOffset }));
         }
     });
+    if (!items.length) return false;
     const sorted = [...items].sort((a, b) => (Number(a.node.attrs.checked) - Number(b.node.attrs.checked))
         * (completedFirst ? -1 : 1));
-    if (sorted.every((item, index) => item === items[index])) return false;
+    if (sorted.every((item, index) => item === items[index])) return true;
     if (!dispatch) return true;
 
     const blocks: Node[] = [];

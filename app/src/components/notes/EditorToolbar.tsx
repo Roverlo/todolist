@@ -158,8 +158,6 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
             bullet: editor.isActive('bulletList') ? editor.getAttributes('bulletList').listStyle || 'disc' : '',
             ordered: editor.isActive('orderedList') ? editor.getAttributes('orderedList').listStyle || 'decimal' : '',
             task: editor.isActive('taskList'),
-            canSortUnfinished: editor.can().command(sortNoteTasks(false)),
-            canSortCompleted: editor.can().command(sortNoteTasks(true)),
             canIndent: editor.can().indent(),
             canOutdent: editor.can().outdent(),
             taskDepth: Array.from({ length: editor.state.selection.$from.depth }, (_, index) =>
@@ -199,6 +197,15 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
         chain.run();
     };
 
+    const sortTasks = (completedFirst: boolean) => {
+        const before = editor.state.doc;
+        const applied = editor.chain().focus().command(sortNoteTasks(completedFirst)).run();
+        const order = completedFirst ? '已完成在前' : '未完成在前';
+        useToastStore.getState().addToast(!applied ? '当前范围没有待办可排序。'
+            : before.eq(editor.state.doc) ? `当前同级待办已是“${order}”，无需调整。`
+                : `已按“${order}”整理同级待办。`, 'info');
+    };
+
     const tableActions = [
         ['上方插入行', () => editor.chain().focus().addRowBefore().run()],
         ['下方插入行', () => editor.chain().focus().addRowAfter().run()],
@@ -226,6 +233,12 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                 event.preventDefault(); buttons[next]?.focus();
             }}>
             <div className="editor-toolbar-row">
+                <div className="editor-toolbar-group" role="group" aria-label="编辑历史">
+                    <EditorToolButton label="撤销" icon={Undo2} shortcut="Ctrl+Z" description="撤回上一步编辑。" disabled={!lists.canUndo}
+                        onClick={() => editor.chain().focus().undo().run()} />
+                    <EditorToolButton label="重做" icon={Redo2} shortcut="Ctrl+Shift+Z" description="恢复刚刚撤销的编辑。" disabled={!lists.canRedo}
+                        onClick={() => editor.chain().focus().redo().run()} />
+                </div>
                 <div className="editor-toolbar-group" role="group" aria-label="字体">
                     <EditorSelect className="editor-heading-select" aria-label="段落标题" description="设置段落或标题层级。" value={lists.heading}
                         options={[{ value: '0', label: '段落' }, ...[1, 2, 3, 4, 5, 6].map(level => ({ value: String(level), label: `标题 ${level}` }))]}
@@ -255,11 +268,13 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                         onApply={color => { setHighlightColor(color); editor.chain().focus().setHighlight({ color }).run(); }}
                         onClear={() => editor.chain().focus().unsetHighlight().run()} />
                 </div>
-                <div className="editor-toolbar-group" role="group" aria-label="编辑">
-                    <EditorToolButton label="撤销" icon={Undo2} shortcut="Ctrl+Z" description="撤回上一步编辑。" disabled={!lists.canUndo}
-                        onClick={() => editor.chain().focus().undo().run()} />
-                    <EditorToolButton label="重做" icon={Redo2} shortcut="Ctrl+Shift+Z" description="恢复刚刚撤销的编辑。" disabled={!lists.canRedo}
-                        onClick={() => editor.chain().focus().redo().run()} />
+                <div className="editor-toolbar-group" role="group" aria-label="内容样式">
+                    <EditorToolButton label="引用" icon={Quote} active={lists.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()} />
+                    <EditorToolButton label="行内代码" icon={Code} active={lists.code} disabled={!lists.canCode} onClick={() => editor.chain().focus().toggleCode().run()} />
+                    <EditorToolButton label="代码块" icon={CodeXml} active={lists.codeBlock} onClick={() => editor.chain().focus().toggleCodeBlock().run()} />
+                    <EditorToolButton label="分隔线" icon={Minus} onClick={() => editor.chain().focus().setHorizontalRule().run()} />
+                </div>
+                <div className="editor-toolbar-group" role="group" aria-label="格式与查找">
                     <EditorToolButton label="格式刷" icon={PaintRoller} active={lists.painter} disabled={!lists.painter && !lists.canPaint}
                         description="从带格式的文字中取样，再选择目标文字；再次点击可取消。"
                         onClick={() => lists.painter ? editor.commands.unsetPainter() : editor.chain().focus().setPainter().run()} />
@@ -277,24 +292,24 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                         onClick={() => void openNoteImageFolder(editor.getAttributes('imageBlock').src || editor.getAttributes('image').src)
                             .catch(error => useToastStore.getState().addToast(error instanceof Error ? error.message : String(error), 'error'))} />
                 </div>}
+                {lists.table && <div className="editor-toolbar-group editor-context-tools" role="group" aria-label="表格工具">
+                    <EditorSelect className="editor-list-select" aria-label="表格操作" description="增删行列、切换表头；拖选多个单元格后可合并。" value="" placeholder="表格操作"
+                        options={tableActions.map(([label, , disabled], index) => ({ value: String(index), label, disabled }))}
+                        onChange={value => tableActions[Number(value)][1]()} />
+                </div>}
                 {actions}
             </div>
             <div className="editor-toolbar-row">
-                <div className="editor-toolbar-group" role="group" aria-label="段落">
-                    {([['left', '左对齐', AlignLeft], ['center', '居中对齐', AlignCenter], ['right', '右对齐', AlignRight], ['justify', '两端对齐', AlignJustify]] as const)
-                        .map(([value, label, AlignIcon]) => <EditorToolButton key={value} label={label} icon={AlignIcon} active={lists.align === value}
-                            onClick={() => editor.chain().focus().setTextAlign(value).run()} />)}
-                    <EditorSelect className="editor-line-select" aria-label="行距" description="调整当前段落的行间距。" value={lists.lineHeight}
-                        options={[{ value: '', label: '行距' }, ...['1', '1.25', '1.5', '1.75', '2', '2.5', '3'].map(value => ({ value, label: `${value} 倍` }))]}
-                        onChange={value => value ? editor.chain().focus().setLineHeight(value).run() : editor.chain().focus().unsetLineHeight().run()} />
-                    <EditorToolButton label={lists.task ? '设为子待办' : '增加缩进'} icon={IndentIncrease} disabled={!lists.canIndent}
-                        shortcut={lists.task ? 'Tab' : undefined}
-                        description={lists.task ? lists.canIndent ? '移入上一个同级待办下面，成为它的子项；已有子项一起移动。' : '前面需要有同级待办，才能将当前项设为它的子项。' : '增加段落缩进；列表中也可按 Tab。'}
-                        onClick={() => editor.chain().focus().indent().run()} />
-                    <EditorToolButton label={lists.task ? lists.taskDepth > 1 ? '提升一级' : '退出待办列表' : '减少缩进'} icon={IndentDecrease} disabled={!lists.canOutdent}
-                        shortcut={lists.task ? 'Shift+Tab' : undefined}
-                        description={lists.task ? lists.taskDepth > 1 ? '将当前子待办提升一级，已有子项一起移动。' : '当前已在最外层，继续减少缩进会转为普通段落。' : '减少段落缩进；列表中也可按 Shift+Tab。'}
-                        onClick={() => editor.chain().focus().outdent().run()} />
+                <div className="editor-toolbar-group" role="group" aria-label="待办排序">
+                    <EditorToolButton label="待办列表" icon={ListTodo} active={lists.task} className="editor-toolbar-text-button editor-todo-btn"
+                        description="回车新增一项，空行回车结束列表。"
+                        onClick={() => editor.chain().focus().toggleTaskList().run()}><span>待办</span></EditorToolButton>
+                    <EditorToolButton label="未完成在前" icon={Circle} className="editor-toolbar-text-button"
+                        description="将同一层级的未完成待办排在前面，子项随父项移动，说明文字保留原位。可撤销。"
+                        onClick={() => sortTasks(false)}><span>未完成在前</span></EditorToolButton>
+                    <EditorToolButton label="已完成在前" icon={CircleCheck} className="editor-toolbar-text-button"
+                        description="将同一层级的已完成待办排在前面，子项随父项移动，说明文字保留原位。可撤销。"
+                        onClick={() => sortTasks(true)}><span>已完成在前</span></EditorToolButton>
                 </div>
                 <div className="editor-toolbar-group" role="group" aria-label="列表">
                     <EditorSelect className="editor-list-select" aria-label="项目符号样式" description="选择项目符号，或取消当前列表。" value={lists.bullet} placeholder="项目符号"
@@ -303,18 +318,23 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                     <EditorSelect className="editor-list-select" aria-label="编号样式" description="选择数字、字母或罗马数字编号。" value={lists.ordered} placeholder="编号样式"
                         options={[...NUMBER_STYLES.map(([value, label]) => ({ value, label })), ...(lists.ordered ? [{ value: 'none', label: '取消编号' }] : [])]}
                         onChange={value => setListStyle('orderedList', value)} />
-                    <EditorToolButton label="待办列表" icon={ListTodo} active={lists.task} className="editor-toolbar-text-button editor-todo-btn"
-                        description="回车新增一项，空行回车结束列表。"
-                        onClick={() => editor.chain().focus().toggleTaskList().run()}><span>待办</span></EditorToolButton>
+                    <EditorToolButton label={lists.task ? lists.taskDepth > 1 ? '提升一级' : '退出待办列表' : '减少缩进'} icon={IndentDecrease} disabled={!lists.canOutdent}
+                        shortcut={lists.task ? 'Shift+Tab' : undefined}
+                        description={lists.task ? lists.taskDepth > 1 ? '将当前子待办提升一级，已有子项一起移动。' : '当前已在最外层，继续减少缩进会转为普通段落。' : '减少段落缩进；列表中也可按 Shift+Tab。'}
+                        onClick={() => editor.chain().focus().outdent().run()} />
+                    <EditorToolButton label={lists.task ? '设为子待办' : '增加缩进'} icon={IndentIncrease} disabled={!lists.canIndent}
+                        shortcut={lists.task ? 'Tab' : undefined}
+                        description={lists.task ? lists.canIndent ? '移入上一个同级待办下面，成为它的子项；已有子项一起移动。' : '前面需要有同级待办，才能将当前项设为它的子项。' : '增加段落缩进；列表中也可按 Tab。'}
+                        onClick={() => editor.chain().focus().indent().run()} />
                 </div>
-                {lists.task && <div className="editor-toolbar-group" role="group" aria-label="待办排序">
-                    <EditorToolButton label="未完成在前" icon={Circle} className="editor-toolbar-text-button" disabled={!lists.canSortUnfinished}
-                        description="将同一层级的未完成待办排在前面，子项随父项移动，说明文字保留原位。可撤销。"
-                        onClick={() => editor.chain().focus().command(sortNoteTasks(false)).run()}><span>未完成在前</span></EditorToolButton>
-                    <EditorToolButton label="已完成在前" icon={CircleCheck} className="editor-toolbar-text-button" disabled={!lists.canSortCompleted}
-                        description="将同一层级的已完成待办排在前面，子项随父项移动，说明文字保留原位。可撤销。"
-                        onClick={() => editor.chain().focus().command(sortNoteTasks(true)).run()}><span>已完成在前</span></EditorToolButton>
-                </div>}
+                <div className="editor-toolbar-group" role="group" aria-label="段落">
+                    {([['left', '左对齐', AlignLeft], ['center', '居中对齐', AlignCenter], ['right', '右对齐', AlignRight], ['justify', '两端对齐', AlignJustify]] as const)
+                        .map(([value, label, AlignIcon]) => <EditorToolButton key={value} label={label} icon={AlignIcon} active={lists.align === value}
+                            onClick={() => editor.chain().focus().setTextAlign(value).run()} />)}
+                    <EditorSelect className="editor-line-select" aria-label="行距" description="调整当前段落的行间距。" value={lists.lineHeight}
+                        options={[{ value: '', label: '行距' }, ...['1', '1.25', '1.5', '1.75', '2', '2.5', '3'].map(value => ({ value, label: `${value} 倍` }))]}
+                        onChange={value => value ? editor.chain().focus().setLineHeight(value).run() : editor.chain().focus().unsetLineHeight().run()} />
+                </div>
                 <div className="editor-toolbar-group" role="group" aria-label="插入">
                     <EditorToolButton label="插入链接" icon={Link} description="为选中文字添加链接。" aria-haspopup="dialog" onClick={() => setInsertDialog('link')} />
                     <EditorToolButton label="插入图片" icon={ImagePlus} description="从本机或图片地址插入图片。" aria-haspopup="dialog" onClick={() => setInsertDialog('image')} />
@@ -325,16 +345,7 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                     <EditorToolButton label="插入日期" icon={CalendarDays} className="editor-toolbar-text-button editor-todo-btn"
                         description="选择任意日期，或快速插入昨天、今天、明天。" aria-haspopup="dialog"
                         onClick={() => setInsertDialog('date')}><span>日期</span></EditorToolButton>
-                    <EditorToolButton label="引用" icon={Quote} active={lists.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()} />
-                    <EditorToolButton label="行内代码" icon={Code} active={lists.code} disabled={!lists.canCode} onClick={() => editor.chain().focus().toggleCode().run()} />
-                    <EditorToolButton label="代码块" icon={CodeXml} active={lists.codeBlock} onClick={() => editor.chain().focus().toggleCodeBlock().run()} />
-                    <EditorToolButton label="分隔线" icon={Minus} onClick={() => editor.chain().focus().setHorizontalRule().run()} />
                 </div>
-                {lists.table && <div className="editor-toolbar-group editor-context-tools" role="group" aria-label="表格工具">
-                    <EditorSelect className="editor-list-select" aria-label="表格操作" description="增删行列、切换表头；拖选多个单元格后可合并。" value="" placeholder="表格操作"
-                        options={tableActions.map(([label, , disabled], index) => ({ value: String(index), label, disabled }))}
-                        onChange={value => tableActions[Number(value)][1]()} />
-                </div>}
             </div>
         </div>
         {searchOpen && <EditorSearch editor={editor} onClose={() => { setSearchOpen(false); editor.commands.focus(); }} />}

@@ -31,9 +31,16 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     const tasksBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.tasks);
     const noteBefore = await page.evaluate(noteId => JSON.parse(localStorage.getItem('project-todo-app')).state.notes.find(note => note.id === noteId), noteId);
     await focus('列表前的说明');
-    assert.equal(await page.getByRole('group', { name: '待办排序', exact: true }).count(), 0, 'Sorting is contextual to checklists');
+    assert.equal(await page.getByRole('group', { name: '待办排序', exact: true }).isVisible(), true, 'Sorting must remain visible in ordinary text');
+    const sortPosition = await page.getByRole('group', { name: '待办排序', exact: true }).boundingBox();
+    await choose('未完成在前');
+    assert.deepEqual(await names(firstList), ['未完成乙', '未完成丁', '已完成甲', '已完成丙']);
+    assert.equal(await body.evaluate(root => root.editor.state.selection.$from.parent.textContent), '列表前的说明');
+    await page.getByRole('button', { name: '撤销', exact: true }).click();
     const original = await content();
     await focus('已完成甲');
+    assert.deepEqual(await page.getByRole('group', { name: '待办排序', exact: true }).boundingBox(), sortPosition,
+        'Moving between ordinary text and tasks must not move the sort buttons');
     const originalSelection = await body.evaluate(root => root.editor.state.selection.toJSON());
     await choose('未完成在前');
     assert.deepEqual(await names(firstList), ['未完成乙', '未完成丁', '已完成甲', '已完成丙']);
@@ -44,7 +51,9 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     assert.deepEqual(await body.locator(':scope > p').allTextContents(), ['列表前的说明', '列表之间的说明']);
     assert.equal(await body.evaluate(root => root.editor.state.selection.$from.parent.textContent), '已完成甲', 'Caret follows the moved task');
     const sorted = await content();
-    assert.equal(await sortButton('未完成在前').isDisabled(), true);
+    assert.equal(await page.locator('.toast-message').last().innerText(), '已按“未完成在前”整理同级待办。');
+    await choose('未完成在前');
+    assert.equal(await page.locator('.toast-message').last().innerText(), '当前同级待办已是“未完成在前”，无需调整。');
     assert.equal(await content(), sorted, 'Already-sorted checks must not modify the document');
     await page.getByRole('button', { name: '撤销', exact: true }).click();
     assert.equal(await content(), original, 'One undo restores the complete original list');
@@ -88,18 +97,60 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
         const rect = await button.boundingBox();
         assert.ok(rect.x >= 0 && rect.x + rect.width <= 1100 && rect.y >= 0 && rect.y + rect.height <= 698);
         assert.equal(await button.innerText(), name, 'Both sort actions must have visible labels');
-        if (await button.isEnabled()) await button.click({ trial: true });
+        assert.equal(await button.isEnabled(), true);
+        await button.click({ trial: true });
     }
     assert.ok(await body.evaluate(root => root.scrollWidth <= root.clientWidth + 1));
     await page.screenshot({ path: 'ui-check.local/note-task-sort-narrow.png' });
     await page.setViewportSize({ width: 1280, height: 840 });
     await page.screenshot({ path: 'ui-check.local/note-task-sort.png' });
 
-    await openNote(list(task('唯一待办')), '单项排序');
-    await focus('唯一待办');
-    for (const name of ['未完成在前', '已完成在前']) {
-        assert.equal(await sortButton(name).isDisabled(), true);
+    // Same-status, single and empty tasks must never grey out either action.
+    for (const sample of [
+        list(task('唯一待办')),
+        list(task('待办甲'), task('待办乙', false, list(task('子项', false, list(task('孙项'))))), task('')),
+        list(task('完成甲', true), task('完成乙', true)),
+        list(task('')),
+    ]) {
+        await openNote(sample, '按钮保持可用');
+        await body.locator('li[data-type="taskItem"] p').first().click();
+        const unchanged = await content();
+        const undoBefore = await page.getByRole('button', { name: '撤销', exact: true }).isEnabled();
+        for (const name of ['未完成在前', '已完成在前']) {
+            await choose(name);
+            assert.equal(await page.locator('.toast-message').last().innerText(), `当前同级待办已是“${name}”，无需调整。`);
+            assert.equal(await content(), unchanged, 'No-op sorting preserves content and blank/nested tasks');
+            assert.equal(await page.getByRole('button', { name: '撤销', exact: true }).isEnabled(), undoBefore);
+        }
     }
+
+    await openNote('<p>没有待办的正文</p>', '无待办时仍可点击');
+    await focus('没有待办的正文');
+    for (const name of ['未完成在前', '已完成在前']) {
+        await choose(name);
+        assert.equal(await page.locator('.toast-message').last().innerText(), '当前范围没有待办可排序。');
+        assert.equal(await content(), '<p>没有待办的正文</p>');
+    }
+
+    await openNote('<table><tbody><tr><td><p>本格说明</p>' + list(task('本格完成', true), task('本格未完'))
+        + '</td><td><p>空单元格说明</p></td></tr></tbody></table>'
+        + list(task('表外完成', true), task('表外未完')), '普通文字排序的范围');
+    await focus('本格说明');
+    await choose('未完成在前');
+    assert.deepEqual(await names(body.locator('td ul')), ['本格未完', '本格完成']);
+    assert.deepEqual(await names(firstList), ['表外完成', '表外未完'], 'Sorting from cell text must not change tasks outside the cell');
+    const beforeEmptyCellSort = await content();
+    await focus('空单元格说明');
+    await choose('未完成在前');
+    assert.equal(await page.locator('.toast-message').last().innerText(), '当前范围没有待办可排序。');
+    assert.equal(await content(), beforeEmptyCellSort, 'An empty cell must not fall back to sorting the entire note');
+
+    await openNote('<blockquote><p>引用说明</p>' + list(task('引用完成', true), task('引用未完')) + '</blockquote>'
+        + list(task('外部完成', true), task('外部未完')), '引用中的排序范围');
+    await focus('引用说明');
+    await choose('未完成在前');
+    assert.deepEqual(await names(body.locator('blockquote ul')), ['引用未完', '引用完成']);
+    assert.deepEqual(await names(firstList), ['外部完成', '外部未完']);
 
     // Separate taskList nodes must participate in one stable sort at the same level.
     const dated = task('<strong>已完成上项</strong>', true, childList)
@@ -131,7 +182,9 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     await choose('已完成在前');
     assert.deepEqual(await topNames(), ['已完成上项', '已完成中项', '未完成中项', '未完成下项'], 'Starting in the last list includes earlier lists');
     assert.deepEqual(await paragraphs(), originalParagraphs);
-    assert.equal(await sortButton('已完成在前').isDisabled(), true);
+    const completedFirstHTML = await content();
+    await choose('已完成在前');
+    assert.equal(await content(), completedFirstHTML);
     await page.screenshot({ path: 'ui-check.local/note-task-sort-separated.png' });
 
     await openNote(list(task('父项', false, list(task('当前子完成', true)) + '<p>子项说明</p>' + list(task('当前子未完成'))),

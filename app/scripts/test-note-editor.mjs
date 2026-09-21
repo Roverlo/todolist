@@ -1228,7 +1228,7 @@ try {
     assert.equal(await page.getByRole('toolbar').getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'AI actions must be integrated into the toolbar');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
     assert.equal(await page.getByLabel('更多工具', { exact: true }).count(), 0, 'Tools should be directly accessible');
-    for (const name of ['插入日期', '查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线']) {
+    for (const name of ['插入日期', '查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线', '未完成在前', '已完成在前']) {
         assert.equal(await page.getByRole('toolbar').getByRole('button', { name, exact: true }).isVisible(), true, `${name} should be visible without opening a menu`);
     }
     await page.getByRole('button', { name: '分隔线', exact: true }).press('Enter');
@@ -1236,7 +1236,7 @@ try {
     await body.press('Control+End');
     await page.getByRole('button', { name: '插入表格', exact: true }).press('Enter');
     await body.locator('table').waitFor();
-    assert.equal((await page.getByRole('toolbar').boundingBox()).height, toolbarHeight, 'Table tools must not add another row');
+    assert.ok((await page.getByRole('toolbar').boundingBox()).height <= 120, 'Contextual table tools remain visible within three rows');
     await body.locator('th').first().click();
     await page.getByRole('button', { name: '插入图片', exact: true }).click();
     const tableImageChooser = page.waitForEvent('filechooser');
@@ -1261,8 +1261,8 @@ try {
                 titleTop: el.querySelector('.note-editor-title').getBoundingClientRect().top,
             }));
             closedLayout ??= layout;
-            if (width >= 1186) assert.equal(layout.topBars[1].height, toolbarHeight, `Image and table tools must stay within two rows at ${width}px`);
-            else assert.ok(layout.topBars[1].height <= 120, 'Narrow windows may wrap contextual image tools to one additional row');
+            if (width >= 1538) assert.equal(layout.topBars[1].height, toolbarHeight, `Image and table tools must stay within two rows at ${width}px`);
+            else assert.ok(layout.topBars[1].height <= 120, 'Narrow windows may wrap contextual tools while keeping both sort actions visible');
             assert.deepEqual(layout, closedLayout, `Header, toolbar and note top must not jump when toggling AI at ${width}px`);
             assert.ok(await page.locator('.notes-main-root').evaluate(el =>
                 el.getBoundingClientRect().left >= document.querySelector('.sidebar').getBoundingClientRect().right),

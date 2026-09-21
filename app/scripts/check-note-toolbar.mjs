@@ -5,7 +5,7 @@ export async function checkNoteToolbar(page, body) {
     const button = name => toolbar.getByRole('button', { name, exact: true });
     const tooltip = page.getByRole('tooltip');
     assert.equal(await toolbar.locator('[title]').count(), 0, 'Toolbar must not mix native title popups with shared tooltips');
-    for (const name of ['撤销', '重做', '清除格式', '插入日期', '分隔线', 'AI 设置']) {
+    for (const name of ['撤销', '重做', '清除格式', '插入日期', '分隔线', 'AI 设置', '未完成在前', '已完成在前']) {
         assert.equal(await button(name).getAttribute('aria-pressed'), null, `${name} is an action, not a toggle`);
     }
     const icons = await toolbar.locator('.editor-tool-button:not(.editor-color-menu) > svg').evaluateAll(elements => elements.map(el => ({
@@ -38,9 +38,10 @@ export async function checkNoteToolbar(page, body) {
     await tooltip.waitFor({ state: 'hidden' });
 
     await body.press('Alt+F10');
-    assert.equal(await toolbar.getByRole('combobox', { name: '段落标题' }).evaluate(el => el === document.activeElement), true);
+    const firstEnabled = toolbar.locator('button:not(:disabled)').first();
+    assert.equal(await firstEnabled.evaluate(el => el === document.activeElement), true);
     await page.keyboard.press('ArrowRight');
-    assert.equal(await toolbar.getByRole('combobox', { name: '正文字体' }).evaluate(el => el === document.activeElement), true);
+    assert.equal(await toolbar.locator('button:not(:disabled)').nth(1).evaluate(el => el === document.activeElement), true);
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '随记正文');
     await body.press('Control+f');
