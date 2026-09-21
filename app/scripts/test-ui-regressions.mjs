@@ -167,6 +167,9 @@ try {
     const afterToday = await storedNotes();
     assert.equal(afterToday.length, beforeToday.length + 1);
     for (const note of beforeToday) assert.deepEqual(afterToday.find(n => n.id === note.id), note);
+    assert.equal(await page.getByRole('button', { name: '清除筛选', exact: true }).count(), 0);
+    for (const note of afterToday) assert.equal(await page.locator(`[data-node-id="note-${note.id}"]`).count(), 1,
+        'Creating today must leave past and future notes visible');
 
     // Legacy notes belong to their creation day, independently of later edits.
     const legacyDates = await page.evaluate(async () => {

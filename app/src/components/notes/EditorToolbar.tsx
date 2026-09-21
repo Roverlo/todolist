@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
-import { Bold, Italic, Underline, Strikethrough, Undo2, Redo2, PaintRoller, Eraser, Quote, Code, CodeXml, Minus, ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, Link, ImagePlus, Paperclip, FolderOpen, CalendarDays, ListTodo, type LucideIcon } from 'lucide-react';
+import { Bold, Italic, Underline, Strikethrough, Undo2, Redo2, PaintRoller, Eraser, Quote, Code, CodeXml, Minus, ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, Link, ImagePlus, Paperclip, FolderOpen, CalendarDays, ListTodo, Circle, CircleCheck, type LucideIcon } from 'lucide-react';
 import { formatPainterPluginKey } from 'reactjs-tiptap-editor/formatpainter';
 import { BULLET_STYLES, NUMBER_STYLES, FONT_FAMILIES } from './extensions/NoteExtensions';
 import { EditorSearch } from './EditorSearch';
@@ -305,14 +305,15 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                     <EditorToolButton label="待办列表" icon={ListTodo} active={lists.task} className="editor-toolbar-text-button editor-todo-btn"
                         description="回车新增一项，空行回车结束列表。"
                         onClick={() => editor.chain().focus().toggleTaskList().run()}><span>待办</span></EditorToolButton>
-                    {lists.task && <EditorSelect className="editor-list-select" aria-label="待办排序" value="" placeholder="待办排序"
-                        description="同一层级的待办跨空行和文字一起排序；说明文字保留原位，同状态保持原顺序，子项随父项移动。可撤销。"
-                        options={[
-                            { value: 'unfinished', label: '未完成在前', disabled: !lists.canSortUnfinished },
-                            { value: 'completed', label: '已完成在前', disabled: !lists.canSortCompleted },
-                        ]}
-                        onChange={value => editor.chain().focus().command(sortNoteTasks(value === 'completed')).run()} />}
                 </div>
+                {lists.task && <div className="editor-toolbar-group" role="group" aria-label="待办排序">
+                    <EditorToolButton label="未完成在前" icon={Circle} className="editor-toolbar-text-button" disabled={!lists.canSortUnfinished}
+                        description="将同一层级的未完成待办排在前面，子项随父项移动，说明文字保留原位。可撤销。"
+                        onClick={() => editor.chain().focus().command(sortNoteTasks(false)).run()}><span>未完成在前</span></EditorToolButton>
+                    <EditorToolButton label="已完成在前" icon={CircleCheck} className="editor-toolbar-text-button" disabled={!lists.canSortCompleted}
+                        description="将同一层级的已完成待办排在前面，子项随父项移动，说明文字保留原位。可撤销。"
+                        onClick={() => editor.chain().focus().command(sortNoteTasks(true)).run()}><span>已完成在前</span></EditorToolButton>
+                </div>}
                 <div className="editor-toolbar-group" role="group" aria-label="插入">
                     <EditorToolButton label="插入链接" icon={Link} description="为选中文字添加链接。" aria-haspopup="dialog" onClick={() => setInsertDialog('link')} />
                     <EditorToolButton label="插入图片" icon={ImagePlus} description="从本机或图片地址插入图片。" aria-haspopup="dialog" onClick={() => setInsertDialog('image')} />

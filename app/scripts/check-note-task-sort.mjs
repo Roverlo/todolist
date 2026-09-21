@@ -9,7 +9,7 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
         task('已完成丙', true), task('<em>未完成丁</em>'))
         + '<p>列表之间的说明</p><blockquote>' + list(task('第二组已完成', true), task('第二组未完成')) + '</blockquote>';
     const noteId = await openNote(html, '待办排序回归');
-    const menu = page.getByRole('combobox', { name: '待办排序', exact: true });
+    const sortButton = name => page.getByRole('button', { name, exact: true });
     const firstList = body.locator(':scope > ul[data-type="taskList"]').first();
     const names = list => list.locator(':scope > li > div > p').evaluateAll(nodes => nodes.map(node => {
         const paragraph = node.cloneNode(true);
@@ -24,15 +24,14 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
         }, text);
     };
     const choose = async name => {
-        await menu.click();
-        assert.equal(await page.getByRole('option', { name, exact: true }).isDisabled(), false, `${name} must be available for an unsorted scope`);
-        await page.getByRole('option', { name, exact: true }).click();
+        assert.equal(await sortButton(name).isDisabled(), false, `${name} must be available for an unsorted scope`);
+        await sortButton(name).click();
     };
     const content = () => body.evaluate(root => root.editor.getHTML());
     const tasksBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.tasks);
     const noteBefore = await page.evaluate(noteId => JSON.parse(localStorage.getItem('project-todo-app')).state.notes.find(note => note.id === noteId), noteId);
     await focus('列表前的说明');
-    assert.equal(await menu.count(), 0, 'Sorting is contextual to checklists');
+    assert.equal(await page.getByRole('group', { name: '待办排序', exact: true }).count(), 0, 'Sorting is contextual to checklists');
     const original = await content();
     await focus('已完成甲');
     const originalSelection = await body.evaluate(root => root.editor.state.selection.toJSON());
@@ -45,10 +44,8 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     assert.deepEqual(await body.locator(':scope > p').allTextContents(), ['列表前的说明', '列表之间的说明']);
     assert.equal(await body.evaluate(root => root.editor.state.selection.$from.parent.textContent), '已完成甲', 'Caret follows the moved task');
     const sorted = await content();
-    await menu.click();
-    assert.equal(await page.getByRole('option', { name: '未完成在前', exact: true }).isDisabled(), true);
-    await page.keyboard.press('Escape');
-    assert.equal(await content(), sorted, 'Cancel and already-sorted checks must not modify the document');
+    assert.equal(await sortButton('未完成在前').isDisabled(), true);
+    assert.equal(await content(), sorted, 'Already-sorted checks must not modify the document');
     await page.getByRole('button', { name: '撤销', exact: true }).click();
     assert.equal(await content(), original, 'One undo restores the complete original list');
     assert.deepEqual(await body.evaluate(root => root.editor.state.selection.toJSON()), originalSelection);
@@ -66,10 +63,9 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     await page.getByRole('button', { name: '撤销', exact: true }).click();
     assert.equal(await content(), sorted);
 
-    // A child-list sort stays inside its parent; keyboard interaction uses the shared menu.
+    // A child-list sort stays inside its parent; both actions are keyboard-accessible buttons.
     await focus('未完成子项');
-    await menu.focus();
-    await page.keyboard.press('ArrowDown');
+    await sortButton('未完成在前').focus();
     await page.keyboard.press('Enter');
     assert.deepEqual(await names(firstList.locator('ul')), ['未完成子项', '已完成子项']);
     assert.deepEqual(await names(firstList), ['未完成乙', '未完成丁', '已完成甲', '已完成丙']);
@@ -87,27 +83,23 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state.tasks), tasksBefore);
     await focus('已完成甲');
     await page.setViewportSize({ width: 1100, height: 698 });
-    await menu.click();
-    // The shared portal positions itself after the menu mounts and the viewport resizes.
-    await page.waitForFunction(() => {
-        const menu = document.querySelector('[role="listbox"][aria-label="待办排序"]');
-        if (!menu) return false;
-        const rect = menu.getBoundingClientRect();
-        return rect.x >= 0 && rect.right <= innerWidth && rect.y >= 0 && rect.bottom <= innerHeight;
-    });
+    for (const name of ['未完成在前', '已完成在前']) {
+        const button = sortButton(name);
+        const rect = await button.boundingBox();
+        assert.ok(rect.x >= 0 && rect.x + rect.width <= 1100 && rect.y >= 0 && rect.y + rect.height <= 698);
+        assert.equal(await button.innerText(), name, 'Both sort actions must have visible labels');
+        if (await button.isEnabled()) await button.click({ trial: true });
+    }
     assert.ok(await body.evaluate(root => root.scrollWidth <= root.clientWidth + 1));
     await page.screenshot({ path: 'ui-check.local/note-task-sort-narrow.png' });
-    await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 1280, height: 840 });
     await page.screenshot({ path: 'ui-check.local/note-task-sort.png' });
 
     await openNote(list(task('唯一待办')), '单项排序');
     await focus('唯一待办');
-    await menu.click();
     for (const name of ['未完成在前', '已完成在前']) {
-        assert.equal(await page.getByRole('option', { name, exact: true }).isDisabled(), true);
+        assert.equal(await sortButton(name).isDisabled(), true);
     }
-    await page.keyboard.press('Escape');
 
     // Separate taskList nodes must participate in one stable sort at the same level.
     const dated = task('<strong>已完成上项</strong>', true, childList)
@@ -139,9 +131,7 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     await choose('已完成在前');
     assert.deepEqual(await topNames(), ['已完成上项', '已完成中项', '未完成中项', '未完成下项'], 'Starting in the last list includes earlier lists');
     assert.deepEqual(await paragraphs(), originalParagraphs);
-    await menu.click();
-    assert.equal(await page.getByRole('option', { name: '已完成在前', exact: true }).isDisabled(), true);
-    await page.keyboard.press('Escape');
+    assert.equal(await sortButton('已完成在前').isDisabled(), true);
     await page.screenshot({ path: 'ui-check.local/note-task-sort-separated.png' });
 
     await openNote(list(task('父项', false, list(task('当前子完成', true)) + '<p>子项说明</p>' + list(task('当前子未完成'))),

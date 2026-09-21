@@ -5,6 +5,7 @@ import { preview } from 'vite';
 import { checkNoteCompletion } from './check-note-completion.mjs';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 import { checkNoteTaskListMerge } from './check-note-task-list-merge.mjs';
+import { checkNoteNavigation } from './check-note-navigation.mjs';
 
 const arg = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const cdp = arg('--cdp');
@@ -45,6 +46,7 @@ try {
     await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
     await checkNoteCompletion(page, body, openNote, saveAndReload);
     await checkNoteTaskSort(page, body, openNote, saveAndReload);
+    await checkNoteNavigation(page);
     assert.deepEqual(errors, []);
     console.log(cdp ? 'Native completion workflow and isolated data.json persistence passed' : 'Production completion workflow passed');
 } catch (error) {

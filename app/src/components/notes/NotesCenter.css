@@ -403,10 +403,25 @@
   justify-content: center;
 }
 
-.notes-calendar-clear-btn {
-  width: 100%;
-  padding: 4px;
-  margin-top: 6px;
+.notes-filter-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--primary-soft);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.notes-filter-summary > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.notes-filter-summary button {
+  flex-shrink: 0;
+  padding: 4px 6px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -416,10 +431,16 @@
   transition: all 0.2s;
 }
 
-.notes-calendar-clear-btn:hover {
+.notes-filter-summary button:hover {
   background: var(--hover-bg);
   border-color: var(--primary);
   color: var(--primary);
+}
+
+.notes-filter-empty {
+  padding: 12px 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 /* ==================== NotesTags 样式 ==================== */

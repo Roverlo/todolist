@@ -1376,14 +1376,15 @@ export const useAppStore = create<AppStore>()(
           });
 
           // 刷新标签计数
+          const activeNotes = state.notes.filter(note => !note.deletedAt);
           state.tags.forEach(tag => {
             if (tag.id === 'all') {
-              tag.count = state.notes.length;
+              tag.count = activeNotes.length;
             } else if (tag.id === 'uncategorized') {
               // 未分类：没有任何标签的笔记数量
-              tag.count = state.notes.filter(n => !n.tags || n.tags.length === 0).length;
+              tag.count = activeNotes.filter(n => !n.tags || n.tags.length === 0).length;
             } else {
-              tag.count = state.notes.filter(n =>
+              tag.count = activeNotes.filter(n =>
                 n.tags?.includes(tag.name)
               ).length;
             }
@@ -1397,12 +1398,12 @@ export const useAppStore = create<AppStore>()(
         ...(date ? { noteCalendarMonth: date.slice(0, 7) } : {}),
       }),
       setNoteCalendarMonth: (month) => set({ noteCalendarMonth: month }),
-      setNoteSearchText: (text: string) => set({ noteSearchText: text }),
-      setActiveNoteTag: (tagId: string | null) => set({ activeNoteTagId: tagId }),
+      setNoteSearchText: (text: string) => set({ noteSearchText: text, ...(text.trim() ? { noteTreeExpandedState: {} } : {}) }),
+      setActiveNoteTag: (tagId: string | null) => set({ activeNoteTagId: tagId, ...(tagId && tagId !== 'all' ? { noteTreeExpandedState: {} } : {}) }),
       toggleNoteTreeNode: (nodeId: string) => {
         set(produce((state: AppStore) => {
           if (!state.noteTreeExpandedState) state.noteTreeExpandedState = {};
-          state.noteTreeExpandedState[nodeId] = !state.noteTreeExpandedState[nodeId];
+          state.noteTreeExpandedState[nodeId] = state.noteTreeExpandedState[nodeId] === false;
         }));
       },
       setNoteTreeNodeExpanded: (nodeId: string, expanded: boolean) => {

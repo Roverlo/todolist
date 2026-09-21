@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useAppStore } from '../../state/appStore';
 import dayjs from 'dayjs';
 
@@ -33,17 +33,20 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
     const setSelectedDate = useAppStore((state) => state.setSelectedNoteDate);
     const currentMonth = useAppStore((state) => state.noteCalendarMonth);
     const setCurrentMonth = useAppStore((state) => state.setNoteCalendarMonth);
+    const setSearchText = useAppStore((state) => state.setNoteSearchText);
+    const setActiveTag = useAppStore((state) => state.setActiveNoteTag);
+    const [locationRequest, setLocationRequest] = useState(0);
+    const query = searchText.trim().toLocaleLowerCase();
+    const activeTag = activeTagId && activeTagId !== 'all' ? tags.find(tag => tag.id === activeTagId) : undefined;
+    const hasFilters = !!query || !!activeTag;
+    const clearFilters = () => {
+        setSearchText('');
+        setActiveTag('all');
+    };
 
     // 筛选笔记
     const filteredNotes = useMemo(() => {
         let result = notes.filter(n => !n.deletedAt);
-
-        // 按日期筛选
-        if (selectedDate) {
-            result = result.filter(note => {
-                return getNoteDate(note) === selectedDate;
-            });
-        }
 
         // 按标签筛选
         if (activeTagId && activeTagId !== 'all') {
@@ -61,16 +64,20 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
         }
 
         // 按搜索文本筛选
-        if (searchText.trim()) {
-            const lowerSearch = searchText.toLowerCase();
-            result = result.filter(note =>
-                note.title.toLowerCase().includes(lowerSearch) ||
-                note.content.toLowerCase().includes(lowerSearch)
-            );
+        if (query) {
+            const parser = new DOMParser();
+            result = result.filter(note => {
+                if (note.title.toLocaleLowerCase().includes(query)) return true;
+                const document = parser.parseFromString(note.content, 'text/html');
+                document.querySelectorAll('script, style').forEach(node => node.remove());
+                // Preserve word boundaries between paragraphs while ignoring markup and attachment paths.
+                document.querySelectorAll('p, div, li, tr, br, h1, h2, h3, h4, h5, h6').forEach(node => node.append(' '));
+                return document.body.textContent?.toLocaleLowerCase().includes(query);
+            });
         }
 
         return result.sort(compareNotes);
-    }, [notes, selectedDate, activeTagId, tags, searchText]);
+    }, [notes, activeTagId, tags, query]);
 
     // 构建树形结构
     const tree = useMemo(() => {
@@ -87,11 +94,31 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
         setTreeNodeExpanded(currentMonthId, true);
     }, [selectedDate, setTreeNodeExpanded]);
 
+    // Selecting or locating a note scrolls to it without turning its date into a filter.
+    useEffect(() => {
+        if (!selectedNoteId) return;
+        const frame = requestAnimationFrame(() => {
+            document.querySelector(`[data-node-id="note-${CSS.escape(selectedNoteId)}"]`)
+                ?.scrollIntoView({ block: 'nearest' });
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [selectedNoteId, locationRequest]);
+
+    const locateNote = (note: Note) => {
+        const date = getNoteDate(note);
+        setSelectedDate(date);
+        setTreeNodeExpanded(`year-${date.slice(0, 4)}`, true);
+        setTreeNodeExpanded(`month-${date.slice(0, 7)}`, true);
+        if (note.isPinned) setTreeNodeExpanded('pinned-group', true);
+        setLocationRequest(request => request + 1);
+    };
+
     const handleNodeClick = (node: NoteTreeNode) => {
         if (node.type === 'note' && node.noteId) {
             const note = notes.find(n => n.id === node.noteId);
             if (note) {
                 onSelectNote(note);
+                locateNote(note);
             }
         } else if (node.children) {
             toggleTreeNode(node.id);
@@ -108,7 +135,15 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
             <div className="notes-sidebar-calendar-container">
                 <NotesCalendar
                     selectedDate={selectedDate ? dayjs(selectedDate) : null}
-                    onDateSelect={(date) => setSelectedDate(date.format('YYYY-MM-DD'))}
+                    onDateSelect={date => {
+                        const key = date.format('YYYY-MM-DD');
+                        setSelectedDate(key);
+                        const note = filteredNotes.find(note => getNoteDate(note) === key);
+                        if (note) {
+                            onSelectNote(note);
+                            locateNote(note);
+                        }
+                    }}
                     currentMonth={dayjs(currentMonth)}
                     onMonthChange={(date) => setCurrentMonth(date.format('YYYY-MM'))}
                 />
@@ -116,14 +151,6 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                     <Icon name="plus" size={14} />
                     {selectedDate ? `${selectedDate} 新建随记` : '新建随记'}
                 </button>
-                {selectedDate && (
-                    <button
-                        className="notes-calendar-clear-btn"
-                        onClick={() => setSelectedDate(null)}
-                    >
-                        清除筛选 ({filteredNotes.length} 条)
-                    </button>
-                )}
             </div>
 
             {/* 快捷导航栏 (控制中枢) - 移至日历下方 */}
@@ -137,6 +164,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                     const index = filteredNotes.findIndex(n => n.id === selectedNoteId);
                     if (index >= 0 && index < filteredNotes.length - 1) {
                         onSelectNote(filteredNotes[index + 1]);
+                        locateNote(filteredNotes[index + 1]);
                     }
                 }}
                 onNext={() => {
@@ -144,23 +172,16 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                     const index = filteredNotes.findIndex(n => n.id === selectedNoteId);
                     if (index > 0) {
                         onSelectNote(filteredNotes[index - 1]);
+                        locateNote(filteredNotes[index - 1]);
                     }
                 }}
                 onLocate={() => {
                     if (!selectedNoteId) return;
-                    const note = notes.find(n => n.id === selectedNoteId);
+                    const note = notes.find(n => n.id === selectedNoteId && !n.deletedAt);
                     if (note) {
-                        const date = dayjs(getNoteDate(note));
-                        setSelectedDate(getNoteDate(note));
-                        const yearId = `year-${date.year()}`;
-                        const monthId = `month-${date.format('YYYY-MM')}`;
-                        setTreeNodeExpanded(yearId, true);
-                        setTreeNodeExpanded(monthId, true);
-
-                        setTimeout(() => {
-                            const el = document.querySelector(`[data-node-id="note-${selectedNoteId}"]`);
-                            if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                        }, 100);
+                        if (!filteredNotes.some(item => item.id === note.id)) clearFilters();
+                        setNoteViewMode('tree');
+                        locateNote(note);
                     }
                 }}
                 canPrev={!!selectedNoteId && filteredNotes.findIndex(n => n.id === selectedNoteId) >= 0 && filteredNotes.findIndex(n => n.id === selectedNoteId) < filteredNotes.length - 1}
@@ -171,8 +192,14 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
             {/* 标签 */}
             <NotesTags />
 
+            {hasFilters && <div className="notes-filter-summary" aria-label="随记筛选条件">
+                <span role="status">{[query && `搜索：${searchText.trim()}`, activeTag && `标签：${activeTag.name}`].filter(Boolean).join(' · ')} · {filteredNotes.length} 条</span>
+                <button type="button" onClick={clearFilters}>清除筛选</button>
+            </div>}
+
             {/* 树形笔记列表 */}
             <div className="notes-sidebar-tree">
+                {hasFilters && filteredNotes.length === 0 && <p className="notes-filter-empty">没有符合条件的随记</p>}
                 <NotesTree
                     tree={tree}
                     selectedNoteId={selectedNoteId}

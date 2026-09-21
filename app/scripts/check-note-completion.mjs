@@ -51,8 +51,7 @@ export async function checkNoteCompletion(page, body, openNote, saveAndReload) {
     assert.deepEqual((await states()).slice(0, 4), [['true', secondTime], ['true', secondTime], ['true', firstTime], ['true', oldTime]],
         'Only reopened tasks get a new time when completing the parent again');
     await body.locator('p').filter({ hasText: '父待办' }).click();
-    await page.getByRole('combobox', { name: '待办排序', exact: true }).click();
-    await page.getByRole('option', { name: '未完成在前', exact: true }).click();
+    await page.getByRole('button', { name: '未完成在前', exact: true }).click();
     assert.deepEqual(await items.locator(':scope > div > p').evaluateAll(nodes => nodes.map(node => {
         const paragraph = node.cloneNode(true);
         paragraph.querySelectorAll('time').forEach(time => time.remove());

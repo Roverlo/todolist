@@ -44,7 +44,8 @@ export function NotesTags() {
                             <button
                                 key={tag.id}
                                 className={'notes-tag-item' + (activeTagId === tag.id ? ' active' : '')}
-                                onClick={() => setActiveTag(tag.id)}
+                                aria-pressed={activeTagId === tag.id}
+                                onClick={() => setActiveTag(activeTagId === tag.id ? 'all' : tag.id)}
                             >
                                 <span className="notes-tag-icon">{tag.icon}</span>
                                 <span className="notes-tag-name">{tag.name}</span>
