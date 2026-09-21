@@ -1115,20 +1115,25 @@ try {
     }, png);
     assert.equal(dropped, true);
     await page.waitForFunction(() => document.querySelectorAll('.ProseMirror img').length === 3);
-    for (const [type, size, message] of [
-        ['image/svg+xml', 10, '请选择 PNG、JPEG、WebP 或 GIF 图片'],
-        ['image/png', 2 * 1024 * 1024 + 1, '请选择 2 MB 以内的图片'],
-    ]) {
-        await body.evaluate((root, { type, size }) => {
-            const transfer = new DataTransfer();
-            transfer.items.add(new File([new Uint8Array(size)], '无效图片', { type }));
-            root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
-        }, { type, size });
-        await page.getByText(message, { exact: true }).waitFor();
-        assert.equal(await body.locator('img').count(), 3, 'Rejected image must not alter the document');
-    }
+    await body.press('Control+End');
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.state.selection.empty);
+    await body.evaluate((root, png) => {
+        const bytes = new Uint8Array(2 * 1024 * 1024 + 1);
+        bytes.set(Uint8Array.from(atob(png), character => character.charCodeAt(0)));
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([bytes], '大图片.png', { type: 'image/png' }));
+        transfer.setData('text/html', '<img src="file:///not-accessible.png">');
+        root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
+    }, png);
+    await page.waitForFunction(() => document.querySelectorAll('.ProseMirror img').length === 4);
+    await body.evaluate(root => {
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([new Uint8Array(10)], '无效图片', { type: 'image/png' }));
+        root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
+    });
+    await page.getByText('无效图片：图片文件内容与格式不符，请重新选择', { exact: true }).waitFor();
     await saveAndReload();
-    assert.equal(await body.locator('img').count(), 3);
+    assert.equal(await body.locator('img').count(), 4);
     const downloadPromise = page.waitForEvent('download');
     await page.getByTitle('导出为 HTML', { exact: true }).click();
     assert.match(await readFile(await (await downloadPromise).path(), 'utf8'), /data:image\/png;base64,/);
@@ -1289,7 +1294,7 @@ try {
             if ([1186, 1538].includes(width)) await page.screenshot({ path: `ui-check.local/compact-toolbar-${width}-${panelOpen ? 'open' : 'closed'}.png` });
         }
     }
-    assert.equal(await page.getByRole('button', { name: '打开图片文件夹', exact: true }).isVisible(), true);
+    assert.equal(await page.getByRole('button', { name: '打开附件文件夹', exact: true }).isVisible(), true);
     await page.getByRole('button', { name: /^回收站/ }).click();
     await page.locator('.notes-center-header').waitFor();
     assert.equal(await page.getByRole('toolbar').count(), 0, 'Trash must not retain editing tools');

@@ -31,7 +31,8 @@ import { Code } from 'reactjs-tiptap-editor/code';
 import { CodeBlock } from 'reactjs-tiptap-editor/codeblock';
 import { HorizontalRule } from 'reactjs-tiptap-editor/horizontalrule';
 import { useToastStore } from '../../../state/toastStore';
-import { readNoteImage, IMAGE_TYPES, MAX_IMAGE_BYTES } from '../../../utils/noteImages';
+import { readNoteImage, IMAGE_TYPES } from '../../../utils/noteImages';
+import { NoteAttachment, NoteFilePaste, insertNoteFiles } from './NoteAttachments';
 import { withTaskCompletion } from './taskCompletion';
 
 export const BULLET_STYLES = [
@@ -220,14 +221,7 @@ const NoteSelection = Extension.create({
     },
 });
 
-export async function insertNoteImages(editor: Editor, files: File[]) {
-    try {
-        const images = await Promise.all(files.map(async file => ({ src: await readNoteImage(file), alt: file.name })));
-        if (!editor.isDestroyed) editor.chain().focus().insertContent(images.map(attrs => ({ type: 'imageBlock', attrs }))).run();
-    } catch (error) {
-        useToastStore.getState().addToast(error instanceof Error ? error.message : '图片插入失败', 'error');
-    }
-}
+export const insertNoteImages = insertNoteFiles;
 
 // Use the same ProseMirror as the editor: the UI library bundles a second
 // DecorationSet in its table implementation, which crashes when highlights overlap.
@@ -276,39 +270,14 @@ export const noteExtensions = [
     } }),
     // Ctrl+V replaces selected text; changing only its href belongs in the link dialog.
     Link.configure({ openOnClick: false, linkOnPaste: false }),
-    Image.extend<IImageOptions & { allowBase64: boolean }>({
-        addProseMirrorPlugins() {
-            const editor = this.editor;
-            return [...(this.parent?.() || []), new Plugin({
-                props: {
-                    handlePaste: (_view, event) => {
-                        if (event.clipboardData?.getData('text/html')) return false;
-                        const files = Array.from(event.clipboardData?.files || []).filter(file => file.type.startsWith('image/'));
-                        if (!files.length) return false;
-                        event.preventDefault();
-                        void insertNoteImages(editor, files);
-                        return true;
-                    },
-                    handleDrop: (view, event, _slice, moved) => {
-                        if (moved) return false;
-                        const files = Array.from(event.dataTransfer?.files || []).filter(file => file.type.startsWith('image/'));
-                        if (!files.length) return false;
-                        event.preventDefault();
-                        const position = view.posAtCoords({ left: event.clientX, top: event.clientY });
-                        if (position) editor.commands.setTextSelection(position.pos);
-                        void insertNoteImages(editor, files);
-                        return true;
-                    },
-                },
-            })];
-        },
-    }).configure({
+    NoteAttachment, NoteFilePaste,
+    Image.configure({
         allowBase64: true,
         acceptMimes: IMAGE_TYPES,
-        maxSize: MAX_IMAGE_BYTES,
+        maxSize: Number.MAX_SAFE_INTEGER,
         upload: readNoteImage,
-        onError: error => useToastStore.getState().addToast(error.message, 'error'),
-    }),
+        onError: error => useToastStore.getState().addToast(error.message, 'error', 8000),
+    } as Partial<IImageOptions>),
     NoteTable.configure({ resizable: true, HTMLAttributes: { style: 'border: 1px solid #000; border-collapse: collapse;' } }),
     SearchAndReplace.configure({ disableRegex: true }),
     Clear, History, Blockquote, Code, CodeBlock.configure({ enableTabIndentation: true }), HorizontalRule,

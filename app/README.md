@@ -47,3 +47,15 @@ npm run tauri:build -- --no-bundle
 涉及数据写入前备份用户 Documents/ProjectTodo 全目录并核对 SHA-256。测试使用独立 `PROJECTTODO_TEST_DATA_DIR` 和 `WEBVIEW2_USER_DATA_FOLDER`，真实同步服务使用专用测试端点；不得用生产数据测试恢复。
 
 日常验证按改动选择 [RELEASE_QA.md](docs/RELEASE_QA.md) 中的检查；纯文档变更只核对内容、引用和 diff。完整 EXE 交付仍需原生流程与数据保护检查。
+
+## 图片与文件附件
+
+随记支持粘贴、拖入或通过工具栏“插入附件”选择任意格式文件（包括空文件），不设单文件大小上限。PNG、JPEG、WebP、GIF 默认显示为图片；其他格式显示文件卡片，也可用“插入附件”将图片作为原文件保存。文件夹需先压缩。图片不会自动降质或压缩。
+
+EXE 版统一将文件保存在系统 Documents/ProjectTodo/attachments；设置 → 数据 → 附件存储位置可查看并打开实际目录。正文只保存附件引用，另存为可导出原文件；“所在文件夹”定位存储副本。网页预览使用浏览器内嵌存储，与 EXE 独立，仍受浏览器存储容量约束。
+
+旧随记的内嵌图片首次加载时自动迁移。迁移前在数据目录旁生成 `ProjectTodo-before-attachments-<时间>` 全目录备份，逐文件校验内容并写入 `RESTORE.ps1`；原 images 目录保留，不自动删除。迁移失败会保留原正文并提示。需要回滚时先关闭程序，再运行备份目录中的恢复脚本。
+
+本地/自动备份、云同步上传以及随记 HTML/Markdown 导出会嵌入附件内容，迁移和恢复不依赖原电脑的路径。恢复时先写入附件，全部成功后才应用数据。附件缺失会使备份或导出明确失败。手动迁移需复制整个数据目录；仅复制 data.json 不包含新附件。
+
+附件功能验证：`node scripts/test-note-attachments.mjs`；原生验证：`./scripts/test-portable.ps1 -Executable '<EXE绝对路径>' -Attachments`，包含大图、文件字节完整性、旧图迁移、缺失/写入失败及备份恢复。

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
-import { Bold, Italic, Underline, Strikethrough, Undo2, Redo2, PaintRoller, Eraser, Quote, Code, CodeXml, Minus, ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, Link, ImagePlus, FolderOpen, CalendarDays, ListTodo, type LucideIcon } from 'lucide-react';
+import { Bold, Italic, Underline, Strikethrough, Undo2, Redo2, PaintRoller, Eraser, Quote, Code, CodeXml, Minus, ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, Link, ImagePlus, Paperclip, FolderOpen, CalendarDays, ListTodo, type LucideIcon } from 'lucide-react';
 import { formatPainterPluginKey } from 'reactjs-tiptap-editor/formatpainter';
 import { BULLET_STYLES, NUMBER_STYLES, FONT_FAMILIES } from './extensions/NoteExtensions';
 import { EditorSearch } from './EditorSearch';
@@ -9,6 +9,7 @@ import { EditorTablePicker } from './EditorTablePicker';
 import { EditorInsertDialog } from './EditorInsertDialog';
 import { openNoteImageFolder } from '../../utils/noteImages';
 import { useToastStore } from '../../state/toastStore';
+import { insertNoteFiles } from './extensions/NoteAttachments';
 import { sortNoteTasks } from './extensions/sortNoteTasks';
 
 const COLOR_PALETTE = [
@@ -138,6 +139,7 @@ function WordColorPicker({
 }
 
 export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: ReactNode }) {
+    const attachmentInput = useRef<HTMLInputElement>(null);
     const toolbarRef = useRef<HTMLDivElement>(null);
     const [searchOpen, setSearchOpen] = useState(false);
     const [insertDialog, setInsertDialog] = useState<'link' | 'image' | 'date' | null>(null);
@@ -270,7 +272,7 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                         options={[{ value: 'auto', label: '原始宽度' }, ...['25%', '50%', '75%', '100%'].map(value => ({ value, label: `${value} 正文宽度` }))]}
                         onChange={value => editor.chain().focus().updateImage({ width: value === 'auto' ? null
                             : Math.round(editor.view.dom.clientWidth * Number.parseInt(value) / 100) }).run()} />
-                    <EditorToolButton label="打开图片文件夹" icon={FolderOpen}
+                    <EditorToolButton label="打开附件文件夹" icon={FolderOpen}
                         onClick={() => void openNoteImageFolder(editor.getAttributes('imageBlock').src || editor.getAttributes('image').src)
                             .catch(error => useToastStore.getState().addToast(error instanceof Error ? error.message : String(error), 'error'))} />
                 </div>}
@@ -314,6 +316,9 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                 <div className="editor-toolbar-group" role="group" aria-label="插入">
                     <EditorToolButton label="插入链接" icon={Link} description="为选中文字添加链接。" aria-haspopup="dialog" onClick={() => setInsertDialog('link')} />
                     <EditorToolButton label="插入图片" icon={ImagePlus} description="从本机或图片地址插入图片。" aria-haspopup="dialog" onClick={() => setInsertDialog('image')} />
+                    <input ref={attachmentInput} type="file" multiple hidden aria-label="选择附件"
+                        onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void insertNoteFiles(editor, files, true); }} />
+                    <EditorToolButton label="插入附件" icon={Paperclip} description="选择任意格式文件，也可直接粘贴或拖入。" onClick={() => attachmentInput.current?.click()} />
                     <EditorTablePicker editor={editor} />
                     <EditorToolButton label="插入日期" icon={CalendarDays} className="editor-toolbar-text-button editor-todo-btn"
                         description="选择任意日期，或快速插入昨天、今天、明天。" aria-haspopup="dialog"

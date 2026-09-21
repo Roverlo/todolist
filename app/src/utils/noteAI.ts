@@ -4,7 +4,7 @@ import { isNoteDate } from './noteDate';
 export function noteContentForAI(html: string): { text: string; imageCount: number } {
     const document = new DOMParser().parseFromString(html, 'text/html');
     const imageCount = document.querySelectorAll('img').length;
-    document.querySelectorAll('script, style, img').forEach(node => node.remove());
+    document.querySelectorAll('script, style, img, [data-type="attachment"]').forEach(node => node.remove());
     document.querySelectorAll('a[href]').forEach(node => {
         const href = node.getAttribute('href') || '';
         if (/^https?:\/\//i.test(href) && href !== node.textContent?.trim()) node.append(` (${href})`);

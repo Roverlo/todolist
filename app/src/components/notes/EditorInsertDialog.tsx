@@ -108,7 +108,7 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
                             <button type="button" data-insert-autofocus className="editor-image-picker" onClick={() => fileRef.current?.click()}>
                                 {file && preview ? <img src={preview} alt="待插入图片预览" /> : <ImagePlus size={28} />}
                                 <strong>{file ? file.name : '选择图片'}</strong>
-                                <span>{file ? '点击可重新选择' : 'PNG、JPG、WebP、GIF · 单张不超过 2 MB'}</span>
+                                <span>{file ? '点击可重新选择' : 'PNG、JPG、WebP、GIF · 不限制图片大小'}</span>
                             </button>
                         </> : <label>图片链接<input value={url} onChange={event => setUrl(event.target.value)} placeholder="https://example.com/photo.png" required /></label>}
                         <label>图片说明（选填）<input value={description} onChange={event => setDescription(event.target.value)} placeholder="如：机房网络拓扑" /></label>
@@ -116,10 +116,10 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
                         <div className="editor-image-storage">
                             <strong>图片存在哪里？</strong>
                             <p>{source === 'url' ? '网络图片引用原网址，需要联网查看。'
-                                : isTauri() ? '本地图片另存到数据文件夹下的 images，data.json 的随记正文内也保留副本；可在“设置 → 数据”查看实际位置。'
+                                : isTauri() ? '图片与文件统一保存在附件目录；可在“设置 → 数据 → 附件存储位置”查看。备份和导出会包含图片。'
                                     : '网页预览中的图片内嵌在当前浏览器的随记数据中，与 EXE 版独立。'}</p>
                             <button type="button" disabled={!isTauri()} onClick={() => void openNoteImageFolder().catch(error => setError(String(error)))}>
-                                <FolderOpen size={15} />打开图片文件夹
+                                <FolderOpen size={15} />打开附件文件夹
                             </button>
                         </div>
                     </>}

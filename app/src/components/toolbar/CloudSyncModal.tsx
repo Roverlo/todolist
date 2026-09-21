@@ -1,3 +1,5 @@
+import { transferNotes } from '../../utils/noteAttachments';
+import { createAutoBackup } from '../../utils/backupUtils';
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useAppStoreShallow, useAppStore } from '../../state/appStore';
@@ -139,7 +141,7 @@ export const CloudSyncModal = ({ open, onClose }: CloudSyncModalProps) => {
         setMessage('正在上传数据...');
 
         try {
-            const data = JSON.stringify({ tasks, projects, settings, notes, tags, timestamp: Date.now() }, null, 2);
+            const data = JSON.stringify({ tasks, projects, settings, notes: await transferNotes(notes, 'export'), tags, timestamp: Date.now() }, null, 2);
 
             if (config.method === 'smb') {
                 const result = await invoke<{ success: boolean; message: string }>('smb_upload', {
@@ -215,7 +217,9 @@ export const CloudSyncModal = ({ open, onClose }: CloudSyncModalProps) => {
                 const parsed = JSON.parse(cloudData);
 
                 // 备份本地
-                localStorage.setItem('cloudSync_localBackup', JSON.stringify({ tasks, projects, settings, notes, tags, timestamp: Date.now() }));
+                const backup = await createAutoBackup(useAppStore.getState());
+                if (!backup) throw new Error('无法备份当前数据，已停止恢复');
+                if (parsed.notes) parsed.notes = await transferNotes(parsed.notes, 'import');
 
                 // 应用
                 useAppStore.setState((state) => ({

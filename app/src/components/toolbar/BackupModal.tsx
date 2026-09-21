@@ -1,3 +1,4 @@
+import { transferNotes } from '../../utils/noteAttachments';
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../state/appStore';
 import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
@@ -65,7 +66,7 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
             }
 
             // 使用新的工具函数创建带校验和的备份数据
-            const backupData = createBackupData(useAppStore.getState());
+            const backupData = await createBackupData(useAppStore.getState());
 
             await writeTextFile(filePath, JSON.stringify(backupData, null, 2));
             setStatus('success');
@@ -130,14 +131,15 @@ export const BackupModal = ({ open, onClose }: BackupModalProps) => {
         }
     };
 
-    const handleConfirmRestore = () => {
+    const handleConfirmRestore = async () => {
         if (!pendingRestore) return;
 
         setIsProcessing(true);
         setConfirmOpen(false);
 
         try {
-            const backupData = pendingRestore.data;
+            const backupData = structuredClone(pendingRestore.data);
+            if (backupData.data.notes) backupData.data.notes = await transferNotes(backupData.data.notes, 'import');
 
             // 使用 setState 直接覆盖数据
             useAppStore.setState({

@@ -41,6 +41,7 @@
 | E05 | Tab/Shift+Tab、列表、代码、表格、Escape | 正文插入空白而非跳走；列表缩进、表格导航保留；可退出编辑焦点 |
 | E06 | 插入表格、立即输入、行列、合并/拆分、右边缘缩小 | 鼠标选择尺寸后焦点留在新单元格；整表宽度可缩小，内部列独立拖动；保存/撤销/导出保留 |
 | E07 | 链接添加/修改、图片上传/粘贴/拖放/路径 | 对话框完整可见；满宽图片选中不撑出横向滚动条，四角可拖拽缩放；图片文件能找到，保存及导出可读 |
+| E14 | 任意文件附件、无大小上限图片 | 选择/粘贴/拖入，含 HTML 的图片剪贴板、Windows 资源管理器复制、空文件、未知格式、超 2 MB 图片；撤销/重做、另存为字节一致；保存重启、空附件目录恢复；文件缺失或写入失败不得虚报成功 |
 | E08 | 查找替换、格式刷、清除格式 | 命中与替换范围正确，撤销可恢复 |
 | E09 | AI 显隐、不同桌面窗口宽度、长文滚动 | 查找、清除格式、引用、代码、分隔线直接可用；选中图片显示宽度及文件夹入口；常用桌面宽度两行，窄窗口必要时换行，不重叠或截断；AI 显隐不挤动顶栏 |
 | E10 | 正式构建中的扩展、插件和装饰对象兼容 | 无重复注册；选区、查找、代码高亮与表格缩放使用同一 DecorationSet；跨节点长/短/空替换、撤销/重做、图片及切换页面往返正常。不能仅凭 npm ls 已去重判断安全 |
@@ -54,7 +55,7 @@
 | A06 | JSON/温度/token 参数兼容、拒绝/截断/空结果 | 有界且仅针对明确不兼容的降级；不盲重试鉴权或限流 |
 | S01 | 主题、字体大小 | 页面、弹窗、色盘都可读，重开持久化 |
 | E13 | 插入时间、撤销/重做、保存重开 | 在光标处插入当前本地日期和时间，作为固定文字保存；焦点留在正文，随记归档日期不变 |
-| S02 | 数据存储位置、图片目录、导入/导出 | 显示实际本地位置；区分 data.json 内嵌图片、images 额外副本、网络链接与网页预览；打开目录正确；导出可读；导入预览与实际结果一致 |
+| S02 | 数据与附件存储位置、导入/导出 | 图片与普通文件统一在 attachments；data.json 仅引用；旧图迁移前完整备份、原 images 保留；网络图片与网页预览说明准确，导出包含附件 |
 | S03 | 本地备份、定时备份、恢复 | 随记和标签完整；恢复往返一致；旧备份缺省字段不清空当前随记；校验失败或恢复前备份失败时不覆盖；每次恢复重新确认 |
 | S04 | 远程同步设置及失败状态 | 未配置提示清晰；真实服务读写需独立测试端点，不使用生产空间 |
 | S05 | 关于、感谢、版本检查 | 文案和版本正确；网络检查失败可恢复，不能伪称升级成功 |
@@ -70,16 +71,20 @@ node scripts/test-ai-compat.mjs
 npm run test:notes
 node scripts/test-progress-save.mjs
 node scripts/test-backup.mjs
+node scripts/test-note-attachments.mjs
 node scripts/test-task-workflow.mjs
 node scripts/test-recurring.mjs
 node scripts/test-ui-regressions.mjs
 node scripts/test-note-workflow.mjs
 ./scripts/test-portable.ps1 -Executable '<交付 EXE 绝对路径>' -EditorWorkflow
+./scripts/test-portable.ps1 -Executable '<交付 EXE 绝对路径>' -Attachments
 ```
 
 待办联动、完成时间、排序及列表合并可单独运行 `node scripts/test-note-completion.mjs` 检查生产网页构建，或运行 `./scripts/test-portable.ps1 -Executable '<被测 EXE 绝对路径>' -NoteCompletion` 检查隔离原生数据的写入与重载。`npm run test:notes` 也包含这组编辑器回归。删除间隔后相邻同级待办应合并，间距与单个列表一致；撤销恢复间隔，子项、格式和完成时间保持，仍有段落或位于不同父项/单元格的列表保持独立。
 
 原生工作流测试前退出其他 ProjectTodo 进程，避免单实例锁唤醒用户窗口。Computer-use 会话中窗口生命周期直接用其 API 操作；不要混用其他 Windows UI 自动化接口。
+
+`-Attachments` 会依次弹出备份保存、备份打开和附件另存为原生对话框；用 Computer Use 或人工在 180 秒内输入脚本打印的隔离路径。脚本自动验证恢复前后文件哈希，Windows 资源管理器真实复制粘贴另行验收。
 
 真实模型的提取质量、真实同步服务和不同 Windows/WebView 版本应独立记录覆盖情况。本机模拟响应只能证明传输、兼容与交互流程，不能证明所有供应商和模型质量。
 

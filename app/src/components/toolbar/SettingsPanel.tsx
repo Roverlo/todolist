@@ -488,14 +488,14 @@ export const SettingsPanel = ({
                                 onClick={isTauri() ? handleOpenDataDirectory : undefined}
                             />
                             <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--text-subtle)', padding: '0 16px' }}>
-                                <p><strong>{isTauri() ? 'data.json' : '随记数据'}</strong>：保存任务、随记文字、表格、插入的时间，以及本地图片的内嵌副本。</p>
+                                <p><strong>{isTauri() ? 'data.json' : '随记数据'}</strong>：保存任务、随记正文和附件引用。EXE 版的图片与文件保存在下方附件目录。</p>
                                 <p><strong>网络图片和链接</strong>：只保存网址，不会下载目标内容，离线时可能无法查看。</p>
-                                <p>目前支持插入图片和链接，尚不支持将任意文件作为附件保存。迁移随记可使用“本地备份”，其中包含内嵌图片；旧版图片可能只有内嵌副本。</p>
+                                <p>支持图片及任意格式文件的粘贴、拖入和选择插入，不设单文件大小上限。迁移时请使用包含附件的“本地备份”，或复制整个数据目录。旧图片迁移前会自动备份，原 images 目录保留。</p>
                             </div>
                             {isTauri() && <SettingCard
                                 icon="🖼️"
-                                title="图片文件夹"
-                                description="images：新上传、粘贴或拖入的本地图片会额外保存在这里；仅复制此文件夹不能恢复随记。"
+                                title="附件存储位置"
+                                description={dataDirectory ? `${dataDirectory}\\attachments（点击打开）` : '系统“文档”文件夹 / ProjectTodo / attachments（点击打开）'}
                                 onClick={() => void openNoteImageFolder().catch(error => window.alert(String(error)))}
                             />}
 

@@ -199,18 +199,18 @@ try {
     await page.getByRole('button', { name: '插入图片', exact: true }).click();
     const picture = page.getByRole('dialog', { name: '插入图片', exact: true });
     assert.equal(await picture.getByLabel('图片说明（选填）', { exact: true }).count(), 1);
-    assert.equal(await picture.getByRole('button', { name: '打开图片文件夹', exact: true }).isEnabled(), native);
+    assert.equal(await picture.getByRole('button', { name: '打开附件文件夹', exact: true }).isEnabled(), native);
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6Wb8AAAAASUVORK5CYII=', 'base64');
     await picture.locator('input[type="file"]').setInputFiles({ name: '验证图片.png', mimeType: 'image/png', buffer: png });
     await picture.getByLabel('图片说明（选填）', { exact: true }).fill('用于验证的图片');
     await page.screenshot({ path: join(output, 'image-dialog.png') });
     await picture.getByRole('button', { name: '插入图片', exact: true }).click();
     await body.locator('img').waitFor();
-    assert.match(await body.locator('img').getAttribute('src'), /^data:image\/png;base64,/);
+    assert.match(await body.locator('img').getAttribute('src'), native ? /^http:\/\/attachment.localhost\// : /^data:image\/png;base64,/);
     await page.getByRole('button', { name: '保存', exact: true }).click();
     if (native) {
         const filename = createHash('sha256').update(png).digest('hex') + '.png';
-        const imagePath = join(dirname(dataPath), 'images', filename);
+        const imagePath = join(dirname(dataPath), 'attachments', filename);
         assert.deepEqual(await readFile(imagePath), png, 'The actual native image file must match the upload');
         assert.ok((await readdir(dirname(imagePath))).includes(filename));
     }

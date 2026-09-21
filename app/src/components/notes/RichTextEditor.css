@@ -29,9 +29,10 @@
 @container note-document (max-width: 900px) {
     .editor-toolbar .notes-ai-description { display: none; }
 }
-@container note-document (max-width: 860px) {
+@container note-document (max-width: 950px) {
     .editor-toolbar .editor-todo-btn { width: 28px; padding: 0; }
     .editor-toolbar .editor-todo-btn span { display: none; }
+    .editor-toolbar-row:nth-child(2) .editor-toolbar-group { gap: 0; }
 }
 .editor-toolbar .custom-select-trigger { height: 30px; padding: 0 6px; gap: 3px; font-size: 12px; font-weight: 400; color: var(--text-secondary); border-color: var(--border); border-radius: 6px; }
 .editor-toolbar .custom-select-arrow { width: 12px; height: 12px; stroke-width: 1.75; }
@@ -358,3 +359,10 @@ div[data-richtext-portal] { z-index: 1200; }
 .editor-insert-dialog .editor-dialog-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
 .editor-insert-dialog .editor-dialog-primary:hover:not(:disabled) { background: var(--primary-hover); }
 .editor-dialog-error { margin: 0; padding: 8px 10px; background: #fef2f2; color: #b42318; border-radius: 6px; font-size: 12px; overflow-wrap: anywhere; }
+
+/* File attachments share the editor's existing surface and focus colors. */
+.note-attachment { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); max-width: 100%; }
+.note-attachment-name { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+.note-attachment-size { color: var(--text-subtle); font-size: 12px; }
+.note-attachment button { border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); padding: 4px 8px; cursor: pointer; font: inherit; font-size: 12px; }
+.note-attachment button:focus-visible, .note-attachment.ProseMirror-selectednode { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 2px; }

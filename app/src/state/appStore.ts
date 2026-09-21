@@ -1,3 +1,5 @@
+import { migrateStoredAttachments } from '../utils/noteAttachments';
+import { useToastStore } from './toastStore';
 import { create, type StoreApi } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { StateStorage } from 'zustand/middleware';
@@ -378,6 +380,9 @@ const withHistory = (set: StoreApi<AppStore>['setState'], updater: (state: Draft
 
 // noopStorage removed
 
+
+// Startup effects must not persist initial/empty state while native data and attachments are loading.
+let storageHydrated = false;
 
 export const useAppStore = create<AppStore>()(
   persist(
@@ -1485,7 +1490,13 @@ export const useAppStore = create<AppStore>()(
             try {
               // 优先尝试读取本地文件 (Portable Mode)
               const data = await invoke<string>('load_data');
-              if (data) return data;
+              if (data) {
+                try { return await migrateStoredAttachments(data); }
+                catch (error) {
+                  useToastStore.getState().addToast(`旧图片迁移未完成，原数据已保留：${String(error)}`, 'error', 10000);
+                  return data;
+                }
+              }
 
               // 如果文件不存在，回退读取 localStorage (迁移旧数据)
               const local = window.localStorage.getItem(name);
@@ -1497,14 +1508,14 @@ export const useAppStore = create<AppStore>()(
                   console.warn('Failed to auto-migrate data to file', e);
                 }
               }
-              return local;
+              return local ? await migrateStoredAttachments(local) : local;
             } catch (e) {
               console.warn('Failed to load portable data, falling back to localStorage', e);
               return window.localStorage.getItem(name);
             }
           },
           setItem: async (name: string, value: string): Promise<void> => {
-            if (typeof window === 'undefined') return;
+            if (typeof window === 'undefined' || !storageHydrated) return;
 
             // 1. 写入本地文件 (Portable)
             try {
@@ -1664,8 +1675,13 @@ export const useAppStore = create<AppStore>()(
         activeView: state.activeView,
         selectedNoteId: state.selectedNoteId,
       }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+      onRehydrateStorage: () => {
+        storageHydrated = false;
+        return state => {
+          if (!state) return;
+          storageHydrated = true;
+          state.setHasHydrated(true);
+        };
       },
     },
   ),

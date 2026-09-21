@@ -1,3 +1,4 @@
+import { embedAttachments } from '../../utils/noteAttachments';
 import { useState, useEffect, useLayoutEffect, useCallback, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
@@ -279,15 +280,17 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
                 <div className="note-editor-actions">
                     <button
                         className="btn btn-light"
-                        onClick={() => {
-                            const html = editor?.getHTML() || '';
-                            const blob = new Blob([html], { type: 'text/html' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `${title || '未命名随记'}.html`;
-                            a.click();
-                            URL.revokeObjectURL(url);
+                        onClick={async () => {
+                            try {
+                                const html = await embedAttachments(editor?.getHTML() || '');
+                                const blob = new Blob([html], { type: 'text/html' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `${title || '未命名随记'}.html`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                            } catch (error) { useToastStore.getState().addToast(`导出失败：${error instanceof Error ? error.message : String(error)}`, 'error', 8000); }
                         }}
                         title="导出为 HTML"
                     >

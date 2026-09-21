@@ -11,7 +11,7 @@
 | 任务筛选与排序 | [src/hooks/useVisibleTasks.ts](../src/hooks/useVisibleTasks.ts) |
 | 项目、任务与周期任务 | src/components/sidebar/、src/components/task-table/、src/components/toolbar/ |
 | 随记编辑与 AI 交互 | src/components/notes/、src/services/、src/utils/noteAI.ts |
-| 备份、图片与恢复 | src/utils/backupUtils.ts、src/utils/noteImages.ts、src/components/toolbar/BackupModal.tsx |
+| 备份、图片与恢复 | src/utils/backupUtils.ts、src/utils/noteAttachments.ts、src/utils/noteImages.ts、src/components/toolbar/BackupModal.tsx |
 | 导入、导出与远程同步 | src/components/toolbar/ImportModal.tsx、src/components/toolbar/ExportModal.tsx、src/components/toolbar/CloudSyncModal.tsx |
 | 原生存储、同步命令与窗口生命周期 | [src-tauri/src/lib.rs](../src-tauri/src/lib.rs)、src-tauri/src/ |
 | 前端入口与关闭协调 | [src/App.tsx](../src/App.tsx) |
@@ -29,3 +29,9 @@
 ## 验证与交付
 
 日常迭代运行受影响模块的检查；数据、备份、恢复、窗口关闭和单实例改动需要对应失败场景回归。发布前执行 [Windows 验收](RELEASE_QA.md)，网页构建通过不能代替被交付 EXE 的真实运行结果。本文中的技术步骤不授权合并主分支或发布。
+
+## 附件存储
+
+EXE 通过 attachments.rs 的二进制命令写入 attachments，文件名为 SHA-256 与规范化扩展名；写入使用临时文件和重命名，同名内容不一致时拒绝覆盖。随记使用稳定的 attachment.localhost 引用，原生协议仅读取此目录的有效附件标识；图片按受支持格式返回，其余内容作为二进制，不作为网页执行。任意文件由 NoteAttachments 扩展显示为文件卡片，文件名使用文本节点，另存为由用户选择目的地。
+
+noteAttachments.ts 统一处理内嵌内容与文件引用转换。日常保存仅含引用，跨电脑传输才嵌入内容；backupUtils.createBackupData 为异步方法，调用方必须 await。旧图迁移前做完整可恢复备份，保留原 images；没有新增自动删除附件逻辑，以免破坏撤销、回收站或旧备份引用。

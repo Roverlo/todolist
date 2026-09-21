@@ -1,3 +1,4 @@
+import { transferNotes } from './noteAttachments';
 import type { AppData, Project, Task, RecurringTemplate, Settings, Dictionary, SortScheme, Filters, GroupBy, SortRule, SavedFilter, ColumnConfig, Note, NoteTag } from '../types';
 
 // 统一版本号
@@ -136,7 +137,7 @@ export const validateBackupFile = (content: string): ValidationResult => {
 /**
  * 创建带校验和的备份数据
  */
-export const createBackupData = (appData: AppData): BackupFile => {
+export const createBackupData = async (appData: AppData): Promise<BackupFile> => {
     const data = {
         projects: appData.projects ?? [],
         tasks: appData.tasks ?? [],
@@ -149,7 +150,7 @@ export const createBackupData = (appData: AppData): BackupFile => {
         sortRules: appData.sortRules,
         savedFilters: appData.savedFilters,
         columnConfig: appData.columnConfig,
-        notes: appData.notes ?? [],
+        notes: await transferNotes(appData.notes ?? [], 'export'),
         tags: appData.tags ?? [],
     };
 
@@ -190,7 +191,7 @@ export const createAutoBackup = async (appData: AppData, retentionCount: number 
         const filePath = await join(backupDir, filename);
 
         // 创建备份数据并写入文件
-        const backupData = createBackupData(appData);
+        const backupData = await createBackupData(appData);
         await writeTextFile(filePath, JSON.stringify(backupData, null, 2));
 
         // 清理旧的自动备份

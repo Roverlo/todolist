@@ -1,3 +1,4 @@
+import { transferNotes } from '../../utils/noteAttachments';
 import { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import type { Note } from '../../types';
@@ -50,13 +51,16 @@ export const NoteExportModal = ({ open, onClose, notes, defaultFileName }: Props
             return;
         }
 
+        let portableNotes: Note[];
+        try { portableNotes = await transferNotes(notesToExport, 'export'); }
+        catch (error) { alert(`附件导出失败：${error instanceof Error ? error.message : String(error)}`); return; }
         // 生成 Markdown 内容
         let markdown = `# ${defaultFileName}\n\n`;
         markdown += `导出时间: ${new Date().toLocaleString('zh-CN')}\n`;
         markdown += `笔记数量: ${notesToExport.length}\n\n`;
         markdown += '---\n\n';
 
-        notesToExport.forEach(note => {
+        portableNotes.forEach(note => {
             markdown += `## ${note.title || '未命名随记'}\n\n`;
             markdown += `所属日期: ${getNoteDate(note)}\n\n`;
             markdown += `创建时间: ${new Date(note.createdAt).toLocaleString('zh-CN')}\n\n`;
