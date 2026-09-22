@@ -1,3 +1,4 @@
+import { checkNotesCommandBar } from './check-notes-command-bar.mjs';
 import assert from 'node:assert/strict';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 import { checkNoteCompletion } from './check-note-completion.mjs';
@@ -965,8 +966,6 @@ try {
         + '<tr><td style="background-color: #fff200"><p></p></td><td colwidth="243"><p>会议记录</p></td><td colwidth="196"><p></p></td><td colwidth="280"><p></p></td></tr>'
         + '<tr><td><p></p></td><td colwidth="243"><p>保留表格内容</p></td><td colwidth="196"><p></p></td><td colwidth="280"><p></p></td></tr>'
         + '</tbody></table>', '表格横向缩放');
-    const hideAssistant = page.getByRole('button', { name: '隐藏 AI 助手', exact: true });
-    if (await hideAssistant.isVisible()) await hideAssistant.click();
     const resizeTable = body.locator('table');
     const dragColumn = async (column, delta) => {
         const cell = await resizeTable.locator('tr').first().locator('td').nth(column).boundingBox();
@@ -992,7 +991,6 @@ try {
     assert.equal(await resizeTable.locator('tr').first().locator('td').nth(1).getAttribute('colwidth'), '283', 'Internal column borders must remain resizable');
     const savedWidth = (await resizeTable.boundingBox()).width;
     await saveAndReload();
-    if (await hideAssistant.isVisible()) await hideAssistant.click();
     assert.ok(Math.abs((await resizeTable.boundingBox()).width - savedWidth) < 2, 'Saved table widths must survive reload');
     assert.equal(await resizeTable.locator('tr').count(), 2);
     assert.equal(await resizeTable.getByText('保留表格内容', { exact: true }).count(), 1);
@@ -1222,9 +1220,9 @@ try {
 
     await openNote('<p>工具栏布局检查</p>', '工具栏布局');
     const toolbarHeight = (await page.getByRole('toolbar').boundingBox()).height;
-    assert.ok(toolbarHeight <= 82, 'The toolbar should occupy only two compact rows');
+    assert.ok(toolbarHeight <= 86, 'The toolbar should occupy only two compact rows');
     assert.equal(await page.locator('.notes-center-header').count(), 0, 'Editing must not reserve a separate title bar');
-    assert.equal(await page.getByRole('toolbar').getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'AI actions must be integrated into the toolbar');
+    assert.equal(await page.locator('.notes-ai-tools').getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'AI settings belong to the peer AI section');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
     assert.equal(await page.getByLabel('更多工具', { exact: true }).count(), 0, 'Tools should be directly accessible');
     for (const name of ['插入日期', '查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线', '未完成在前', '已完成在前']) {
@@ -1248,51 +1246,18 @@ try {
     assert.equal(await page.locator('.ai-panel-header').count(), 0, 'Do not add a second title bar for the assistant');
     for (const width of [1100, 1186, 1280, 1538, 1920]) {
         await page.setViewportSize({ width, height: 698 });
-        let closedLayout;
-        for (const panelOpen of [false, true, false]) {
-            const toggle = page.getByRole('button', { name: panelOpen ? '显示 AI 助手' : '隐藏 AI 助手', exact: true });
-            if (await toggle.isVisible()) await toggle.click();
-            const layout = await page.locator('.notes-main-root').evaluate(el => ({
-                topBars: ['.notes-center-actions', '#editor-toolbar-portal'].map(selector => {
-                    const rect = el.querySelector(selector).getBoundingClientRect();
-                    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-                }),
-                titleTop: el.querySelector('.note-editor-title').getBoundingClientRect().top,
-            }));
-            closedLayout ??= layout;
-            if (width >= 1538) assert.equal(layout.topBars[1].height, toolbarHeight, `Image and table tools must stay within two rows at ${width}px`);
-            else assert.ok(layout.topBars[1].height <= 120, 'Narrow windows may wrap contextual tools while keeping both sort actions visible');
-            assert.deepEqual(layout, closedLayout, `Header, toolbar and note top must not jump when toggling AI at ${width}px`);
-            assert.ok(await page.locator('.notes-main-root').evaluate(el =>
-                el.getBoundingClientRect().left >= document.querySelector('.sidebar').getBoundingClientRect().right),
-                'The navigation sidebar must not overlap the document workspace');
-            assert.ok(await page.getByRole('toolbar').evaluate(el => {
-                const bounds = el.getBoundingClientRect();
-                const groupsFit = [...el.querySelectorAll('.editor-toolbar-row')].every(row => {
-                    const groups = [...row.children].map(group => group.getBoundingClientRect());
-                    return groups.every((group, i) => !i || group.top >= groups[i - 1].bottom || group.left >= groups[i - 1].right);
-                });
-                return groupsFit && [...el.querySelectorAll('button, select')].every(control => {
-                    const rect = control.getBoundingClientRect();
-                    if (!rect.width || !rect.height) return true;
-                    return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1
-                        && rect.top >= bounds.top && rect.bottom <= bounds.bottom;
-                });
-            }), `Toolbar controls must remain reachable at ${width}px with AI panel ${panelOpen}`);
-            if (panelOpen) {
-                assert.ok(await page.locator('.notes-main-root').evaluate(el => {
-                    const panel = el.querySelector('.notes-center-ai-panel').getBoundingClientRect();
-                    const document = el.querySelector('.notes-document').getBoundingClientRect();
-                    const toolbar = el.querySelector('[role="toolbar"]').getBoundingClientRect();
-                    return Math.abs(panel.top - document.top) < 1 && Math.abs(panel.top - toolbar.bottom) < 1
-                        && Math.abs(panel.right - toolbar.right) < 1;
-                }), 'AI panel and document must start below the full-width toolbar');
-            }
-            assert.equal(await body.locator('hr').count(), 1, 'Toggling the sidebar must preserve the editor content');
-            assert.equal(await body.locator('table').count(), 1, 'Toggling the sidebar must preserve the table');
-            assert.equal(await body.locator('table img').count(), 1, 'Toggling the sidebar must preserve the image');
-            if ([1186, 1538].includes(width)) await page.screenshot({ path: `ui-check.local/compact-toolbar-${width}-${panelOpen ? 'open' : 'closed'}.png` });
+        await checkNotesCommandBar(page, width, { contextual: true });
+        const layout = await page.locator('.notes-command-bar').boundingBox();
+        for (const mode of ['一键生成周报', '一键生成待办事项']) {
+            await page.getByRole('button', { name: mode, exact: true }).click();
+            assert.equal(await page.getByRole('combobox', { name: '图片宽度', exact: true }).isVisible(), true, 'AI commands preserve the selected image and its tools');
+            assert.equal(await page.getByRole('combobox', { name: '表格操作', exact: true }).isVisible(), true, 'AI commands preserve the table context');
+            assert.deepEqual(await page.locator('.notes-command-bar').boundingBox(), layout, 'Switching AI modes must not shift the toolbar');
+            assert.equal(await body.locator('hr').count(), 1, 'Switching AI mode preserves editor content');
+            assert.equal(await body.locator('table').count(), 1, 'Switching AI mode preserves the table');
+            assert.equal(await body.locator('table img').count(), 1, 'Switching AI mode preserves the image');
         }
+        if ([1186, 1538].includes(width)) await page.screenshot({ path: `ui-check.local/compact-toolbar-${width}.png` });
     }
     assert.equal(await page.getByRole('button', { name: '打开附件文件夹', exact: true }).isVisible(), true);
     await page.getByRole('button', { name: /^回收站/ }).click();
@@ -1301,7 +1266,7 @@ try {
     assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'Trash must retain settings access');
     await page.evaluate(async () => (await import('/src/state/appStore.ts')).useAppStore.getState().setNoteViewMode('tree'));
     await body.waitFor();
-    console.log(`Passed: directly accessible two-row toolbar (${toolbarHeight}px), narrow-window wrapping, image/table controls, empty/trash views and stable AI toggle at five desktop widths`);
+    console.log(`Passed: directly accessible two-row toolbar (${toolbarHeight}px), narrow-window wrapping, image/table controls, empty/trash views and stable peer AI entries at five desktop widths`);
     await checkNoteFormatting(page, body, saveAndReload);
     assert.deepEqual(errors, []);
     await page.setViewportSize({ width: 1280, height: 840 });

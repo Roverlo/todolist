@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
-import { Bold, Italic, Underline, Strikethrough, Undo2, Redo2, PaintRoller, Eraser, Quote, Code, CodeXml, Minus, ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, Link, ImagePlus, Paperclip, FolderOpen, CalendarDays, ListTodo, Circle, CircleCheck, type LucideIcon } from 'lucide-react';
+import { Bold, Italic, Underline, Strikethrough, Undo2, Redo2, PaintRoller, Eraser, Code, CodeXml, Minus, ChevronDown, Highlighter, Baseline, IndentIncrease, IndentDecrease, AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, Link, ImagePlus, Paperclip, FolderOpen, CalendarDays, ListTodo, Circle, CircleCheck, type LucideIcon } from 'lucide-react';
 import { formatPainterPluginKey } from 'reactjs-tiptap-editor/formatpainter';
 import { BULLET_STYLES, NUMBER_STYLES, FONT_FAMILIES } from './extensions/NoteExtensions';
 import { EditorSearch } from './EditorSearch';
@@ -139,7 +139,7 @@ function WordColorPicker({
     );
 }
 
-export function EditorToolbar({ editor, actions, secondaryActions }: { editor: Editor; actions?: ReactNode; secondaryActions?: ReactNode }) {
+export function EditorToolbar({ editor }: { editor: Editor }) {
     const attachmentInput = useRef<HTMLInputElement>(null);
     const toolbarRef = useRef<HTMLDivElement>(null);
     const [searchOpen, setSearchOpen] = useState(false);
@@ -269,7 +269,7 @@ export function EditorToolbar({ editor, actions, secondaryActions }: { editor: E
                         onClear={() => editor.chain().focus().unsetHighlight().run()} />
                 </div>
                 <div className="editor-toolbar-group" role="group" aria-label="内容样式">
-                    <EditorToolButton label="引用" icon={Quote} active={lists.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()} />
+                    <EditorToolButton label="引用" className="editor-toolbar-text-button" active={lists.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>引用</EditorToolButton>
                     <EditorToolButton label="行内代码" icon={Code} active={lists.code} disabled={!lists.canCode} onClick={() => editor.chain().focus().toggleCode().run()} />
                     <EditorToolButton label="代码块" icon={CodeXml} active={lists.codeBlock} onClick={() => editor.chain().focus().toggleCodeBlock().run()} />
                     <EditorToolButton label="分隔线" icon={Minus} onClick={() => editor.chain().focus().setHorizontalRule().run()} />
@@ -297,7 +297,6 @@ export function EditorToolbar({ editor, actions, secondaryActions }: { editor: E
                         options={tableActions.map(([label, , disabled], index) => ({ value: String(index), label, disabled }))}
                         onChange={value => tableActions[Number(value)][1]()} />
                 </div>}
-                {actions}
             </div>
             <div className="editor-toolbar-row">
                 <div className="editor-toolbar-group" role="group" aria-label="待办排序">
@@ -346,7 +345,6 @@ export function EditorToolbar({ editor, actions, secondaryActions }: { editor: E
                         description="选择任意日期，或快速插入昨天、今天、明天。" aria-haspopup="dialog"
                         onClick={() => setInsertDialog('date')}><span>日期</span></EditorToolButton>
                 </div>
-                {secondaryActions && <div className="editor-toolbar-secondary-actions">{secondaryActions}</div>}
             </div>
         </div>
         {searchOpen && <EditorSearch editor={editor} onClose={() => { setSearchOpen(false); editor.commands.focus(); }} />}

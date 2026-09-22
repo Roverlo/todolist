@@ -92,9 +92,9 @@ try {
     }
     assert.equal(await panel.locator('.ai-panel-generate-btn').isEnabled(), true, 'Untitled notes with content can generate tasks');
     await page.screenshot({ path: join(output, 'ai-untitled-note.png') });
-    assert.equal(await page.getByRole('button', { name: '隐藏 AI 助手', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.getByRole('button', { name: '一键生成待办事项', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).locator('svg.lucide-settings').count(), 1);
-    assert.match(await page.getByRole('button', { name: '隐藏 AI 助手', exact: true }).innerText(), /AI助手：一键生成待办事项/);
+    assert.match(await page.getByRole('button', { name: '一键生成待办事项', exact: true }).innerText(), /一键生成待办事项/);
     await page.getByRole('combobox', { name: '编号样式', exact: true }).click();
     await page.screenshot({ path: join(output, 'editor-dropdown.png') });
     await page.getByRole('combobox', { name: '编号样式', exact: true }).press('Escape');
@@ -130,10 +130,9 @@ try {
     await generate();
     await page.getByLabel('任务 1 标题', { exact: true }).waitFor();
     assert.equal(await panel.locator('.task-preview-card').count(), 2);
-    await page.getByRole('button', { name: '隐藏 AI 助手', exact: true }).click();
-    assert.equal(await panel.isVisible(), false);
-    await page.getByRole('button', { name: '显示 AI 助手', exact: true }).click();
-    assert.equal(await panel.locator('.task-preview-card').count(), 2, 'Hiding the panel must preserve previews');
+    await page.getByRole('button', { name: '一键生成待办事项', exact: true }).click();
+    assert.equal(await panel.isVisible(), true);
+    assert.equal(await panel.locator('.task-preview-card').count(), 2, 'Clicking the active AI entry must preserve previews');
     await page.getByLabel('任务 1 标题', { exact: true }).fill('确认后的接口联调');
     await page.getByRole('button', { name: '展开任务 1 详情', exact: true }).click();
     await panel.getByRole('button', { name: '添加子任务', exact: true }).click();

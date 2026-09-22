@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 export async function checkNoteToolbar(page, body) {
     const toolbar = page.getByRole('toolbar', { name: '随记编辑工具' });
-    const button = name => toolbar.getByRole('button', { name, exact: true });
+    const button = name => (name === 'AI 设置' ? page : toolbar).getByRole('button', { name, exact: true });
     const tooltip = page.getByRole('tooltip');
     assert.equal(await toolbar.locator('[title]').count(), 0, 'Toolbar must not mix native title popups with shared tooltips');
     for (const name of ['撤销', '重做', '清除格式', '插入日期', '分隔线', 'AI 设置', '未完成在前', '已完成在前']) {
@@ -31,6 +31,8 @@ export async function checkNoteToolbar(page, body) {
         await page.keyboard.press('Escape');
         await tooltip.waitFor({ state: 'hidden' });
     }
+    assert.equal(await button('引用').innerText(), '引用');
+    assert.equal(await button('引用').locator('svg').count(), 0, 'Quote uses the approved text label');
     await button('插入日期').hover();
     await tooltip.waitFor();
     await page.screenshot({ path: 'ui-check.local/toolbar-unified-tooltip.png' });

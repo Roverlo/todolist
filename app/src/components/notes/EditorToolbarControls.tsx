@@ -57,7 +57,7 @@ export function EditorTooltip({ label, description, shortcut, children }: {
 
 interface EditorToolButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title' | 'aria-label'> {
     label: string;
-    icon: LucideIcon;
+    icon?: LucideIcon;
     description?: string;
     shortcut?: string;
     active?: boolean;
@@ -70,7 +70,7 @@ export const EditorToolButton = forwardRef<HTMLButtonElement, EditorToolButtonPr
         <button {...props} ref={ref} type="button" className={`editor-tool-button ${className}`}
             aria-label={label} aria-pressed={active} data-state={active === undefined ? undefined : active ? 'on' : 'off'}
             onMouseDown={event => { event.preventDefault(); onMouseDown?.(event); }}>
-            <Icon size={18} strokeWidth={1.75} aria-hidden="true" />{children}
+            {Icon && <Icon size={18} strokeWidth={1.75} aria-hidden="true" />}{children}
         </button>
     </EditorTooltip>;
 });

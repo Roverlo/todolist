@@ -412,7 +412,23 @@
   border-bottom: 1px solid var(--border);
   font-size: 11px;
 }
-.notes-ai-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+/* Match the editor/assistant split below; keep peer AI actions together. */
+.notes-command-bar { display: grid; grid-template-columns: minmax(0, 1fr) 320px; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface); }
+.notes-editor-tools { min-width: 0; align-self: center; }
+.notes-ai-tools { padding: 6px 12px 8px; border-left: 1px solid var(--border); }
+.notes-ai-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.notes-ai-heading h2 { margin: 0; color: var(--text-main); font-size: 14px; font-weight: 600; }
+.notes-ai-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.notes-ai-actions > .editor-control { min-width: 0; }
+.notes-ai-actions .editor-tool-button.notes-ai-action { width: 100%; height: 38px; padding: 0 4px; gap: 5px; border-color: var(--border); color: rgb(var(--primary-rgb)); background: var(--surface); white-space: nowrap; }
+.notes-ai-actions .notes-ai-action[data-state='on'] { background: var(--primary-soft); border-color: rgb(var(--primary-rgb)); }
+@container note-document (max-width: 1200px) {
+    .notes-command-bar { grid-template-columns: minmax(0, 1fr); }
+    .notes-ai-tools { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 4px 12px; border-left: 0; border-top: 1px solid var(--border); }
+    .notes-ai-heading { gap: 8px; }
+    .notes-ai-actions { width: 294px; }
+    .notes-ai-actions .editor-tool-button.notes-ai-action { height: 32px; }
+}
 
 .notes-filter-summary > span {
   flex: 1;

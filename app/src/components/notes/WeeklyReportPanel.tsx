@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Copy, FileText, LoaderCircle, RefreshCw, Save } from 'lucide-react';
+import { ChevronDown, Copy, FileText, LoaderCircle, RefreshCw, Save } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useAppStore, waitForAppSave } from '../../state/appStore';
 import { createAIProvider } from '../../services/ai';
@@ -7,7 +7,7 @@ import { WEEKLY_REPORT_PROMPT, parseWeeklyReport, reportAsHtml, weeklyReportInpu
 import { AISettingsModal } from './AISettingsModal';
 import './WeeklyReportPanel.css';
 
-export function WeeklyReportPanel({ source, onBack }: { source: WeeklyReportSource; onBack: () => void }) {
+export function WeeklyReportPanel({ source }: { source: WeeklyReportSource }) {
     const request = useRef<AbortController | null>(null);
     const savedId = useRef<string | null>(null);
     const [report, setReport] = useState('');
@@ -16,6 +16,7 @@ export function WeeklyReportPanel({ source, onBack }: { source: WeeklyReportSour
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [sourcesOpen, setSourcesOpen] = useState(false);
     const settings = useAppStore(state => state.settings.ai);
     const profile = settings?.providers.find(provider => provider.id === settings.activeProviderId);
     const configured = Boolean(profile?.apiKey?.trim() && profile?.model?.trim() && profile?.apiEndpoint?.trim());
@@ -72,19 +73,22 @@ export function WeeklyReportPanel({ source, onBack }: { source: WeeklyReportSour
 
     return <section className="ai-panel weekly-report-panel" aria-labelledby="weekly-report-title">
         <header className="weekly-report-header">
-            <div><h2 id="weekly-report-title"><FileText size={20} aria-hidden="true" />本周周报</h2><p>{source.start} — {source.end}</p></div>
-            <button type="button" className="weekly-report-back" disabled={saving} onClick={onBack}><ArrowLeft size={14} />返回待办</button>
+            <h2 id="weekly-report-title"><FileText size={18} aria-hidden="true" />本周周报</h2>
+            <span className="weekly-report-dates" aria-label={`${source.start} — ${source.end}`}>{dayjs(source.start).format('MM.DD')} — {dayjs(source.end).format('MM.DD')}</span>
         </header>
         <div className="weekly-report-body">
-            <div className="weekly-report-summary"><span><b>{source.sources.length}</b> 篇随记</span><span><b>{source.completed}</b> 项本周勾选完成</span></div>
-            <details className="weekly-report-sources"><summary>查看本次使用的随记</summary>
+            <div className="weekly-report-meta">
+                <span className="weekly-report-summary">{source.sources.length} 篇随记 · {source.completed} 项本周完成</span>
+                <button type="button" className="weekly-report-source-toggle" aria-expanded={sourcesOpen} aria-controls="weekly-report-sources" onClick={() => setSourcesOpen(value => !value)}>查看来源<ChevronDown size={14} aria-hidden="true" /></button>
+            </div>
+            <div id="weekly-report-sources" className="weekly-report-sources" hidden={!sourcesOpen}>
                 <p>汇总点击生成时的本周随记，包含当前草稿。旧事项按完成时间区分；图片和附件不参与生成。</p>
                 <ul>{source.sources.map(note => <li key={note.id}><span>{note.title}{note.draft ? '（含当前草稿）' : ''}</span><time>{dayjs(note.updatedAt).format('MM-DD HH:mm')}</time></li>)}</ul>
                 {source.undatedCompleted > 0 && <p>{source.undatedCompleted} 项已勾选但未记录完成时间，会在周报中明确说明。</p>}
-            </details>
+            </div>
             {!source.sources.length ? <div className="weekly-report-empty"><FileText size={28} /><strong>本周还没有可汇总的随记</strong><p>本周编辑过且有文字的随记会出现在这里，已删除的随记和已生成的周报不参与。</p></div>
                 : !configured ? <div className="weekly-report-empty"><strong>先配置用于生成周报的 AI</strong><p>周报与待办提取使用同一个 AI 接口。</p><button className="btn btn-primary" onClick={() => setSettingsOpen(true)}>配置 AI</button></div>
-                : <><div className="weekly-report-label"><label htmlFor="weekly-report-content">周报正文</label><span>生成后可直接修改</span></div>
+                : <><div className="weekly-report-label"><label htmlFor="weekly-report-content">周报正文</label><span>可直接修改</span></div>
                     {loading && <div className="weekly-report-loading" role="status"><LoaderCircle size={18} className="weekly-report-spinner" />正在整理本周记录…<button onClick={cancel}>取消生成</button></div>}
                     <textarea id="weekly-report-content" value={report} disabled={loading || saving} placeholder="周报将按本周完成、工作进展、问题及风险、下周计划整理。"
                         onChange={event => { setReport(event.target.value); setNotice(''); }} />

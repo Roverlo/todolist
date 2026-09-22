@@ -1,13 +1,13 @@
 .weekly-report-panel { color: var(--text-main); min-width: 0; }
-.weekly-report-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 14px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.weekly-report-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .weekly-report-header h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 15px; }
-.weekly-report-header p { margin: 6px 0 0; color: var(--text-secondary); font-size: 11px; }
-.weekly-report-back { display: inline-flex; align-items: center; gap: 3px; padding: 6px 0; border: 0; background: transparent; color: var(--primary); font-size: 12px; white-space: nowrap; }
-.weekly-report-body { display: flex; flex-direction: column; flex: 1; gap: 10px; padding: 14px; overflow: auto; min-height: 0; }
-.weekly-report-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: var(--text-secondary); }
-.weekly-report-summary b { color: var(--primary); font-size: 17px; }
-.weekly-report-sources { flex-shrink: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; }
-.weekly-report-sources summary { cursor: pointer; }
+.weekly-report-dates { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+.weekly-report-body { display: flex; flex-direction: column; flex: 1; gap: 8px; padding: 0 14px 14px; overflow: auto; min-height: 0; }
+.weekly-report-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 3px 0; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.weekly-report-summary { font-size: 12px; color: var(--text-secondary); }
+.weekly-report-source-toggle { display: inline-flex; align-items: center; gap: 4px; padding: 5px 0 5px 4px; border: 0; background: transparent; color: var(--text-main); font-size: 12px; white-space: nowrap; }
+.weekly-report-source-toggle[aria-expanded='true'] svg { transform: rotate(180deg); }
+.weekly-report-sources { flex-shrink: 0; font-size: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
 .weekly-report-sources p { color: var(--text-secondary); font-size: 12px; line-height: 1.6; margin: 8px 0; }
 .weekly-report-sources ul { max-height: 120px; overflow: auto; margin: 8px 0 0; padding: 0; list-style: none; }
 .weekly-report-sources li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; }

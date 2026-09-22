@@ -1,5 +1,5 @@
 import { embedAttachments } from '../../utils/noteAttachments';
-import { useState, useEffect, useLayoutEffect, useCallback, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
 import type { Note } from '../../types';
@@ -20,15 +20,13 @@ interface NoteEditorProps {
     onSave: (title: string, content: string, tags?: string[]) => void;
     onCreate?: () => void;
     onDraftChange?: (draft: Pick<Note, 'id' | 'title' | 'content'>) => void;
-    toolbarActions?: ReactNode;
-    toolbarSecondaryActions?: ReactNode;
 }
 
 export function NoteEditor(props: NoteEditorProps) {
     return <NoteEditorContent key={props.note?.id} {...props} />;
 }
 
-function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActions, toolbarSecondaryActions }: NoteEditorProps) {
+function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditorProps) {
     const [title, setTitle] = useState(note?.title || '');
     const [tags, setTags] = useState<string[]>(note?.tags || []);
     const [contentHtml, setContentHtml] = useState(note?.content || '');
@@ -109,7 +107,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
             if (event.button !== 0 || !(target instanceof Element) || editor.isDestroyed
                 || editor.state.selection.empty || editor.view.dom.contains(target)) return;
             // Formatting controls retain the range; ordinary clicks elsewhere end it.
-            if (target.closest('.note-editor-content-wrapper, .editor-toolbar, .editor-search, .editor-insert-dialog, [data-richtext-portal]')) return;
+            if (target.closest('.note-editor-content-wrapper, .editor-toolbar, .notes-ai-tools, .editor-search, .editor-insert-dialog, [data-richtext-portal]')) return;
             const menu = target.closest('[role="listbox"]');
             if (menu && Array.from(document.querySelectorAll('.editor-toolbar [aria-controls]'))
                 .some(trigger => trigger.getAttribute('aria-controls') === menu.id)) return;
@@ -254,7 +252,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
             </div>
 
             {editor && <RichTextProvider editor={editor}>
-                {portalTarget ? createPortal(<EditorToolbar editor={editor} actions={toolbarActions} secondaryActions={toolbarSecondaryActions} />, portalTarget) : <EditorToolbar editor={editor} actions={toolbarActions} secondaryActions={toolbarSecondaryActions} />}
+                {portalTarget ? createPortal(<EditorToolbar editor={editor} />, portalTarget) : <EditorToolbar editor={editor} />}
                 <div
                 className="note-editor-content-wrapper"
                 onClick={(e) => {

@@ -5,7 +5,7 @@ import { NotesRecycleBin } from './NotesRecycleBin';
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { AISettingsModal } from './AISettingsModal';
 import { Icon } from '../ui/Icon';
-import { FileText, PanelRight, Settings } from 'lucide-react';
+import { FileText, ListTodo, Settings } from 'lucide-react';
 import { WeeklyReportPanel } from './WeeklyReportPanel';
 import { collectWeeklyNotes, type WeeklyReportSource } from '../../utils/weeklyReport';
 import { EditorToolButton } from './EditorToolbarControls';
@@ -26,7 +26,6 @@ export function NotesMain() {
     // Initial tag refresh is handled by store or separate effect if needed.
     // Reducing potential for render loops.
 
-    const [aiPanelOpen, setAiPanelOpen] = useState(true);
     const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
     const [weeklySource, setWeeklySource] = useState<WeeklyReportSource | null>(null);
     const [aiMode, setAiMode] = useState<'tasks' | 'weekly'>('tasks');
@@ -46,35 +45,30 @@ export function NotesMain() {
         setSelectedNoteId(newNote.id);
     };
 
-    const toolbarActions = (
-        <div className="notes-center-actions">
-            <EditorToolButton onClick={() => { setAiPanelOpen(aiMode === 'weekly' || !aiPanelOpen); setAiMode('tasks'); }} className="editor-toolbar-text-button" active={aiPanelOpen && aiMode === 'tasks'}
-                label={aiPanelOpen && aiMode === 'tasks' ? '隐藏 AI 助手' : '显示 AI 助手'} icon={PanelRight} description="根据随记内容生成待办事项。">
-                <span>AI助手<span className="notes-ai-description">：一键生成待办事项</span></span>
-            </EditorToolButton>
-            <EditorToolButton onClick={() => setAiSettingsOpen(true)} label="AI 设置" icon={Settings} aria-haspopup="dialog" />
-        </div>
-    );
-
-    const weeklyAction = <EditorToolButton onClick={() => {
-        if (aiMode !== 'weekly') setWeeklySource(collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null));
-        setAiMode('weekly'); setAiPanelOpen(true);
-    }} className="editor-toolbar-text-button" label="一键生成周报" icon={FileText} active={aiPanelOpen && aiMode === 'weekly'} description="汇总本周编辑的随记与已完成事项，生成后可编辑、复制或保存。">
-        <span><span className="notes-report-prefix">一键<span className="notes-report-verb">生成</span></span>周报</span>
-    </EditorToolButton>;
-
     return (
         <div className="notes-main-root">
-            {/* Editing actions share the full-width toolbar; empty/trash views keep a small header. */}
-            {(!activeNote || noteViewMode === 'trash') && <div className="notes-center-header">
-                <div className="notes-center-title">
-                    <Icon name="note" size={18} />
-                    <span className="notes-center-title-text">随记编辑器</span>
+            <div className="notes-command-bar">
+                <div className="notes-editor-tools">
+                    {(!activeNote || noteViewMode === 'trash') && <div className="notes-center-header">
+                        <div className="notes-center-title"><Icon name="note" size={18} /><span className="notes-center-title-text">随记编辑器</span></div>
+                    </div>}
+                    <div id="editor-toolbar-portal" />
                 </div>
-                <div className="notes-ai-actions">{toolbarActions}{weeklyAction}</div>
-            </div>}
-
-            <div id="editor-toolbar-portal" />
+                <section className="notes-ai-tools" aria-labelledby="notes-ai-heading">
+                    <div className="notes-ai-heading"><h2 id="notes-ai-heading">AI 助手</h2>
+                        <EditorToolButton onClick={() => setAiSettingsOpen(true)} label="AI 设置" icon={Settings} aria-haspopup="dialog" />
+                    </div>
+                    <div className="notes-ai-actions" role="group" aria-label="AI 功能">
+                        <EditorToolButton onClick={() => setAiMode('tasks')} className="notes-ai-action" active={aiMode === 'tasks'}
+                            label="一键生成待办事项" icon={ListTodo} description="根据当前随记生成待办事项。"><span>一键生成待办事项</span></EditorToolButton>
+                        <EditorToolButton onClick={() => {
+                            if (aiMode !== 'weekly') setWeeklySource(collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null));
+                            setAiMode('weekly');
+                        }} className="notes-ai-action" label="一键生成周报" icon={FileText} active={aiMode === 'weekly'}
+                            description="汇总本周编辑的随记与已完成事项，生成后可编辑、复制或保存。"><span>一键生成周报</span></EditorToolButton>
+                    </div>
+                </section>
+            </div>
 
             <div className="notes-center-main">
                 <section className="notes-document" aria-label="随记编辑区">
@@ -82,14 +76,14 @@ export function NotesMain() {
                         {noteViewMode === 'trash' ? (
                             <NotesRecycleBin />
                         ) : (
-                            <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={setDraft} toolbarActions={toolbarActions} toolbarSecondaryActions={weeklyAction} />
+                            <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={setDraft} />
                         )}
                     </main>
                 </section>
 
-                <aside className="notes-center-ai-panel" aria-label="AI 助手面板" hidden={!aiPanelOpen}>
+                <aside className="notes-center-ai-panel" aria-label="AI 助手面板">
                     {aiMode === 'weekly' && weeklySource
-                        ? <WeeklyReportPanel source={weeklySource} onBack={() => setAiMode('tasks')} />
+                        ? <WeeklyReportPanel source={weeklySource} />
                         : <AIAssistantPanel key={activeNote?.id} note={activeNote && draft?.id === activeNote.id ? { ...activeNote, ...draft } : activeNote} />}
                 </aside>
             </div>

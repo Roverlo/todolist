@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile, rename, rmdir } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { createServer as createViteServer } from 'vite';
 import { chromium } from 'playwright';
+import { checkNotesCommandBar } from './check-notes-command-bar.mjs';
 
 const native = process.argv.includes('--cdp');
 const arg = name => process.argv[process.argv.indexOf(name) + 1];
@@ -86,7 +87,7 @@ try {
     };
     const panel = page.getByRole('region', { name: '本周周报', exact: true });
     const open = async () => { await page.getByRole('button', { name: '一键生成周报', exact: true }).click(); await panel.waitFor(); };
-    const close = () => page.getByRole('button', { name: '返回待办', exact: true }).click();
+    const close = () => page.getByRole('button', { name: '一键生成待办事项', exact: true }).click();
     const content = page.getByRole('textbox', { name: '周报正文', exact: true });
     await seed(); const editorBounds = await page.getByRole('region', { name: '随记编辑区' }).boundingBox();
     replies.push({}); const before = requests.length; await open();
@@ -100,6 +101,11 @@ try {
     assert.equal(await page.locator('.notes-center-ai-panel .weekly-report-panel').count(), 1);
     await page.getByRole('button', { name: '一键生成周报', exact: true }).click();
     assert.equal(requests.length, before + 1, 'Reopening the active panel must not duplicate generation');
+    await page.getByRole('button', { name: '查看来源', exact: true }).click();
+    assert.equal(await panel.locator('.weekly-report-sources li').count(), 2);
+    assert.equal(await panel.locator('.weekly-report-sources').isVisible(), true);
+    await page.getByRole('button', { name: '查看来源', exact: true }).press('Enter');
+    assert.equal(await panel.locator('.weekly-report-sources').isVisible(), false);
     await content.fill(example + '\n补充编辑 <script>not code</script> & 已核对');
     await page.evaluate(() => { Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: async text => { window.__weeklyCopied = text; } }); });
     await page.getByRole('button', { name: '复制周报' }).click(); assert.match(await page.evaluate(() => window.__weeklyCopied), /补充编辑/);
@@ -133,7 +139,13 @@ try {
     await body.click(); await body.press('Control+End'); await page.keyboard.type('LIVE-DRAFT-WEEKLY');
     replies.push({}); await open(); await until(async () => await content.inputValue() === example, 'Draft report generated'); assert.match(requests.at(-1).messages.at(-1).content, /LIVE-DRAFT-WEEKLY/);
     for (const width of [1100, 1186, 1538, 1920]) {
-        await page.setViewportSize({ width, height: 700 }); const bounds = await panel.boundingBox();
+        await page.setViewportSize({ width, height: 700 });
+        await checkNotesCommandBar(page, width);
+        const headerBounds = await panel.locator('.weekly-report-header').boundingBox();
+        const textBounds = await content.boundingBox();
+        assert.ok(headerBounds.height <= 44 && textBounds.y - headerBounds.y <= 115, 'Compact report metadata leaves space for the report');
+        assert.ok(textBounds.height >= 280, 'Report content remains usable at desktop heights');
+        const bounds = await panel.boundingBox();
         assert.ok(bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= width && bounds.y + bounds.height <= 700);
         const saveBounds = await page.getByRole('button', { name: '保存为随记' }).boundingBox();
         assert.ok(saveBounds.y + saveBounds.height <= 700, 'Save action remains visible without scrolling');
