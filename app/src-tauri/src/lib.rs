@@ -402,6 +402,17 @@ pub fn run() {
         }
     }
 
+    let mut context = tauri::generate_context!();
+    // The existing test data override must also isolate the single-instance lock.
+    // Copies sharing a test directory still exercise normal single-instance behavior.
+    if let Some(directory) = std::env::var_os("PROJECTTODO_TEST_DATA_DIR").filter(|value| !value.is_empty()) {
+        use std::hash::{Hash, Hasher};
+        let path = PathBuf::from(directory);
+        let mut hash = std::collections::hash_map::DefaultHasher::new();
+        path.canonicalize().unwrap_or(path).hash(&mut hash);
+        context.config_mut().identifier.push_str(&format!(".test.{:x}", hash.finish()));
+    }
+
     let builder = tauri::Builder::default();
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
@@ -480,6 +491,6 @@ pub fn run() {
             smb_test_connection, smb_upload, smb_download,
             ssh_test_connection, ssh_upload, ssh_download
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running tauri application");
 }

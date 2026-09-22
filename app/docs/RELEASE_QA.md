@@ -91,7 +91,7 @@ python scripts/test-publish-update.py
 
 清除格式专项可运行 `node scripts/test-note-formatting.mjs`，原生版本使用 `./scripts/test-portable.ps1 -Executable '<被测 EXE 绝对路径>' -ClearFormatting`。覆盖不同字体/字号/行距粘贴后统一正文样式、软换行与段落的实际行距、部分选区、表格单元格、代码换行与保留空行、重复清除、独立撤销/重做、继续输入及保存重载；`npm run test:notes` 同样包含这些检查。普通粘贴保留格式，只有显式清除时才把选中的软换行统一为正文段落，不合并或删除原有空行。
 
-原生工作流测试前退出其他 ProjectTodo 进程，避免单实例锁唤醒用户窗口。Computer-use 会话中窗口生命周期直接用其 API 操作；不要混用其他 Windows UI 自动化接口。
+原生测试指定 `PROJECTTODO_TEST_DATA_DIR` 时，数据目录及单实例锁都隔离；同一个测试目录的重复启动和改名副本仍共用单实例锁。普通启动保持原标识。测试前核对最终 EXE 包含此隔离逻辑及独立 WebView 配置；更早不支持锁隔离的 EXE 需要先由用户退出其他 ProjectTodo 进程，不能直接唤醒用户窗口。Computer-use 会话中窗口生命周期直接用其 API 操作；不要混用其他 Windows UI 自动化接口。
 
 `-Attachments` 会依次弹出备份保存、备份打开和附件另存为原生对话框；用 Computer Use 或人工在 180 秒内输入脚本打印的隔离路径。脚本自动验证恢复前后文件哈希，Windows 资源管理器真实复制粘贴另行验收。
 
