@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory = $true)][string]$Executable, [switch]$EditorWorkflow, [switch]$NoteCompletion, [switch]$ClearFormatting, [switch]$Attachments, [switch]$WindowLifecycle, [switch]$UpdateSettings, [ValidateSet('busy', 'crash')][string]$WindowRecovery)
+﻿param([Parameter(Mandatory = $true)][string]$Executable, [switch]$EditorWorkflow, [switch]$NoteCompletion, [switch]$ClearFormatting, [switch]$Attachments, [switch]$WindowLifecycle, [switch]$UpdateSettings, [switch]$WeeklyReport, [ValidateSet('busy', 'crash')][string]$WindowRecovery)
 $ErrorActionPreference = 'Stop'
 
 $source = (Get-Item -LiteralPath $Executable).FullName
@@ -51,7 +51,7 @@ $started = $null
 try {
     $env:PROJECTTODO_TEST_DATA_DIR = $dataRoot
     $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $checkRoot 'webview'
-    if ($EditorWorkflow -or $Attachments -or $NoteCompletion -or $ClearFormatting -or $WindowLifecycle -or $UpdateSettings -or $WindowRecovery) {
+    if ($EditorWorkflow -or $Attachments -or $NoteCompletion -or $ClearFormatting -or $WindowLifecycle -or $UpdateSettings -or $WeeklyReport -or $WindowRecovery) {
         $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
         $probe.Start()
         $nativeDebugPort = $probe.LocalEndpoint.Port
@@ -101,6 +101,13 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Packaged update settings check failed' }
         } finally { Pop-Location }
     }
+    if ($WeeklyReport) {
+        Push-Location (Split-Path -Parent $PSScriptRoot)
+        try {
+            & node (Join-Path $PSScriptRoot 'test-weekly-report.mjs') --cdp $nativeDebugPort --data $dataPath
+            if ($LASTEXITCODE -ne 0) { throw 'Packaged weekly report check failed' }
+        } finally { Pop-Location }
+    }
     if ($WindowLifecycle) {
         Push-Location (Split-Path -Parent $PSScriptRoot)
         try {
@@ -119,7 +126,7 @@ try {
         if ((Get-FileHash -LiteralPath (Join-Path $userRoot $relative) -Algorithm SHA256).Hash -ne $before[$relative]) { throw 'Existing user data changed during the check; backup retained' }
     }
     [ordered]@{
-        result = 'PASS'; updateSettings = [bool]$UpdateSettings; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; attachments = [bool]$Attachments; noteCompletion = [bool]$NoteCompletion; clearFormatting = [bool]$ClearFormatting; windowLifecycle = [bool]$WindowLifecycle; windowRecovery = $WindowRecovery; isolatedData = $dataPath; existingDataUnchanged = $true
+        result = 'PASS'; weeklyReport = [bool]$WeeklyReport; updateSettings = [bool]$UpdateSettings; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; attachments = [bool]$Attachments; noteCompletion = [bool]$NoteCompletion; clearFormatting = [bool]$ClearFormatting; windowLifecycle = [bool]$WindowLifecycle; windowRecovery = $WindowRecovery; isolatedData = $dataPath; existingDataUnchanged = $true
         executable = $source; testedExecutable = $testExe; bytes = (Get-Item -LiteralPath $testExe).Length
         sha256 = (Get-FileHash -LiteralPath $testExe -Algorithm SHA256).Hash
     } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $checkRoot 'result.json')

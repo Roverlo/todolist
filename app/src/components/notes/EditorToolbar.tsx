@@ -139,7 +139,7 @@ function WordColorPicker({
     );
 }
 
-export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: ReactNode }) {
+export function EditorToolbar({ editor, actions, secondaryActions }: { editor: Editor; actions?: ReactNode; secondaryActions?: ReactNode }) {
     const attachmentInput = useRef<HTMLInputElement>(null);
     const toolbarRef = useRef<HTMLDivElement>(null);
     const [searchOpen, setSearchOpen] = useState(false);
@@ -346,6 +346,7 @@ export function EditorToolbar({ editor, actions }: { editor: Editor; actions?: R
                         description="选择任意日期，或快速插入昨天、今天、明天。" aria-haspopup="dialog"
                         onClick={() => setInsertDialog('date')}><span>日期</span></EditorToolButton>
                 </div>
+                {secondaryActions && <div className="editor-toolbar-secondary-actions">{secondaryActions}</div>}
             </div>
         </div>
         {searchOpen && <EditorSearch editor={editor} onClose={() => { setSearchOpen(false); editor.commands.focus(); }} />}

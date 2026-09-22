@@ -4,6 +4,8 @@
 
 随记待办界面修改先读[已确认的选图与偏好](app/docs/NOTE_TASK_DESIGN.md)，区分选定方案、实现和验收状态；后续明确反馈更新该记录。
 
+周报和窗口行为先读[周报与窗口设计记录](app/docs/WEEKLY_REPORT.md)，遵守右侧区域复用及保留最小化的最新修正。
+
 更新功能与新版本发布先读[更新服务及设计记录](app/docs/UPDATE_SERVICE.md)。用户已指定 VPS03 为后续已验收新版本的发布位置；不运行旧域名的 Nginx 安装脚本覆盖既有服务。
 
 - 以当前分支的 package.json、锁文件、Tauri 配置和脚本为准；不要沿用旧文档中的版本、缺失的 design.md 或不存在的 bundle/app 路径。

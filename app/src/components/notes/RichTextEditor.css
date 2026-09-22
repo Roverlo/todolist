@@ -24,12 +24,18 @@
 .editor-toolbar-group + .editor-toolbar-group { padding-left: 4px; border-left: 1px solid var(--border); }
 .editor-toolbar-group > * { flex-shrink: 0; }
 .editor-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 32px; }
+.editor-toolbar-secondary-actions { margin-left: auto; }
+.editor-toolbar-row:nth-child(2) .editor-toolbar-group { gap: 1px; }
 .editor-toolbar .notes-center-actions,
 .editor-toolbar .editor-context-tools { margin-left: auto; flex-shrink: 0; }
+@container note-document (max-width: 1100px) {
+    .editor-toolbar .notes-report-verb { display: none; }
+}
 @container note-document (max-width: 900px) {
     .editor-toolbar .notes-ai-description { display: none; }
 }
 @container note-document (max-width: 950px) {
+    .editor-toolbar .notes-report-prefix { display: none; }
     .editor-toolbar .editor-todo-btn { width: 28px; padding: 0; }
     .editor-toolbar .editor-todo-btn span { display: none; }
     .editor-toolbar-row:nth-child(2) .editor-toolbar-group { gap: 0; }
@@ -42,6 +48,12 @@
 .editor-toolbar .editor-size-select { width: 56px; }
 .editor-toolbar .editor-line-select { width: 54px; }
 .editor-toolbar .editor-line-select .custom-select-trigger { padding: 0 3px; gap: 2px; }
+@container note-document (max-width: 950px) {
+    .editor-toolbar .editor-list-select { width: 76px; }
+    .editor-toolbar .editor-list-select .custom-select-trigger { padding-inline: 2px; gap: 1px; }
+    .editor-toolbar-row:nth-child(2) .editor-toolbar-text-button { padding-inline: 3px; gap: 3px; }
+    .editor-toolbar-secondary-actions svg { display: none; }
+}
 .editor-toolbar .custom-select-trigger:hover, .editor-toolbar .custom-select-trigger.is-open { border-color: rgb(var(--primary-rgb)); background: var(--primary-soft); }
 
 /* Keep editor theme variables within the library's own surfaces. */

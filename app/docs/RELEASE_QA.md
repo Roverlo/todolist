@@ -62,6 +62,8 @@
 
 ## 可重复运行的自动化
 
+周报与窗口修改见 [周报与窗口设计记录](WEEKLY_REPORT.md)。运行 `node scripts/test-weekly-report.mjs`，最终 EXE 分别运行 `scripts/test-portable.ps1 -Executable '<EXE>' -WeeklyReport` 和 `-WindowLifecycle`。窗口标题栏仅保留最小化和关闭；运行中前端崩溃/忙碌时自绘按钮无法响应，关闭兜底须通过 Alt+F4 或托盘退出触发，不能沿用旧版“原生 X”点击证据。
+
 待办前导空行由 `scripts/check-note-leading-blank.mjs` 覆盖，集成在 `npm run test:notes`、`node scripts/test-note-completion.mjs` 和原生 `-NoteCompletion`。检查从首项开头按 Backspace 或空行按 Delete（含 Ctrl 组合键）、空白与有文字的首项、连续空行、撤销/重做及保存重开；确认序号、勾选、格式、完成时间、子项和引用/单元格边界保留，不能删除父待办所需的段落。
 
 随记编号与统计由 `scripts/check-note-task-indicators.mjs` 覆盖，集成在 `npm run test:notes`、`node scripts/test-note-completion.mjs` 以及原生 `-NoteCompletion` 流程。检查两种排序后的父/子编号、撤销/重做、增删和层级调整、完成联动、保存重载、普通正文/引用/单元格范围、零待办和 100 项统计；在 1536、1186、1100、900px 检查标题与统计不重叠、编号和勾选框为 4px 间隔。900px 是网页压力检查，原生最小窗口宽度仍以 Tauri 配置为准。

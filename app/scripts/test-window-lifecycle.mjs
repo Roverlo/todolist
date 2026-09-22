@@ -55,9 +55,22 @@ try {
     let page = await connect();
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     await body.waitFor();
+    const windowState = () => page.evaluate(async () => {
+        const commands = ['is_maximized', 'is_minimized', 'is_maximizable', 'is_minimizable', 'is_decorated', 'is_resizable'];
+        return Object.fromEntries(await Promise.all(commands.map(async command => [command, await window.__TAURI_INTERNALS__.invoke('plugin:window|' + command, { label: 'main' })])));
+    });
+    assert.deepEqual(await windowState(), { is_maximized: true, is_minimized: false, is_maximizable: false, is_minimizable: true, is_decorated: false, is_resizable: false });
+    assert.equal(await page.getByRole('banner', { name: '窗口标题栏' }).getByRole('button').count(), 2, 'Only minimize and close are shown');
+    await page.screenshot({ path: join(output, 'maximized-two-window-buttons.png') });
+    await page.getByRole('button', { name: '最小化窗口', exact: true }).click();
+    await until(async () => (await windowState()).is_minimized, 'Minimize must remain available');
+    const minimizedWake = launch();
+    await until(() => minimizedWake.exitCode !== null, 'A repeated launch restores the minimized instance');
+    await until(async () => { const state = await windowState(); return !state.is_minimized && state.is_maximized; }, 'Restored instance remains maximized');
+    console.log('Passed: maximized startup, no restore button, native minimize and maximized wake-up');
     const originalContent = await body.innerHTML();
     await page.evaluate(() => localStorage.removeItem('closeAction'));
-    await closeNativeWindow(originalPid);
+    await page.getByRole('button', { name: '关闭窗口', exact: true }).click();
     await page.getByRole('heading', { name: '关闭应用', exact: true }).waitFor();
     await page.getByLabel('记住我的选择', { exact: true }).check();
     await page.getByRole('button', { name: '最小化到托盘', exact: true }).click();

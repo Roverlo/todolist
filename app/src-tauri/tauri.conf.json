@@ -17,7 +17,11 @@
         "height": 840,
         "minWidth": 1100,
         "minHeight": 700,
-        "resizable": true,
+        "resizable": false,
+        "maximized": true,
+        "maximizable": false,
+        "minimizable": true,
+        "decorations": false,
         "dragDropEnabled": false,
         "fullscreen": false,
         "dataDirectory": "shared_data"

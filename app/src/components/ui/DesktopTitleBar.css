@@ -1,0 +1,8 @@
+.desktop-titlebar { position: fixed; inset: 0 0 auto; height: 32px; z-index: 10000; display: flex; align-items: center; justify-content: space-between; background: var(--surface); border-bottom: 1px solid var(--border); color: var(--text-secondary); user-select: none; font-size: 12px; box-sizing: border-box; }
+.desktop-titlebar > span { padding-left: 14px; }
+.desktop-titlebar > div { display: flex; height: 100%; }
+.desktop-titlebar button { display: grid; place-items: center; width: 46px; height: 100%; border: 0; border-radius: 0; padding: 0; background: transparent; color: inherit; box-shadow: none; cursor: pointer; }
+.desktop-titlebar button:hover { background: var(--primary-soft); }
+.desktop-titlebar button:last-child:hover { background: #c42b1c; color: white; }
+.desktop-titlebar button:focus-visible { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: -3px; }
+.app.native-window { margin-top: 32px; height: calc(100dvh - 32px); }

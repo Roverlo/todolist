@@ -263,6 +263,7 @@ export interface Note {
   tags?: string[];        // 标签数组
   createdAt: number;      // 创建时间戳
   updatedAt: number;      // 更新时间戳
+  kind?: 'weekly-report'; // Generated reports are not fed back into weekly source notes.
   isPinned?: boolean;     // 是否置顶
   deletedAt?: number;     // 删除时间戳（软删除）
 }

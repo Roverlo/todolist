@@ -301,7 +301,7 @@ export interface AppStore extends AppData {
   materializeRecurringTasks: () => void;
   migrateLegacyRecurringTasks: () => void;
   // Note Actions
-  addNote: (note: { title?: string; content: string; tags?: string[]; date?: string }) => Note;
+  addNote: (note: { title?: string; content: string; tags?: string[]; date?: string; kind?: Note['kind'] }) => Note;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   toggleNotePin: (id: string) => void;
@@ -1247,6 +1247,7 @@ export const useAppStore = create<AppStore>()(
           id: nanoid(12),
           title,
           content: noteInput.content,
+          ...(noteInput.kind === 'weekly-report' ? { kind: noteInput.kind } : {}),
           date,
           tags: noteInput.tags || [],
           createdAt: now,

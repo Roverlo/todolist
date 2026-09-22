@@ -5,7 +5,9 @@ import { NotesRecycleBin } from './NotesRecycleBin';
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { AISettingsModal } from './AISettingsModal';
 import { Icon } from '../ui/Icon';
-import { PanelRight, Settings } from 'lucide-react';
+import { FileText, PanelRight, Settings } from 'lucide-react';
+import { WeeklyReportPanel } from './WeeklyReportPanel';
+import { collectWeeklyNotes, type WeeklyReportSource } from '../../utils/weeklyReport';
 import { EditorToolButton } from './EditorToolbarControls';
 import type { Note } from '../../types';
 
@@ -26,6 +28,8 @@ export function NotesMain() {
 
     const [aiPanelOpen, setAiPanelOpen] = useState(true);
     const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+    const [weeklySource, setWeeklySource] = useState<WeeklyReportSource | null>(null);
+    const [aiMode, setAiMode] = useState<'tasks' | 'weekly'>('tasks');
     const [draft, setDraft] = useState<Pick<Note, 'id' | 'title' | 'content'> | null>(null);
 
     const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId) || null, [notes, selectedNoteId]);
@@ -44,13 +48,20 @@ export function NotesMain() {
 
     const toolbarActions = (
         <div className="notes-center-actions">
-            <EditorToolButton onClick={() => setAiPanelOpen(!aiPanelOpen)} className="editor-toolbar-text-button" active={aiPanelOpen}
-                label={aiPanelOpen ? '隐藏 AI 助手' : '显示 AI 助手'} icon={PanelRight} description="根据随记内容生成待办事项。">
+            <EditorToolButton onClick={() => { setAiPanelOpen(aiMode === 'weekly' || !aiPanelOpen); setAiMode('tasks'); }} className="editor-toolbar-text-button" active={aiPanelOpen && aiMode === 'tasks'}
+                label={aiPanelOpen && aiMode === 'tasks' ? '隐藏 AI 助手' : '显示 AI 助手'} icon={PanelRight} description="根据随记内容生成待办事项。">
                 <span>AI助手<span className="notes-ai-description">：一键生成待办事项</span></span>
             </EditorToolButton>
             <EditorToolButton onClick={() => setAiSettingsOpen(true)} label="AI 设置" icon={Settings} aria-haspopup="dialog" />
         </div>
     );
+
+    const weeklyAction = <EditorToolButton onClick={() => {
+        if (aiMode !== 'weekly') setWeeklySource(collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null));
+        setAiMode('weekly'); setAiPanelOpen(true);
+    }} className="editor-toolbar-text-button" label="一键生成周报" icon={FileText} active={aiPanelOpen && aiMode === 'weekly'} description="汇总本周编辑的随记与已完成事项，生成后可编辑、复制或保存。">
+        <span><span className="notes-report-prefix">一键<span className="notes-report-verb">生成</span></span>周报</span>
+    </EditorToolButton>;
 
     return (
         <div className="notes-main-root">
@@ -60,7 +71,7 @@ export function NotesMain() {
                     <Icon name="note" size={18} />
                     <span className="notes-center-title-text">随记编辑器</span>
                 </div>
-                {toolbarActions}
+                <div className="notes-ai-actions">{toolbarActions}{weeklyAction}</div>
             </div>}
 
             <div id="editor-toolbar-portal" />
@@ -71,13 +82,15 @@ export function NotesMain() {
                         {noteViewMode === 'trash' ? (
                             <NotesRecycleBin />
                         ) : (
-                            <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={setDraft} toolbarActions={toolbarActions} />
+                            <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={setDraft} toolbarActions={toolbarActions} toolbarSecondaryActions={weeklyAction} />
                         )}
                     </main>
                 </section>
 
                 <aside className="notes-center-ai-panel" aria-label="AI 助手面板" hidden={!aiPanelOpen}>
-                    <AIAssistantPanel key={activeNote?.id} note={activeNote && draft?.id === activeNote.id ? { ...activeNote, ...draft } : activeNote} />
+                    {aiMode === 'weekly' && weeklySource
+                        ? <WeeklyReportPanel source={weeklySource} onBack={() => setAiMode('tasks')} />
+                        : <AIAssistantPanel key={activeNote?.id} note={activeNote && draft?.id === activeNote.id ? { ...activeNote, ...draft } : activeNote} />}
                 </aside>
             </div>
 

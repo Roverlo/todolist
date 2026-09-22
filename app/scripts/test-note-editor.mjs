@@ -259,15 +259,10 @@ try {
     ]) {
         await openNote(content, `网址覆盖：${name}`);
         await body.locator('p, pre').first().click();
-        // Let the editor's click-focus frame finish before creating the paste selection.
-        await page.evaluate(() => new Promise(requestAnimationFrame));
-        await body.locator('p, pre').first().evaluate(element => {
-            const range = document.createRange();
-            range.selectNodeContents(element);
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
-        });
+        // Use the editor's real keyboard selection; a DOM-only Range can race
+        // ProseMirror's deferred click selection, especially inside table cells.
+        await body.press('Home');
+        await body.press('Shift+End');
         await page.waitForFunction(() => !document.querySelector('.ProseMirror').editor.state.selection.empty);
         assert.equal(await page.evaluate(() => window.getSelection().toString()), name === '普通文字' ? '替换这段文字' : oldURL);
         await pasteText(newURL, clipboardHTML);
@@ -384,7 +379,7 @@ try {
     await openNote('<p>原文保留，点击空白不会替换。</p>', '空白点击取消选区');
     const beforeBlankClicks = await body.evaluate(root => root.editor.getHTML());
     const selectBlankTestText = async () => {
-        await body.click();
+        await body.locator('p').first().click();
         await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.view.hasFocus());
         await page.evaluate(() => new Promise(requestAnimationFrame));
         await body.press('Control+Home');

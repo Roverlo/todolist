@@ -31,6 +31,7 @@ import { BackupModal } from './components/toolbar/BackupModal';
 import { DueReminderModal } from './components/ui/DueReminderModal';
 import { StatsCard } from './components/ui/StatsCard';
 import { CloseConfirmModal } from './components/ui/CloseConfirmModal';
+import { DesktopTitleBar } from './components/ui/DesktopTitleBar';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -290,7 +291,8 @@ function App() {
   }, [isHydrated, allTasks, allProjectMap, reminderShown, settings.dueReminderEnabled, settings.dueReminderSnoozeUntil]);
 
   return (
-    <div className={`app theme-${colorScheme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+    <div className={`app theme-${colorScheme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}${isTauri() ? ' native-window' : ''}`}>
+      {isTauri() && <DesktopTitleBar />}
       <AppSidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}

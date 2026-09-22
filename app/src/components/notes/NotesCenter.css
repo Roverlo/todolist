@@ -412,6 +412,7 @@
   border-bottom: 1px solid var(--border);
   font-size: 11px;
 }
+.notes-ai-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 
 .notes-filter-summary > span {
   flex: 1;
