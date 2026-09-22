@@ -34,6 +34,7 @@ import { useToastStore } from '../../../state/toastStore';
 import { readNoteImage, IMAGE_TYPES } from '../../../utils/noteImages';
 import { NoteAttachment, NoteFilePaste, insertNoteFiles } from './NoteAttachments';
 import { withTaskCompletion } from './taskCompletion';
+import { taskNumbersPlugin } from './taskNumbers';
 
 export const BULLET_STYLES = [
     ['disc', '● 实心圆'], ['circle', '○ 空心圆'], ['square', '■ 方块'],
@@ -133,7 +134,7 @@ const NoteTaskList = TaskList.extend({
             ? withTaskCompletion(extension as TiptapNode) : extension);
     },
     addProseMirrorPlugins() {
-        return [...(this.parent?.() || []), new Plugin({
+        return [...(this.parent?.() || []), taskNumbersPlugin(), new Plugin({
             appendTransaction: (transactions, _oldState, state) => {
                 if (!transactions.some(tr => tr.docChanged || tr.getMeta('normalizeTaskLists'))) return null;
                 const boundaries: number[] = [];

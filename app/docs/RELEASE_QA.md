@@ -62,6 +62,8 @@
 
 ## 可重复运行的自动化
 
+随记编号与统计由 `scripts/check-note-task-indicators.mjs` 覆盖，集成在 `npm run test:notes`、`node scripts/test-note-completion.mjs` 以及原生 `-NoteCompletion` 流程。检查两种排序后的父/子编号、撤销/重做、增删和层级调整、完成联动、保存重载、普通正文/引用/单元格范围、零待办和 100 项统计；在 1536、1186、1100、900px 检查标题与统计不重叠、编号和勾选框为 4px 间隔。900px 是网页压力检查，原生最小窗口宽度仍以 Tauri 配置为准。
+
 在 `app` 目录依次运行，避免多个临时开发服务器争抢资源：
 
 ```powershell

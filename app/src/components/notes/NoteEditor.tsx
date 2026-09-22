@@ -210,18 +210,47 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange, toolbarActio
     }
 
     const charCount = Array.from(editor?.state.doc.textContent.replace(/\s/g, '') ?? '').length;
+    let taskTotal = 0;
+    let taskCompleted = 0;
+    editor?.state.doc.descendants(node => {
+        if (node.type.name === 'taskItem') {
+            taskTotal++;
+            if (node.attrs.checked) taskCompleted++;
+        }
+    });
+    const taskPercent = taskTotal ? taskCompleted / taskTotal * 100 : 0;
 
     return (
         <div className="note-editor">
-            <input
-                className="note-editor-title"
-                type="text"
-                placeholder="标题（可选）"
-                aria-label="随记标题"
-                title="修改标题即可重命名随记"
-                value={title}
-                onChange={handleTitleChange}
-            />
+            <div className="note-editor-heading">
+                <input
+                    className="note-editor-title"
+                    type="text"
+                    placeholder="标题（可选）"
+                    aria-label="随记标题"
+                    title="修改标题即可重命名随记"
+                    value={title}
+                    onChange={handleTitleChange}
+                />
+                <div className="note-task-summary" role="status" aria-atomic="true" title="本篇随记的待办统计，包含子待办">
+                    <span className="note-task-progress" aria-hidden="true">
+                        <svg viewBox="0 0 36 36" focusable="false">
+                            <circle className="note-task-progress-track" cx="18" cy="18" r="15" />
+                            <circle className="note-task-progress-value" cx="18" cy="18" r="15" pathLength="100"
+                                strokeDasharray={`${taskPercent} 100`} transform="rotate(-90 18 18)" />
+                        </svg>
+                        <span>{taskTotal > 99 ? `${Math.round(taskPercent)}%` : `${taskCompleted}/${taskTotal}`}</span>
+                    </span>
+                    <span className="note-task-summary-text">
+                        <strong>待办事项</strong>
+                        <span className="note-task-counts">
+                            <span>总数 <b>{taskTotal}</b></span>
+                            <span>已完成 <b>{taskCompleted}</b></span>
+                            <span>未完成 <b>{taskTotal - taskCompleted}</b></span>
+                        </span>
+                    </span>
+                </div>
+            </div>
 
             {editor && <RichTextProvider editor={editor}>
                 {portalTarget ? createPortal(<EditorToolbar editor={editor} actions={toolbarActions} />, portalTarget) : <EditorToolbar editor={editor} actions={toolbarActions} />}

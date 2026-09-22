@@ -6,6 +6,7 @@ import { checkNoteCompletion } from './check-note-completion.mjs';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 import { checkNoteTaskListMerge } from './check-note-task-list-merge.mjs';
 import { checkNoteNavigation } from './check-note-navigation.mjs';
+import { checkNoteTaskIndicators } from './check-note-task-indicators.mjs';
 
 const arg = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const cdp = arg('--cdp');
@@ -43,6 +44,7 @@ try {
         await page.reload();
         await body.waitFor();
     };
+    await checkNoteTaskIndicators(page, body, openNote, saveAndReload);
     await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
     await checkNoteCompletion(page, body, openNote, saveAndReload);
     await checkNoteTaskSort(page, body, openNote, saveAndReload);

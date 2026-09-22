@@ -679,7 +679,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 10px 24px 16px;
+  padding: 4px 24px 16px;
 }
 
 .note-editor-empty {
@@ -740,7 +740,21 @@
   background: var(--primary-hover);
 }
 
+.note-editor-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  flex-shrink: 0;
+  padding: 2px 0 5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.note-editor-heading:focus-within { border-color: var(--primary); }
+
 .note-editor-title {
+  flex: 1 1 120px;
+  min-width: 0;
   font-size: 22px;
   font-weight: 600;
   color: var(--text-main);
@@ -749,14 +763,30 @@
   background: transparent;
   width: 100%;
   padding: 4px 0;
-  margin-bottom: 6px;
-  border-bottom: 2px solid var(--border);
-  transition: border-color 0.2s;
+  margin: 0;
 }
 
-.note-editor-title:focus {
-  border-color: var(--primary);
+.note-task-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  max-width: 100%;
+  margin-left: auto;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
 }
+
+.note-task-progress { position: relative; display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; }
+.note-task-progress svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke-width: 3; }
+.note-task-progress-track { stroke: var(--border); }
+.note-task-progress-value { stroke: var(--primary); }
+.note-task-progress > span { font-size: 10px; line-height: 1; }
+.note-task-summary-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.note-task-summary-text > strong { font-size: 12px; line-height: 16px; font-weight: 600; }
+.note-task-counts { display: flex; flex-wrap: wrap; gap: 0 8px; font-size: 12px; line-height: 16px; color: var(--text-secondary); }
+.note-task-counts > span { white-space: nowrap; }
+.note-task-counts b { font-weight: 400; }
 
 .note-editor-title::placeholder {
   color: var(--text-subtle);
