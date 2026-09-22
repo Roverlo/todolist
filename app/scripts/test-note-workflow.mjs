@@ -78,12 +78,14 @@ try {
     if (await reminder.isVisible()) await reminder.click();
     if (!await page.getByRole('textbox', { name: '随记正文', exact: true }).isVisible()) {
         await page.getByTitle('切换到随记中心', { exact: true }).click();
+        await page.getByRole('button', { name: '一键生成待办事项', exact: true }).click();
         assert.equal(await page.locator('.ai-source-note strong').innerText(), '尚未选择随记');
         await page.getByRole('button', { name: '创建新随记' }).click();
     }
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     const panel = page.getByRole('complementary', { name: 'AI 助手面板' });
     await body.waitFor();
+    await page.getByRole('button', { name: '一键生成待办事项', exact: true }).click();
     await body.fill('刚输入：周三完成接口联调，每周日整理周报。');
     for (const title of ['', '   ', '批注回归验证', '']) {
         await page.getByPlaceholder('标题（可选）').fill(title);
@@ -134,6 +136,12 @@ try {
     assert.equal(await panel.isVisible(), true);
     assert.equal(await panel.locator('.task-preview-card').count(), 2, 'Clicking the active AI entry must preserve previews');
     await page.getByLabel('任务 1 标题', { exact: true }).fill('确认后的接口联调');
+    const requestsBeforeCollapse = requests.length;
+    await page.getByRole('button', { name: '收起 AI 面板', exact: true }).click();
+    assert.equal(await panel.isVisible(), false);
+    await page.getByRole('button', { name: '一键生成待办事项', exact: true }).click();
+    assert.equal(await page.getByLabel('任务 1 标题', { exact: true }).inputValue(), '确认后的接口联调');
+    assert.equal(requests.length, requestsBeforeCollapse, 'Task preview survives collapse without a new request');
     await page.getByRole('button', { name: '展开任务 1 详情', exact: true }).click();
     await panel.getByRole('button', { name: '添加子任务', exact: true }).click();
     await page.getByRole('checkbox', { name: '选择任务 2', exact: true }).uncheck();

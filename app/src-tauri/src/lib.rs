@@ -369,11 +369,53 @@ fn ssh_download(host: String, port: u16, username: String, password: String, rem
     }
 }
 
+// A non-resizable borderless Win32 maximized window can cover the taskbar even
+// with fullscreen=false. Fill the current monitor's work area as a normal window.
+fn fit_main_window(window: &tauri::Window) -> tauri::Result<()> {
+    if window.label() != "main" || window.is_minimized()? { return Ok(()); }
+    if let Some(monitor) = window.current_monitor()? {
+        let work = monitor.work_area();
+        let outer = window.outer_size()?;
+        let inner = window.inner_size()?;
+        let position = window.outer_position()?;
+        let (mut visible_position, mut visible_size) = (position, outer);
+        #[cfg(windows)]
+        {
+            #[repr(C)]
+            #[derive(Default)]
+            struct Rect { left: i32, top: i32, right: i32, bottom: i32 }
+            #[link(name = "dwmapi")]
+            extern "system" {
+                fn DwmGetWindowAttribute(hwnd: *mut std::ffi::c_void, attribute: u32, value: *mut Rect, size: u32) -> i32;
+            }
+            let mut frame = Rect::default();
+            // DWMWA_EXTENDED_FRAME_BOUNDS excludes invisible resize/shadow margins.
+            // Read them at the current DPI instead of assuming a fixed 8px inset.
+            let result = unsafe { DwmGetWindowAttribute(window.hwnd()?.0, 9, &mut frame, std::mem::size_of::<Rect>() as u32) };
+            if result == 0 && frame.right > frame.left && frame.bottom > frame.top {
+                visible_position = tauri::PhysicalPosition::new(frame.left, frame.top);
+                visible_size = tauri::PhysicalSize::new((frame.right - frame.left) as u32, (frame.bottom - frame.top) as u32);
+            }
+        }
+        let target_position = tauri::PhysicalPosition::new(
+            work.position.x - (visible_position.x - position.x),
+            work.position.y - (visible_position.y - position.y),
+        );
+        let target_size = tauri::PhysicalSize::new(
+            (inner.width as i64 + work.size.width as i64 - visible_size.width as i64).max(1) as u32,
+            (inner.height as i64 + work.size.height as i64 - visible_size.height as i64).max(1) as u32,
+        );
+        if position != target_position { window.set_position(target_position)?; }
+        if inner != target_size { window.set_size(target_size)?; }
+    }
+    Ok(())
+}
+
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
-        let _ = window.maximize();
+        if let Err(error) = fit_main_window(&window.as_ref().window()) { log::warn!("Could not fit work area: {error}"); }
         let _ = window.set_focus();
     }
 }
@@ -423,7 +465,12 @@ pub fn run() {
     builder
         .register_uri_scheme_protocol("attachment", |_context, request| attachments::image_response(&request))
         .manage(close_guard::CloseGuard::default())
-        .on_window_event(close_guard::on_window_event)
+        .on_window_event(|window, event| {
+            close_guard::on_window_event(window, event);
+            if matches!(event, tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_) | tauri::WindowEvent::ScaleFactorChanged { .. } | tauri::WindowEvent::Focused(true)) {
+                if let Err(error) = fit_main_window(window) { log::warn!("Could not fit work area: {error}"); }
+            }
+        })
         .plugin(tauri_plugin_process::init())
         .plugin(LogBuilder::default().level(log::LevelFilter::Info).build())
         .plugin(tauri_plugin_dialog::init())
@@ -474,7 +521,8 @@ pub fn run() {
                 .build(app)?;
 
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.maximize();
+                fit_main_window(&window.as_ref().window())?;
+                window.show()?;
                 // 打开开发者工具用于调试
                 #[cfg(debug_assertions)]
                 let _ = window.open_devtools();

@@ -62,7 +62,7 @@
 
 ## 可重复运行的自动化
 
-周报与窗口修改见 [周报与窗口设计记录](WEEKLY_REPORT.md)。运行 `node scripts/test-weekly-report.mjs`，最终 EXE 分别运行 `scripts/test-portable.ps1 -Executable '<EXE>' -WeeklyReport` 和 `-WindowLifecycle`。窗口标题栏仅保留最小化和关闭；运行中前端崩溃/忙碌时自绘按钮无法响应，关闭兜底须通过 Alt+F4 或托盘退出触发，不能沿用旧版“原生 X”点击证据。
+周报与窗口修改见 [周报与窗口设计记录](WEEKLY_REPORT.md)。运行 `node scripts/test-weekly-report.mjs`，最终 EXE 分别运行 `scripts/test-portable.ps1 -Executable '<EXE>' -WeeklyReport` 和 `-WindowLifecycle`。检查周报默认显示且不自动请求，周报左/待办右，收起后正文占满剩余宽度，键盘展开后结果与编辑保留。窗口标题栏仅保留最小化和关闭；启动、最小化恢复、托盘恢复和重新启动后，通过 `inspect-window-bounds.ps1` 检查 DWM 可见边框恰好等于当前显示器 workArea、正文底部只留原生细边框，贴齐任务栏上沿。透明阴影和调整边缘可能在 workArea 外，不以外框或 `isMaximized` 代替可见区域验收。运行中前端崩溃/忙碌时自绘按钮无法响应，关闭兜底须通过 Alt+F4 或托盘退出触发，不能沿用旧版“原生 X”点击证据。
 
 待办前导空行由 `scripts/check-note-leading-blank.mjs` 覆盖，集成在 `npm run test:notes`、`node scripts/test-note-completion.mjs` 和原生 `-NoteCompletion`。检查从首项开头按 Backspace 或空行按 Delete（含 Ctrl 组合键）、空白与有文字的首项、连续空行、撤销/重做及保存重开；确认序号、勾选、格式、完成时间、子项和引用/单元格边界保留，不能删除父待办所需的段落。
 

@@ -136,6 +136,7 @@ try {
     await renameDialog.waitFor({ state: 'hidden' });
     assert.equal(await page.getByRole('textbox', { name: '随记标题', exact: true }).inputValue(), '改名后的随记');
     assert.equal(await body.innerText(), '改名前尚未自动保存的正文');
+    await page.getByRole('button', { name: '一键生成待办事项', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.ai-source-note strong')?.textContent === '改名后的随记');
     await body.press('Control+End');
     await page.keyboard.insertText('，改名后继续编辑');

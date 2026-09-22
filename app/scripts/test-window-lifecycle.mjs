@@ -3,6 +3,7 @@ import { spawn, execFile } from 'node:child_process';
 import { copyFile, readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 // Invoked by test-portable.ps1, which backs up user data and provides isolated data/profile directories.
@@ -53,21 +54,39 @@ const isVisible = page => page.evaluate(() => window.__TAURI_INTERNALS__.invoke(
 
 try {
     let page = await connect();
+    let currentPid = originalPid;
+    const checkWorkArea = async () => {
+        const bounds = await page.evaluate(async () => {
+            const invoke = command => window.__TAURI_INTERNALS__.invoke('plugin:window|' + command, { label: 'main' });
+            return { position: await invoke('outer_position'), size: await invoke('outer_size'), monitor: await invoke('current_monitor'), fullscreen: await invoke('is_fullscreen') };
+        });
+        console.log('Window work area:', JSON.stringify(bounds));
+        assert.equal(bounds.fullscreen, false, 'Keep the Windows taskbar available');
+        const { stdout } = await run('powershell.exe', ['-NoProfile', '-File', fileURLToPath(new URL('./inspect-window-bounds.ps1', import.meta.url)), '-ProcessId', String(currentPid)], { windowsHide: true });
+        const nativeBounds = JSON.parse(stdout);
+        console.log('Visible native bounds:', JSON.stringify(nativeBounds));
+        assert.deepEqual(nativeBounds.visible, nativeBounds.work, 'Visible frame must meet the work-area edges without a gap');
+        const contentBottom = nativeBounds.clientOrigin.y + nativeBounds.client.bottom;
+        assert.ok(contentBottom <= nativeBounds.work.bottom && nativeBounds.work.bottom - contentBottom <= 2,
+            'Content reaches the taskbar edge with only the native border, never a blank strip');
+    };
+    await checkWorkArea();
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     await body.waitFor();
     const windowState = () => page.evaluate(async () => {
         const commands = ['is_maximized', 'is_minimized', 'is_maximizable', 'is_minimizable', 'is_decorated', 'is_resizable'];
         return Object.fromEntries(await Promise.all(commands.map(async command => [command, await window.__TAURI_INTERNALS__.invoke('plugin:window|' + command, { label: 'main' })])));
     });
-    assert.deepEqual(await windowState(), { is_maximized: true, is_minimized: false, is_maximizable: false, is_minimizable: true, is_decorated: false, is_resizable: false });
+    assert.deepEqual(await windowState(), { is_maximized: false, is_minimized: false, is_maximizable: false, is_minimizable: true, is_decorated: false, is_resizable: false });
     assert.equal(await page.getByRole('banner', { name: '窗口标题栏' }).getByRole('button').count(), 2, 'Only minimize and close are shown');
     await page.screenshot({ path: join(output, 'maximized-two-window-buttons.png') });
     await page.getByRole('button', { name: '最小化窗口', exact: true }).click();
     await until(async () => (await windowState()).is_minimized, 'Minimize must remain available');
     const minimizedWake = launch();
     await until(() => minimizedWake.exitCode !== null, 'A repeated launch restores the minimized instance');
-    await until(async () => { const state = await windowState(); return !state.is_minimized && state.is_maximized; }, 'Restored instance remains maximized');
-    console.log('Passed: maximized startup, no restore button, native minimize and maximized wake-up');
+    await until(async () => !(await windowState()).is_minimized, 'Repeated launch restores the window');
+    await checkWorkArea();
+    console.log('Passed: work-area startup, no restore button, native minimize and work-area wake-up');
     const originalContent = await body.innerHTML();
     await page.evaluate(() => localStorage.removeItem('closeAction'));
     await page.getByRole('button', { name: '关闭窗口', exact: true }).click();
@@ -84,6 +103,7 @@ try {
         assert.equal(duplicate.exitCode, 0);
         assert.ok(alive(originalPid), 'The original instance must remain alive');
         await until(() => isVisible(page), 'A repeated launch must restore the original window');
+        await checkWorkArea();
         assert.equal(await body.innerHTML(), originalContent, 'Restoring the window must preserve the current note');
         await closeNativeWindow(originalPid);
         await until(async () => !await isVisible(page), 'The remembered tray preference must still work');
@@ -100,8 +120,10 @@ try {
     await browser.close().catch(() => {});
 
     const restarted = launch();
+    currentPid = restarted.pid;
     page = await connect();
     await page.getByRole('textbox', { name: '随记正文', exact: true }).waitFor();
+    await checkWorkArea();
     await page.evaluate(() => localStorage.setItem('closeAction', 'exit'));
     await closeNativeWindow(restarted.pid);
     await until(() => restarted.exitCode !== null, 'The remembered exit choice must stop the process');

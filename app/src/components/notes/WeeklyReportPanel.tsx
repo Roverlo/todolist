@@ -7,7 +7,7 @@ import { WEEKLY_REPORT_PROMPT, parseWeeklyReport, reportAsHtml, weeklyReportInpu
 import { AISettingsModal } from './AISettingsModal';
 import './WeeklyReportPanel.css';
 
-export function WeeklyReportPanel({ source }: { source: WeeklyReportSource }) {
+export function WeeklyReportPanel({ source, autoGenerate, onGenerate }: { source: WeeklyReportSource; autoGenerate: boolean; onGenerate: () => void }) {
     const request = useRef<AbortController | null>(null);
     const savedId = useRef<string | null>(null);
     const [report, setReport] = useState('');
@@ -46,13 +46,14 @@ export function WeeklyReportPanel({ source }: { source: WeeklyReportSource }) {
     }, [source]);
 
     useEffect(() => {
+        if (!autoGenerate) return;
         // Defer the initial request so React's development effect probe cannot send it twice.
         const start = window.setTimeout(() => void generate(), 0);
         return () => {
             window.clearTimeout(start);
             request.current?.abort(); request.current = null;
         };
-    }, [generate]);
+    }, [generate, autoGenerate]);
 
     const cancel = () => { request.current?.abort(); request.current = null; setLoading(false); setNotice('已取消生成'); };
     const save = async () => {
@@ -97,7 +98,7 @@ export function WeeklyReportPanel({ source }: { source: WeeklyReportSource }) {
             {notice && <p className="weekly-report-notice" role="status">{notice}</p>}
         </div>
         <footer className="weekly-report-footer">
-            <button className="btn btn-light" onClick={() => void generate()} disabled={!configured || !source.sources.length || loading || saving}><RefreshCw size={15} />{report ? '重新生成' : error ? '重试生成' : '生成周报'}</button>
+            <button className="btn btn-light" onClick={onGenerate} disabled={!configured || !source.sources.length || loading || saving}><RefreshCw size={15} />{report ? '重新生成' : error ? '重试生成' : '生成周报'}</button>
             <button className="btn btn-light" disabled={!report.trim() || loading || saving} onClick={() => {
                 void navigator.clipboard.writeText(report).then(() => setNotice('已复制周报'), () => setError('复制失败，请选中周报正文后手动复制。'));
             }}><Copy size={15} />复制周报</button>

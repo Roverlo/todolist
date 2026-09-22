@@ -25,6 +25,13 @@ export async function checkNotesCommandBar(page, width, { contextual = false } =
     assert.ok(Math.abs(layout.tasks.width - layout.weekly.width) <= 1 && layout.tasks.height === layout.weekly.height && layout.tasks.y === layout.weekly.y,
         `AI actions must be equal peers at ${width}px: ${JSON.stringify(layout)}`);
     assert.ok(layout.weekly.right <= width && layout.root.x >= 0);
+    assert.ok(layout.weekly.right <= layout.tasks.x, 'Weekly report is left of task generation');
+    const collapse = await page.getByRole('button', { name: '收起 AI 面板', exact: true }).boundingBox();
+    const settings = await page.getByRole('button', { name: 'AI 设置', exact: true }).boundingBox();
+    assert.ok(collapse.x + collapse.width <= settings.x, 'Collapse is before AI settings');
+    const toggleLabel = await page.locator('.notes-ai-toggle span').boundingBox();
+    assert.ok(toggleLabel.height < 24 && toggleLabel.x + toggleLabel.width <= collapse.x + collapse.width,
+        'Collapse label stays on one line inside its button');
     assert.equal(layout.headingIcons, 0, 'The AI heading has no decorative star');
     assert.equal(layout.controlsFit, true, `Toolbar groups and controls must be reachable at ${width}px: ${JSON.stringify(layout)}`);
     assert.ok(layout.toolbar.height <= (contextual ? 122 : 86), `Compact toolbar height at ${width}px: ${layout.toolbar.height}`);
