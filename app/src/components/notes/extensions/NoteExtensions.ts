@@ -152,6 +152,31 @@ const NoteTaskList = TaskList.extend({
         })];
     },
     addKeyboardShortcuts() {
+        const deleteAdjacentEmptyParagraph = (backward: boolean) => {
+            const { empty, $from } = this.editor.state.selection;
+            if (!empty || $from.parent.type.name !== 'paragraph') return false;
+            if (backward) {
+                // At the first task's text start, remove the preceding blank block before
+                // the normal list keymap lifts the task or deletes an empty task item.
+                if ($from.parentOffset || $from.depth < 3 || $from.node(-1).type.name !== 'taskItem'
+                    || $from.node(-2).type.name !== 'taskList' || $from.index(-1) || $from.index(-2)) return false;
+                const parent = $from.node(-3);
+                const index = $from.index(-3);
+                const previous = parent.maybeChild(index - 1);
+                if (previous?.type.name !== 'paragraph' || previous.content.size
+                    || !parent.canReplace(index - 1, index)) return false;
+                const to = $from.before(-2);
+                return this.editor.commands.deleteRange({ from: to - previous.nodeSize, to });
+            }
+            // Delete from the blank block itself must keep the following checklist intact.
+            // canReplace protects required parent-task paragraphs and schema boundaries.
+            if ($from.parent.content.size) return false;
+            const parent = $from.node(-1);
+            const index = $from.index(-1);
+            if (parent.maybeChild(index + 1)?.type.name !== 'taskList'
+                || !parent.canReplace(index, index + 1)) return false;
+            return this.editor.commands.deleteRange({ from: $from.before(), to: $from.after() });
+        };
         const deleteEmptyItem = () => {
             const { empty, $from } = this.editor.state.selection;
             if (!empty || $from.depth < 3 || $from.parent.type.name !== 'paragraph'
@@ -163,10 +188,10 @@ const NoteTaskList = TaskList.extend({
         };
         return {
             ...this.parent?.(),
-            Backspace: deleteEmptyItem,
-            Delete: deleteEmptyItem,
-            'Mod-Backspace': deleteEmptyItem,
-            'Mod-Delete': deleteEmptyItem,
+            Backspace: () => deleteAdjacentEmptyParagraph(true) || deleteEmptyItem(),
+            Delete: () => deleteAdjacentEmptyParagraph(false) || deleteEmptyItem(),
+            'Mod-Backspace': () => deleteAdjacentEmptyParagraph(true) || deleteEmptyItem(),
+            'Mod-Delete': () => deleteAdjacentEmptyParagraph(false) || deleteEmptyItem(),
         };
     },
 });

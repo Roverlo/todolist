@@ -22,8 +22,19 @@ export async function checkNoteTaskListMerge(page, body, openNote, saveAndReload
 
     await seed(list(first) + '<p>中间说明</p>' + list(second), '删除待办间隔');
     await body.locator(':scope > p').click();
+    await page.waitForFunction(() => {
+        const editor = document.querySelector('.ProseMirror').editor;
+        const dom = window.getSelection();
+        return dom?.anchorNode && editor.view.dom.contains(dom.anchorNode)
+            && editor.state.selection.from === editor.view.posAtDOM(dom.anchorNode, dom.anchorOffset);
+    });
     await page.keyboard.press('Home');
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.state.selection.$from.parentOffset === 0);
     await page.keyboard.press('Shift+End');
+    await page.waitForFunction(() => {
+        const { doc, selection } = document.querySelector('.ProseMirror').editor.state;
+        return doc.textBetween(selection.from, selection.to) === '中间说明';
+    });
     assert.equal(await body.evaluate(root => root.editor.state.doc.textBetween(root.editor.state.selection.from, root.editor.state.selection.to)), '中间说明');
     await page.keyboard.press('Backspace');
     assert.equal(await topLists.count(), 2, 'An intentional empty paragraph still separates lists');

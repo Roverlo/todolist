@@ -5,6 +5,7 @@ import { preview } from 'vite';
 import { checkNoteCompletion } from './check-note-completion.mjs';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 import { checkNoteTaskListMerge } from './check-note-task-list-merge.mjs';
+import { checkNoteLeadingBlank } from './check-note-leading-blank.mjs';
 import { checkNoteNavigation } from './check-note-navigation.mjs';
 import { checkNoteTaskIndicators } from './check-note-task-indicators.mjs';
 
@@ -44,6 +45,7 @@ try {
         await page.reload();
         await body.waitFor();
     };
+    await checkNoteLeadingBlank(page, body, openNote, saveAndReload);
     await checkNoteTaskIndicators(page, body, openNote, saveAndReload);
     await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
     await checkNoteCompletion(page, body, openNote, saveAndReload);

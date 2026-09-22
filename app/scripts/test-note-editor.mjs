@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 import { checkNoteCompletion } from './check-note-completion.mjs';
 import { checkNoteTaskListMerge } from './check-note-task-list-merge.mjs';
+import { checkNoteLeadingBlank } from './check-note-leading-blank.mjs';
 import { checkNoteTaskIndicators } from './check-note-task-indicators.mjs';
 import { mkdir, readFile } from 'node:fs/promises';
 import { createServer as createTcpServer } from 'node:net';
@@ -877,6 +878,7 @@ try {
     await page.setViewportSize({ width: 1280, height: 840 });
     console.log('Passed: clear three-level checklists, contextual indent actions, parent/child moves, cascading completion, independent reopening, undo/redo and persistence');
 
+    await checkNoteLeadingBlank(page, body, openNote, saveAndReload);
     await checkNoteTaskIndicators(page, body, openNote, saveAndReload);
     await checkNoteTaskSort(page, body, openNote, saveAndReload);
     await checkNoteCompletion(page, body, openNote, saveAndReload);
