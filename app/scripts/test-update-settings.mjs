@@ -156,13 +156,18 @@ try {
     await hasValue(field, defaultServer);
     await page.getByRole('button', { name: '测试连接', exact: true }).click();
     await hasText(feedback, '连接成功', 15000);
-    for (const width of cdp ? [1280, 1100] : [1747, 1280, 1100]) {
-        await page.setViewportSize({ width, height: 900 });
+    for (const [width, height] of cdp ? [[1280, 900], [1100, 720]] : [[1747, 900], [1280, 900], [1100, 720]]) {
+        await page.setViewportSize({ width, height });
         const bounds = await page.locator('.update-about-layout').evaluate(root => {
             const buttons = [...root.querySelectorAll('button,input,select')].map(x => x.getBoundingClientRect());
             return { right: Math.max(...buttons.map(x => x.right)), left: Math.min(...buttons.map(x => x.left)), viewport: innerWidth };
         });
         assert.ok(bounds.left >= 0 && bounds.right <= bounds.viewport, 'Update controls must remain within the viewport');
+        const dialog = await page.locator('.create-dialog').boundingBox();
+        assert.ok(dialog.y >= 0 && dialog.y + dialog.height <= height, 'Settings dialog must fit a short window');
+        await page.getByLabel('检查间隔').scrollIntoViewIfNeeded();
+        const interval = await page.getByLabel('检查间隔').boundingBox();
+        assert.ok(interval.y >= 0 && interval.y + interval.height <= height, 'Lower settings must be reachable by scrolling');
         await page.screenshot({ path: `${output}/${cdp ? 'native' : 'web'}-${width}.png` });
     }
     await page.getByRole('button', { name: '编辑地址', exact: true }).click();

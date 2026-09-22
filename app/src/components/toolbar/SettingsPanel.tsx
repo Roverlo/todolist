@@ -185,7 +185,7 @@ export const SettingsPanel = ({
         <div className="create-overlay">
             <div
                 className="create-dialog"
-                style={{ width: activeTab === 'about' ? 820 : 560, maxWidth: 'calc(100vw - 40px)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+                style={{ width: activeTab === 'about' ? 820 : 560, maxWidth: 'calc(100vw - 40px)', maxHeight: activeTab === 'about' ? 'calc(100vh - 120px)' : '85vh', display: 'flex', flexDirection: 'column' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 <header className="create-dialog-header">
