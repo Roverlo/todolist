@@ -1,112 +1,62 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useAppStoreShallow } from '../state/appStore';
-import { checkForUpdate, type UpdateInfo } from '../utils/updateChecker';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAppStore, useAppStoreShallow } from '../state/appStore';
+import { checkForUpdate, CURRENT_VERSION, DEFAULT_UPDATE_SERVER, type UpdateInfo } from '../utils/updateChecker';
+import { setUpdatePreferences } from '../utils/updatePreferences';
 
-/**
- * 自动更新检查 Hook
- * 支持启动时检查和定时检查
- */
 export const useAutoUpdateCheck = () => {
-    const { settings, setSettings } = useAppStoreShallow((state) => ({
-        settings: state.settings,
-        setSettings: state.setSettings,
-    }));
-
+    const { config, hydrated } = useAppStoreShallow(state => ({ config: state.settings.updateCheck, hydrated: state._hasHydrated }));
+    const serverUrl = config?.serverUrl ?? DEFAULT_UPDATE_SERVER;
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
-    const isChecking = useRef(false);
+    const request = useRef<AbortController | null>(null);
     const hasCheckedOnStartup = useRef(false);
-
-    // 执行检查的核心函数
-    const performCheck = useCallback(async (isStartupCheck = false) => {
-        if (isChecking.current) return;
-
-        isChecking.current = true;
+    const performCheck = useCallback(async () => {
+        if (request.current && !request.current.signal.aborted) return;
+        const controller = new AbortController();
+        request.current = controller;
         try {
-            const result = await checkForUpdate();
-
-            if (result.hasUpdate && result.updateInfo) {
-                const skipVersion = settings.updateCheck?.skipVersion;
-                // 如果用户选择跳过此版本，则不提示
-                if (result.updateInfo.version !== skipVersion) {
-                    setUpdateInfo(result.updateInfo);
-                    setShowUpdateModal(true);
-                }
+            const result = await checkForUpdate(CURRENT_VERSION, serverUrl, controller.signal);
+            if (controller.signal.aborted || result.error) return;
+            const current = useAppStore.getState().settings.updateCheck;
+            if ((current?.serverUrl ?? DEFAULT_UPDATE_SERVER) !== serverUrl) return;
+            if (result.updateInfo && result.updateInfo.version !== current?.skipVersion) {
+                setUpdateInfo(result.updateInfo);
+                setShowUpdateModal(true);
             }
-
-            // 更新最后检查时间
-            setSettings({
-                updateCheck: {
-                    ...settings.updateCheck,
-                    checkOnStartup: settings.updateCheck?.checkOnStartup ?? true,
-                    autoCheck: settings.updateCheck?.autoCheck ?? true,
-                    checkInterval: settings.updateCheck?.checkInterval ?? 60,
-                    lastCheckAt: new Date().toISOString(),
-                },
-            });
-
-            if (!isStartupCheck) {
-                console.log(`[UpdateCheck] 定时检查完成: ${new Date().toLocaleString()}`);
-            }
-        } catch (err) {
-            console.error('[UpdateCheck] 检查失败:', err);
+            setUpdatePreferences({ lastCheckAt: new Date().toISOString() });
         } finally {
-            isChecking.current = false;
+            if (request.current === controller) request.current = null;
         }
-    }, [settings, setSettings]);
+    }, [serverUrl]);
 
-    // 跳过当前版本
-    const skipCurrentVersion = useCallback((version: string) => {
-        setSettings({
-            updateCheck: {
-                ...settings.updateCheck,
-                checkOnStartup: settings.updateCheck?.checkOnStartup ?? true,
-                autoCheck: settings.updateCheck?.autoCheck ?? true,
-                checkInterval: settings.updateCheck?.checkInterval ?? 60,
-                skipVersion: version,
-            },
-        });
+    useEffect(() => {
+        setUpdateInfo(null);
         setShowUpdateModal(false);
-    }, [settings, setSettings]);
+        return () => request.current?.abort();
+    }, [serverUrl]);
 
-    // 启动时检查（仅执行一次）
     useEffect(() => {
-        if (hasCheckedOnStartup.current) return;
-        if (!settings.updateCheck?.checkOnStartup) return;
-
-        hasCheckedOnStartup.current = true;
-
-        // 延迟 3 秒后执行启动检查，避免影响启动速度
+        if (!hydrated || hasCheckedOnStartup.current || !(config?.checkOnStartup ?? true)) return;
         const timer = setTimeout(() => {
-            console.log('[UpdateCheck] 执行启动时检查...');
-            performCheck(true);
+            hasCheckedOnStartup.current = true;
+            void performCheck();
         }, 3000);
-
         return () => clearTimeout(timer);
-    }, [settings.updateCheck?.checkOnStartup, performCheck]);
+    }, [hydrated, config?.checkOnStartup, performCheck]);
 
-    // 定时检查
     useEffect(() => {
-        if (!settings.updateCheck?.autoCheck) return;
-
-        const intervalMs = (settings.updateCheck.checkInterval || 60) * 60 * 1000;
-
-        console.log(`[UpdateCheck] 定时检查已启用，间隔: ${settings.updateCheck.checkInterval || 60} 分钟`);
-
-        const timer = setInterval(() => {
-            performCheck(false);
-        }, intervalMs);
-
+        if (!hydrated || !(config?.autoCheck ?? true)) return;
+        const minutes = config?.checkInterval ?? 60;
+        const timer = setInterval(() => void performCheck(), Math.max(10, Number.isFinite(minutes) ? minutes : 60) * 60000);
         return () => clearInterval(timer);
-    }, [settings.updateCheck?.autoCheck, settings.updateCheck?.checkInterval, performCheck]);
+    }, [hydrated, config?.autoCheck, config?.checkInterval, performCheck]);
 
-    return {
-        updateInfo,
-        showUpdateModal,
-        setShowUpdateModal,
-        skipCurrentVersion,
-        performCheck,
-    };
+    const skipCurrentVersion = useCallback((version: string) => {
+        setUpdatePreferences({ skipVersion: version });
+        setShowUpdateModal(false);
+    }, []);
+
+    return { updateInfo, showUpdateModal, setShowUpdateModal, skipCurrentVersion, performCheck };
 };
 
 export default useAutoUpdateCheck;

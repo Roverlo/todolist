@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { UpdateInfo } from '../../utils/updateChecker';
 import { CURRENT_VERSION, openDownloadUrl } from '../../utils/updateChecker';
 
@@ -8,11 +9,12 @@ interface UpdateModalProps {
 }
 
 export const UpdateModal = ({ open, onClose, updateInfo }: UpdateModalProps) => {
+    const [downloadError, setDownloadError] = useState('');
     if (!open) return null;
 
-    const handleDownload = () => {
-        openDownloadUrl(updateInfo.downloadUrl);
-        onClose();
+    const handleDownload = async () => {
+        try { await openDownloadUrl(updateInfo.downloadUrl); onClose(); }
+        catch { setDownloadError('无法打开下载链接，请检查系统默认浏览器后重试'); }
     };
 
     return (
@@ -35,6 +37,7 @@ export const UpdateModal = ({ open, onClose, updateInfo }: UpdateModalProps) => 
                 </header>
 
                 <div className="create-dialog-body" style={{ padding: '20px 24px' }}>
+                    {downloadError && <p role="alert" style={{ color: 'var(--danger)' }}>{downloadError}</p>}
                     {/* 版本对比 */}
                     <div
                         style={{

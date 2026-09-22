@@ -58,7 +58,7 @@
 | S02 | 数据与附件存储位置、导入/导出 | 图片与普通文件统一在 attachments；data.json 仅引用；旧图迁移前完整备份、原 images 保留；网络图片与网页预览说明准确，导出包含附件 |
 | S03 | 本地备份、定时备份、恢复 | 随记和标签完整；恢复往返一致；旧备份缺省字段不清空当前随记；校验失败或恢复前备份失败时不覆盖；每次恢复重新确认 |
 | S04 | 远程同步设置及失败状态 | 未配置提示清晰；真实服务读写需独立测试端点，不使用生产空间 |
-| S05 | 关于、感谢、版本检查 | 文案和版本正确；网络检查失败可恢复，不能伪称升级成功 |
+| S05 | 关于、感谢、版本检查 | 文案和版本正确；更新源可保存与恢复默认，重启仍保留；手动、历史、启动和定时检查一致；地址/清单错误、网络超时、切源取消及原生保存失败可恢复，不能伪称保存或升级成功 |
 
 ## 可重复运行的自动化
 
@@ -78,6 +78,9 @@ node scripts/test-task-workflow.mjs
 node scripts/test-recurring.mjs
 node scripts/test-ui-regressions.mjs
 node scripts/test-note-workflow.mjs
+node scripts/test-update-settings.mjs
+python scripts/test-publish-update.py
+./scripts/test-portable.ps1 -Executable '<交付 EXE 绝对路径>' -UpdateSettings
 ./scripts/test-portable.ps1 -Executable '<交付 EXE 绝对路径>' -EditorWorkflow
 ./scripts/test-portable.ps1 -Executable '<交付 EXE 绝对路径>' -Attachments
 ```

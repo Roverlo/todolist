@@ -209,6 +209,7 @@ export interface AutoBackupConfig {
 }
 
 export interface UpdateCheckConfig {
+  serverUrl?: string;         // 更新服务器根地址；旧配置缺省时使用默认 VPS03
   checkOnStartup: boolean;    // 启动时检查，默认 true
   autoCheck: boolean;         // 定时检查，默认 true
   checkInterval: number;      // 检查间隔（分钟），默认 60，最小 10

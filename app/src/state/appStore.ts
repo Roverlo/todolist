@@ -3,7 +3,7 @@ import { useToastStore } from './toastStore';
 import { create, type StoreApi } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { StateStorage } from 'zustand/middleware';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { produce, type Draft } from 'immer';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
@@ -383,6 +383,8 @@ const withHistory = (set: StoreApi<AppStore>['setState'], updater: (state: Draft
 
 // Startup effects must not persist initial/empty state while native data and attachments are loading.
 let storageHydrated = false;
+let pendingStorageSave: Promise<void> = Promise.resolve();
+export const waitForAppSave = () => pendingStorageSave;
 
 export const useAppStore = create<AppStore>()(
   persist(
@@ -1515,22 +1517,31 @@ export const useAppStore = create<AppStore>()(
               return window.localStorage.getItem(name);
             }
           },
-          setItem: async (name: string, value: string): Promise<void> => {
-            if (typeof window === 'undefined' || !storageHydrated) return;
+          setItem: (name: string, value: string): Promise<void> => {
+            if (typeof window === 'undefined' || !storageHydrated) return Promise.resolve();
 
-            // 1. 写入本地文件 (Portable)
-            try {
-              await invoke('save_data', { data: value });
-            } catch (e) {
-              console.error('Failed to save portable data', e);
-            }
+            pendingStorageSave = (async () => {
+              let saveError: unknown;
 
-            // 2. 写入系统 localStorage (Backup/Legacy)
-            try {
-              window.localStorage.setItem(name, value);
-            } catch (e) {
-              console.error('Failed to save local backup', e);
-            }
+              // 1. 写入本地文件 (Portable)
+              try {
+                await invoke('save_data', { data: value });
+              } catch (e) {
+                console.error('Failed to save portable data', e);
+                if (isTauri()) saveError = e;
+              }
+
+              // 2. 写入系统 localStorage (Backup/Legacy)
+              try {
+                window.localStorage.setItem(name, value);
+              } catch (e) {
+                console.error('Failed to save local backup', e);
+                if (!isTauri()) saveError = e;
+              }
+              if (saveError) throw new Error('无法写入数据，请检查存储目录或可用空间后重试');
+            })();
+            // Automatic writes remain nonblocking; explicit saves can await the original result.
+            return pendingStorageSave.catch(() => {});
           },
           removeItem: async (): Promise<void> => {
             // Not implemented for file storage

@@ -23,6 +23,7 @@ import { useAutoBackup } from './hooks/useAutoBackup';
 import { useAutoUpdateCheck } from './hooks/useAutoUpdateCheck';
 import { useVisibleTasks } from './hooks/useVisibleTasks';
 import { ToastContainer } from './components/ui/Toast';
+import { useToastStore } from './state/toastStore';
 import './components/ui/Toast.css';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { NewTaskChoiceDialog } from './components/ui/NewTaskChoiceDialog';
@@ -641,8 +642,12 @@ function App() {
                 <button
                   onClick={async () => {
                     const { openDownloadUrl } = await import('./utils/updateChecker');
-                    openDownloadUrl(updateInfo.downloadUrl);
-                    setShowUpdateModal(false);
+                    try {
+                      await openDownloadUrl(updateInfo.downloadUrl);
+                      setShowUpdateModal(false);
+                    } catch {
+                      useToastStore.getState().addToast('无法打开下载链接，请检查系统默认浏览器后重试', 'error');
+                    }
                   }}
                   style={{ flex: 1, padding: '10px 16px', border: 'none', borderRadius: 8, background: 'var(--primary)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                 >

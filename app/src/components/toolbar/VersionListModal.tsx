@@ -1,28 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { UpdateInfo, VersionsInfo } from '../../utils/updateChecker';
-import { CURRENT_VERSION, getAllVersions, openDownloadUrl } from '../../utils/updateChecker';
+import { CURRENT_VERSION, DEFAULT_UPDATE_SERVER, getAllVersions, openDownloadUrl } from '../../utils/updateChecker';
 
 interface VersionListModalProps {
     open: boolean;
     onClose: () => void;
+    serverUrl?: string;
 }
 
-export const VersionListModal = ({ open, onClose }: VersionListModalProps) => {
+export const VersionListModal = ({ open, onClose, serverUrl = DEFAULT_UPDATE_SERVER }: VersionListModalProps) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [versionsInfo, setVersionsInfo] = useState<VersionsInfo | null>(null);
 
-    useEffect(() => {
-        if (open) {
-            loadVersions();
-        }
-    }, [open]);
-
-    const loadVersions = async () => {
+    const request = useRef<AbortController | null>(null);
+    const loadVersions = useCallback(async () => {
+        request.current?.abort();
+        const controller = new AbortController();
+        request.current = controller;
         setLoading(true);
         setError(null);
+        setVersionsInfo(null);
 
-        const result = await getAllVersions();
+        const result = await getAllVersions(serverUrl, controller.signal);
+        if (controller.signal.aborted) return;
 
         if (result.error) {
             setError(result.error);
@@ -31,12 +32,18 @@ export const VersionListModal = ({ open, onClose }: VersionListModalProps) => {
         }
 
         setLoading(false);
-    };
+    }, [serverUrl]);
+
+    useEffect(() => {
+        if (open) void loadVersions();
+        return () => request.current?.abort();
+    }, [open, loadVersions]);
 
     if (!open) return null;
 
-    const handleDownload = (version: UpdateInfo) => {
-        openDownloadUrl(version.downloadUrl);
+    const handleDownload = async (version: UpdateInfo) => {
+        try { await openDownloadUrl(version.downloadUrl); }
+        catch { setError('无法打开下载链接，请检查系统默认浏览器后重试'); }
     };
 
     return (
