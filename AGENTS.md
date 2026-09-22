@@ -2,6 +2,8 @@
 
 实际应用位于 `app/`，是 React + TypeScript + Tauri 的 Windows 桌面程序。命令在 `app/` 执行；[开发说明](app/README.md) 是环境与产物入口，[技术方案](app/docs/TECH_PLAN.md) 是代码定位入口。
 
+随记待办界面修改先读[已确认的选图与偏好](app/docs/NOTE_TASK_DESIGN.md)，区分选定方案、实现和验收状态；后续明确反馈更新该记录。
+
 - 以当前分支的 package.json、锁文件、Tauri 配置和脚本为准；不要沿用旧文档中的版本、缺失的 design.md 或不存在的 bundle/app 路径。
 - 桌面数据默认在系统 Documents/ProjectTodo；浏览器预览的存储与原生行为不能代替桌面验收。任何可能写入用户数据的验证前，完整备份该目录并核对哈希、记录恢复命令。
 - 测试使用独立 `PROJECTTODO_TEST_DATA_DIR` 和 `WEBVIEW2_USER_DATA_FOLDER`，只用虚构数据；不触碰真实同步空间、模型凭据或用户正在使用的进程。
