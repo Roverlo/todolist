@@ -94,7 +94,7 @@ try {
     }
     const now = Date.now(); const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
     const makeNote = (id, content, extra = {}) => ({ id, title: id, content, date: '2025-01-01', createdAt: monday.getTime() - 86400000, updatedAt: now - 1000, tags: [], ...extra });
-    const fixtures = [makeNote('本周随记', '<p>正在确认部署方案，下周一提交验收资料。</p><ul data-type="taskList"><li data-type="taskItem" data-checked="true" data-completed-at="' + new Date(now - 1000).toISOString() + '"><p>完成接口回归测试</p></li></ul>'),
+    const fixtures = [makeNote('本周随记', '<p>正在确认部署方案，计划 <time data-type="noteDate" datetime="2026-10-01">2026-10-01</time> 提交验收资料。</p><ul data-type="taskList"><li data-type="taskItem" data-checked="true" data-completed-at="' + new Date(now - 1000).toISOString() + '"><p>原计划 <time data-type="noteDate" datetime="2026-09-25">2026-09-25</time> 完成接口回归测试</p></li></ul>'),
         makeNote('本周补充', '<p>本周补充内容</p>'), makeNote('上周未修改', '<p>不应发送上周内容</p>', { updatedAt: monday.getTime() - 1 }),
         makeNote('回收站内容', '<p>不应发送回收站</p>', { deletedAt: now }), makeNote('已生成周报', '<p>不应反馈周报</p>', { kind: 'weekly-report' })];
     const seed = async (notes = fixtures, configured = true) => {
@@ -125,6 +125,10 @@ try {
     assert.equal(requests.length, before + 1);
     const sent = JSON.parse(requests.at(-1).messages.at(-1).content);
     assert.deepEqual(sent.notes.map(n => n.title), ['本周随记', '本周补充']); assert.match(sent.notes[0].content, /本期完成/);
+    assert.match(sent.notes[0].content, /计划 2026-10-01 提交验收资料/);
+    assert.match(sent.notes[0].content, /原计划 2026-09-25 完成接口回归测试/);
+    assert.doesNotMatch(sent.notes[0].content, /<time|noteDate|data-weekday/);
+    console.log('Passed: report request retains ISO dates from body and completed tasks without chip markup');
     await page.screenshot({ path: `${output}/report.png` });
     assert.deepEqual(await page.getByRole('region', { name: '随记编辑区' }).boundingBox(), editorBounds);
     assert.equal(await page.getByRole('dialog', { name: '工作周报' }).count(), 0);
