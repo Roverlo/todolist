@@ -1,7 +1,7 @@
+import { checkNoteDates } from './check-note-dates.mjs';
 import { checkNotesCommandBar } from './check-notes-command-bar.mjs';
 import assert from 'node:assert/strict';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
-import { checkNoteCompletion } from './check-note-completion.mjs';
 import { checkNoteTaskListMerge } from './check-note-task-list-merge.mjs';
 import { checkNoteLeadingBlank } from './check-note-leading-blank.mjs';
 import { checkNoteTaskIndicators } from './check-note-task-indicators.mjs';
@@ -34,6 +34,7 @@ try {
     await server.listen();
     browser = await chromium.launch({ channel: 'msedge', headless: true });
     page = await browser.newPage({ viewport: { width: 1280, height: 840 }, timezoneId: 'Asia/Shanghai' });
+    page.setDefaultTimeout(15000);
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => {
         if (/Duplicate extension|different instances of a keyed plugin/.test(message.text())) errors.push(message.text());
@@ -70,6 +71,8 @@ try {
         await page.reload({ waitUntil: 'domcontentloaded' });
         await body.waitFor();
     };
+
+    await checkNoteDates(page, body, { openNote, saveAndReload, storedNotes });
 
     const legacyHTML = '<h2>旧标题</h2><p style="text-align: right"><strong>粗体</strong><em>斜体</em><u>下划线</u><s>删除线</s><span style="font-size: 24px; color: #008000">旧字号颜色</span><mark data-color="#fff200" style="background-color: #fff200">旧高亮</mark></p><ul><li><p>旧项目</p></li></ul><ol start="3" type="A"><li><p>旧编号</p></li></ol><blockquote><p>旧引用</p></blockquote><pre><code>const value = 1;</code></pre>';
     const legacyId = await openNote(legacyHTML, '旧随记兼容');
@@ -365,6 +368,9 @@ try {
     await assertBorderlessSelection();
     await page.emulateMedia({ forcedColors: 'none' });
     await page.keyboard.press('Escape');
+    await body.focus();
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.view.hasFocus());
+    await page.evaluate(() => new Promise(requestAnimationFrame));
     await body.press('ArrowRight');
     await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.state.selection.empty);
     assert.equal(await body.locator('.note-selection').count(), 0, 'Collapsing the selection must remove every retained highlight');
@@ -513,6 +519,7 @@ try {
     await hexInput.fill('#d8eaff');
     await hexInput.press('Enter');
     await assertHighlight('rgb(216, 234, 255)');
+    await page.waitForFunction(() => document.activeElement === document.querySelector('.ProseMirror'));
     assert.ok(await body.evaluate(el => document.activeElement === el), 'Custom color must return focus to the original selection');
     await saveAndReload();
     await assertHighlight('rgb(216, 234, 255)');
@@ -878,7 +885,6 @@ try {
     await checkNoteLeadingBlank(page, body, openNote, saveAndReload);
     await checkNoteTaskIndicators(page, body, openNote, saveAndReload);
     await checkNoteTaskSort(page, body, openNote, saveAndReload);
-    await checkNoteCompletion(page, body, openNote, saveAndReload);
     await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
 
     await openNote('<p>排版文字</p>', '排版工具');
@@ -1137,87 +1143,6 @@ try {
     await page.getByTitle('导出为 HTML', { exact: true }).click();
     assert.match(await readFile(await (await downloadPromise).path(), 'utf8'), /data:image\/png;base64,/);
     console.log('Passed: image upload, sizing, paste/drop, validation, persistence and HTML export');
-
-    const dateNoteId = await openNote('<p>前后</p>', '插入日期检查');
-    const dateButton = page.getByRole('toolbar').getByRole('button', { name: '插入日期', exact: true });
-    const dateDialog = page.getByRole('dialog', { name: '插入日期', exact: true });
-    const dateInput = dateDialog.getByLabel('选择日期', { exact: true });
-    const insertDateButton = dateDialog.getByRole('button', { name: '插入日期', exact: true });
-    const localDate = offset => page.evaluate(offset => {
-        const date = new Date();
-        date.setDate(date.getDate() + offset);
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    }, offset);
-    await body.click();
-    await waitForEditorSelection();
-    await page.keyboard.press('Control+Home');
-    await page.keyboard.press('ArrowRight');
-    await waitForEditorSelection();
-    await dateButton.click();
-    assert.equal(await body.innerText(), '前后', 'Opening the date picker must not insert the current time');
-    assert.equal(await dateInput.evaluate(el => el === document.activeElement), true, 'Opening the dialog must focus the date field');
-    assert.equal(await dateInput.getAttribute('type'), 'date', 'Use the native calendar picker and editable date field');
-    assert.equal(await dateInput.inputValue(), await localDate(0));
-    await dateInput.fill('');
-    assert.equal(await insertDateButton.isDisabled(), true, 'An empty date cannot be inserted');
-    await dateInput.fill('10000-01-01');
-    assert.equal(await insertDateButton.isDisabled(), true, 'Dates must fit the YYYY-MM-DD format');
-    await dateInput.fill('2000-12-31');
-    await page.screenshot({ path: 'ui-check.local/note-date-picker.png' });
-    await insertDateButton.click();
-    await dateDialog.waitFor({ state: 'hidden' });
-    assert.equal(await body.innerText(), '前2000-12-31后', 'Insert the chosen past date at the original caret');
-    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.isFocused);
-    await page.keyboard.press('Control+z');
-    assert.equal(await body.innerText(), '前后');
-    await page.keyboard.press('Control+y');
-    await saveAndReload();
-    assert.equal(await body.innerText(), '前2000-12-31后', 'The chosen date stays fixed after reload');
-    assert.equal((await storedNotes()).find(note => note.id === dateNoteId).date, '2026-09-06', 'Inserting a date must not move the note');
-
-    await body.press('Control+Home');
-    await waitForEditorSelection();
-    await page.keyboard.press('ArrowRight');
-    await waitForEditorSelection();
-    for (let index = 0; index < 10; index++) {
-        await page.keyboard.press('Shift+ArrowRight');
-        await waitForEditorSelection();
-    }
-    assert.equal(await page.evaluate(() => window.getSelection().toString()), '2000-12-31');
-    await waitForEditorSelection();
-    await dateButton.click();
-    await dateInput.fill('2032-02-29');
-    await insertDateButton.click();
-    assert.equal(await body.innerText(), '前2032-02-29后', 'A future leap day replaces only the original selection');
-    await saveAndReload();
-    assert.equal(await body.innerText(), '前2032-02-29后');
-    await body.press('Control+End');
-    await waitForEditorSelection();
-    await dateButton.press('Enter');
-    await dateInput.fill('1999-01-01');
-    await page.keyboard.press('Escape');
-    await dateDialog.waitFor({ state: 'hidden' });
-    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.isFocused);
-    assert.equal(await body.innerText(), '前2032-02-29后', 'Escape cancels without changing the note');
-    await dateButton.click();
-    await dateDialog.getByRole('button', { name: '取消', exact: true }).click();
-    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.isFocused);
-    await page.keyboard.insertText('继续');
-    assert.equal(await body.innerText(), '前2032-02-29后继续', 'Cancel restores the original caret for continued typing');
-
-    for (const [label, offset] of [['昨天', -1], ['今天', 0], ['明天', 1]]) {
-        await body.press('Control+End');
-        await waitForEditorSelection();
-        const original = await body.innerText();
-        await dateButton.click();
-        const expected = await localDate(offset);
-        await dateDialog.getByRole('button', { name: label, exact: true }).click();
-        await dateDialog.waitFor({ state: 'hidden' });
-        assert.equal(await body.innerText(), `${original}${expected}`, `${label} inserts a local date in one click`);
-    }
-    await saveAndReload();
-    assert.equal((await storedNotes()).find(note => note.id === dateNoteId).date, '2026-09-06');
-    console.log('Passed: date picker, past/future/leap dates, shortcuts, caret/selection, cancel, undo/redo and persistence');
 
     await openNote('<p>工具栏布局检查</p>', '工具栏布局');
     const toolbarHeight = (await page.getByRole('toolbar').boundingBox()).height;

@@ -12,6 +12,7 @@ import { checkNoteTaskIndicators } from './check-note-task-indicators.mjs';
 const arg = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const cdp = arg('--cdp');
 const dataPath = arg('--data');
+const clockOnly = process.argv.includes('--clock-only');
 const server = cdp ? null : await preview({ logLevel: 'error', preview: { host: '127.0.0.1', port: 0, strictPort: false } });
 const browser = cdp ? await chromium.connectOverCDP(`http://127.0.0.1:${cdp}`) : await chromium.launch({ channel: 'msedge', headless: true });
 const page = cdp ? browser.contexts()[0].pages()[0] : await browser.newPage({ viewport: { width: 1280, height: 840 }, timezoneId: 'Asia/Shanghai' });
@@ -20,6 +21,8 @@ page.on('pageerror', error => errors.push(error.message));
 await mkdir('ui-check.local', { recursive: true });
 try {
     if (server) {
+        // Keep date simulation in a fresh browser, separate from the long editor suite.
+        if (clockOnly) await page.clock.install();
         await page.goto(server.resolvedUrls.local[0]);
         const reminder = page.getByRole('button', { name: '我知道了' });
         if (await reminder.isVisible()) await reminder.click();
@@ -45,12 +48,16 @@ try {
         await page.reload();
         await body.waitFor();
     };
-    await checkNoteLeadingBlank(page, body, openNote, saveAndReload);
-    await checkNoteTaskIndicators(page, body, openNote, saveAndReload);
-    await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
+    if (!clockOnly) {
+        await checkNoteLeadingBlank(page, body, openNote, saveAndReload);
+        await checkNoteTaskIndicators(page, body, openNote, saveAndReload);
+        await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
+    }
     await checkNoteCompletion(page, body, openNote, saveAndReload);
-    await checkNoteTaskSort(page, body, openNote, saveAndReload);
-    await checkNoteNavigation(page);
+    if (!clockOnly) {
+        await checkNoteTaskSort(page, body, openNote, saveAndReload);
+        await checkNoteNavigation(page);
+    }
     assert.deepEqual(errors, []);
     console.log(cdp ? 'Native completion workflow and isolated data.json persistence passed' : 'Production completion workflow passed');
 } catch (error) {

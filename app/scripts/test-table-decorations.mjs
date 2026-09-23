@@ -118,7 +118,7 @@ try {
 
     // npm deduplication cannot detect ProseMirror classes embedded inside a library bundle.
     // Check the actual registered plugins in the release bundle with every decorated node active.
-    const fixture = '<h2>组合检查</h2><p><strong>苹果</strong><em>苹果</em> 苹果</p>'
+    const fixture = '<h2>组合检查</h2><p><strong>苹果</strong><em>苹果</em> 苹果 <time data-type="noteDate" datetime="2026-09-23">2026-09-23</time></p>'
         + '<ul><li><p>苹果</p></li></ul><ol><li><p>苹果</p></li></ol>'
         + '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p>苹果</p></li></ul>'
         + '<blockquote><p>苹果</p></blockquote><pre><code class="language-javascript">const 苹果 = 1;</code></pre>'
@@ -187,9 +187,10 @@ try {
         canvas.height = 840;
         root.editor.chain().focus('end').insertContent({ type: 'imageBlock', attrs: { src: canvas.toDataURL(), alt: '组合检查图片' } }).run();
     });
-    await body.locator('img').waitFor();
+    const image = body.getByRole('img', { name: '组合检查图片', exact: true });
+    await image.waitFor();
     await body.locator('.image-view__body').click();
-    const imageWidth = (await body.locator('img').boundingBox()).width;
+    const imageWidth = (await image.boundingBox()).width;
     assert.ok(await body.evaluate(root => root.scrollWidth <= root.clientWidth + 1), 'Full-width image handles must not add a horizontal scrollbar');
     const handle = body.locator('.image-resizer__handler--br');
     await handle.scrollIntoViewIfNeeded();
@@ -198,7 +199,12 @@ try {
     await page.mouse.down();
     await page.mouse.move(corner.x - 80, corner.y - 50, { steps: 8 });
     await page.mouse.up();
-    assert.ok((await body.locator('img').boundingBox()).width < imageWidth - 20, 'The fully visible corner handle must still resize the image');
+    assert.ok((await image.boundingBox()).width < imageWidth - 20, 'The fully visible corner handle must still resize the image');
+    await body.getByRole('button', { name: '修改日期 2026-09-23 周三' }).click();
+    const dateDialog = page.getByRole('dialog', { name: '修改日期', exact: true });
+    await dateDialog.getByLabel('选择日期', { exact: true }).fill('2026-09-24');
+    await dateDialog.getByRole('button', { name: '修改日期', exact: true }).click();
+    assert.equal(await body.locator('time[data-type="noteDate"]').getAttribute('datetime'), '2026-09-24');
     await body.evaluate(root => root.editor.commands.selectAll());
     await checkDecorationIdentity();
     const saved = await body.evaluate(root => root.editor.getHTML());

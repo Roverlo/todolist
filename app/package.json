@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test:notes": "node scripts/test-note-editor.mjs && node scripts/test-table-decorations.mjs",
+    "test:notes": "node scripts/test-note-editor.mjs && node scripts/test-table-decorations.mjs && node scripts/test-note-completion.mjs --clock-only",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "npm run tauri -- dev",

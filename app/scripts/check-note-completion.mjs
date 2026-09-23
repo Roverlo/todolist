@@ -111,6 +111,6 @@ export async function checkNoteCompletion(page, body, openNote, saveAndReload) {
     assert.equal(await items.nth(1).locator('p').innerText(), '新待办');
     await saveAndReload();
     assert.deepEqual(await states(), [['true', firstTime], ['false', null]]);
-    await page.clock.setFixedTime(new Date());
+    await page.clock.setSystemTime(new Date());
     console.log('Passed: cascading completion, persistent local timestamps, old-note compatibility, independent reopening, keyboard, undo/redo, sorting, HTML round-trip and split items');
 }

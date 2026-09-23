@@ -12,6 +12,7 @@ import { useToastStore } from '../../state/toastStore';
 import { insertNoteFiles } from './extensions/NoteAttachments';
 import { sortNoteTasks } from './extensions/sortNoteTasks';
 import { clearNoteFormatting } from './extensions/clearNoteFormatting';
+import { NOTE_DATE_EDIT_EVENT } from './extensions/NoteDate';
 
 const COLOR_PALETTE = [
     ['黑色', '#000000'], ['深灰', '#595959'], ['灰色', '#a5a5a5'], ['浅灰', '#d9d9d9'], ['白色', '#ffffff'],
@@ -144,6 +145,12 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
     const toolbarRef = useRef<HTMLDivElement>(null);
     const [searchOpen, setSearchOpen] = useState(false);
     const [insertDialog, setInsertDialog] = useState<'link' | 'image' | 'date' | null>(null);
+    useEffect(() => {
+        const target = editor.view.dom;
+        const editDate = () => setInsertDialog('date');
+        target.addEventListener(NOTE_DATE_EDIT_EVENT, editDate);
+        return () => target.removeEventListener(NOTE_DATE_EDIT_EVENT, editDate);
+    }, [editor]);
     const [textColor, setTextColor] = useState('#000000');
     const [highlightColor, setHighlightColor] = useState('#fff200');
     const lists = useEditorState({
@@ -342,7 +349,7 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                     <EditorToolButton label="插入附件" icon={Paperclip} description="选择任意格式文件，也可直接粘贴或拖入。" onClick={() => attachmentInput.current?.click()} />
                     <EditorTablePicker editor={editor} />
                     <EditorToolButton label="插入日期" icon={CalendarDays} className="editor-toolbar-text-button editor-todo-btn"
-                        description="选择任意日期，或快速插入昨天、今天、明天。" aria-haspopup="dialog"
+                        description="插入可点击修改的日期标签，支持昨天、今天、明天。" aria-haspopup="dialog"
                         onClick={() => setInsertDialog('date')}><span>日期</span></EditorToolButton>
                 </div>
             </div>

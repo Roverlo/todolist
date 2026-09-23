@@ -33,6 +33,7 @@ import { HorizontalRule } from 'reactjs-tiptap-editor/horizontalrule';
 import { useToastStore } from '../../../state/toastStore';
 import { readNoteImage, IMAGE_TYPES } from '../../../utils/noteImages';
 import { NoteAttachment, NoteFilePaste, insertNoteFiles } from './NoteAttachments';
+import { NoteDate } from './NoteDate';
 import { withTaskCompletion } from './taskCompletion';
 import { taskNumbersPlugin } from './taskNumbers';
 
@@ -296,7 +297,7 @@ export const noteExtensions = [
     } }),
     // Ctrl+V replaces selected text; changing only its href belongs in the link dialog.
     Link.configure({ openOnClick: false, linkOnPaste: false }),
-    NoteAttachment, NoteFilePaste,
+    NoteAttachment, NoteFilePaste, NoteDate,
     Image.configure({
         allowBase64: true,
         acceptMimes: IMAGE_TYPES,

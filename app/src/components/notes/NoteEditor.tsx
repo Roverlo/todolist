@@ -208,7 +208,9 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
         );
     }
 
-    const charCount = Array.from(editor?.state.doc.textContent.replace(/\s/g, '') ?? '').length;
+    const doc = editor?.state.doc;
+    const charCount = Array.from(doc?.textBetween(0, doc.content.size, '', node =>
+        node.type.name === 'noteDate' ? node.attrs.date : '').replace(/\s/g, '') ?? '').length;
     let taskTotal = 0;
     let taskCompleted = 0;
     editor?.state.doc.descendants(node => {

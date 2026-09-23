@@ -6,6 +6,7 @@ import { FolderOpen, ImagePlus, X } from 'lucide-react';
 import dayjs from 'dayjs';
 import { IMAGE_TYPES, readNoteImage, openNoteImageFolder } from '../../utils/noteImages';
 import { isNoteDate } from '../../utils/noteDate';
+import { dateWeekday } from './extensions/NoteDate';
 
 export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; kind: 'link' | 'image' | 'date'; onClose: () => void }) {
     const dialogRef = useRef<HTMLDialogElement>(null);
@@ -14,6 +15,7 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
         ? getMarkRange(editor.state.selection.$from, editor.schema.marks.link) || editor.state.selection
         : editor.state.selection);
     const originalText = editor.state.doc.textBetween(selection.current.from, selection.current.to, ' ');
+    const editingDate = kind === 'date' && editor.isActive('noteDate');
     const [text, setText] = useState(originalText);
     const [url, setUrl] = useState(kind === 'link' ? editor.getAttributes('link').href || '' : '');
     const [source, setSource] = useState<'local' | 'url'>('local');
@@ -22,8 +24,8 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
     const [description, setDescription] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
-    const [date, setDate] = useState(() => dayjs().format('YYYY-MM-DD'));
-    const dialogTitle = { link: '插入链接', image: '插入图片', date: '插入日期' }[kind];
+    const [date, setDate] = useState(() => editingDate ? editor.getAttributes('noteDate').date : isNoteDate(originalText) ? originalText : dayjs().format('YYYY-MM-DD'));
+    const dialogTitle = { link: '插入链接', image: '插入图片', date: editingDate ? '修改日期' : '插入日期' }[kind];
 
     const close = () => {
         onClose();
@@ -47,7 +49,8 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
         try {
             if (kind === 'date') {
                 if (!isNoteDate(selectedDate)) throw new Error('请选择有效日期');
-                editor.chain().focus().setTextSelection(selection.current).insertContent(selectedDate).run();
+                editor.chain().focus().insertContentAt({ from: selection.current.from, to: selection.current.to },
+                    editor.isActive('codeBlock') ? selectedDate : { type: 'noteDate', attrs: { date: selectedDate } }).run();
                 close();
                 return;
             }
@@ -88,9 +91,12 @@ export function EditorInsertDialog({ editor, kind, onClose }: { editor: Editor; 
                         <label>显示文字<input data-insert-autofocus value={text} onChange={event => setText(event.target.value)} placeholder="留空则显示链接地址" /></label>
                         <label>链接地址<input value={url} onChange={event => setUrl(event.target.value)} placeholder="https://example.com" required /></label>
                     </> : kind === 'date' ? <>
+                        <div className="editor-date-preview" aria-label="日期标签预览">
+                            <time className="note-date-chip" dateTime={date} data-weekday={dateWeekday(date)}>{isNoteDate(date) ? date : '请选择日期'}</time>
+                        </div>
                         <label>选择日期<input type="date" data-insert-autofocus required value={date} min="0001-01-01" max="9999-12-31"
                             onChange={event => { setDate(event.target.value); setError(''); }} /></label>
-                        <p className="editor-dialog-hint">可选择过去或未来的日期，或使用下方快捷插入。</p>
+                        <p className="editor-dialog-hint">{editor.isActive('codeBlock') ? '代码块内保留纯文本日期。' : '日期以标签显示，插入后点击标签即可修改。'}</p>
                         <div className="editor-date-shortcuts" role="group" aria-label="快捷插入日期">
                             {([['昨天', -1], ['今天', 0], ['明天', 1]] as const).map(([label, offset]) =>
                                 <button key={label} type="button" disabled={busy} onClick={() => void submit(dayjs().add(offset, 'day').format('YYYY-MM-DD'))}>
