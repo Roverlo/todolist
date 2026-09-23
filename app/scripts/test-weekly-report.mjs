@@ -67,9 +67,29 @@ try {
         assert.deepEqual(unit.source.sources.map(n => n.id), ['monday', 'old archive', 'sunday']);
         assert.equal(unit.source.start, '2026-09-21'); assert.equal(unit.source.end, '2026-09-27'); assert.equal(unit.mondayStart, '2026-09-21');
         assert.equal(unit.source.completed, 1); assert.equal(unit.source.undatedCompleted, 1);
-        assert.match(unit.source.sources[1].text, /非本周完成/); assert.match(unit.source.sources[1].text, /本周完成/);
+        assert.match(unit.source.sources[1].text, /非本期完成/); assert.match(unit.source.sources[1].text, /本期完成/);
         assert.ok(!unit.clean.includes('previous')); assert.ok(unit.dirty.includes('previous'));
         assert.equal(unit.html, '<p>&lt;script&gt;bad&lt;/script&gt; &amp; text</p><p>next</p>');
+        const custom = await page.evaluate(async () => {
+            const { collectWeeklyNotes, reportPeriodError } = await import('/src/utils/weeklyReport.ts');
+            const now = new Date('2026-09-23T12:00:00+08:00').getTime();
+            const note = (id, time) => ({ id, title: id, content: '<p>边界</p>', createdAt: 0, updatedAt: new Date(time).getTime() });
+            const notes = [note('before', '2024-02-28T23:59:59.999+08:00'), note('first', '2024-02-29T00:00:00+08:00'),
+                note('last', '2024-03-01T23:59:59.999+08:00'), note('after', '2024-03-02T00:00:00+08:00')];
+            const period = { start: '2024-02-29', end: '2024-03-01' };
+            const ids = (source) => source.sources.map(note => note.id);
+            return {
+                crossMonth: ids(collectWeeklyNotes(notes, null, now, period)),
+                single: ids(collectWeeklyNotes(notes, null, now, { start: '2024-02-29', end: '2024-02-29' })),
+                dirtyPast: ids(collectWeeklyNotes(notes, { id: 'first', title: 'first', content: '<p>今天的草稿</p>' }, now, period)),
+                future: ids(collectWeeklyNotes([note('future', '2026-09-23T13:00:00+08:00')], null, now, { start: '2026-09-23', end: '2026-09-30' })),
+                invalid: [{ start: '', end: '2024-03-01' }, { start: '2025-02-29', end: '2025-03-01' }, { start: '2024-03-01', end: '2024-02-29' }].map(period => {
+                    let rejected = false; try { collectWeeklyNotes([], null, now, period); } catch { rejected = true; }
+                    return Boolean(reportPeriodError(period)) && rejected;
+                }),
+            };
+        });
+        assert.deepEqual(custom, { crossMonth: ['first', 'last'], single: ['first'], dirtyPast: ['last'], future: [], invalid: [true, true, true] });
         console.log('Passed: local week boundaries, edited date, draft overlay, exclusions, independent completion dates and escaped output');
     }
     const now = Date.now(); const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
@@ -78,14 +98,20 @@ try {
         makeNote('本周补充', '<p>本周补充内容</p>'), makeNote('上周未修改', '<p>不应发送上周内容</p>', { updatedAt: monday.getTime() - 1 }),
         makeNote('回收站内容', '<p>不应发送回收站</p>', { deletedAt: now }), makeNote('已生成周报', '<p>不应反馈周报</p>', { kind: 'weekly-report' })];
     const seed = async (notes = fixtures, configured = true) => {
+        // Flush the preceding scenario's editor before replacing isolated fixtures;
+        // its pagehide save must not overwrite the next scenario's data.
+        const saveDraft = page.getByRole('button', { name: '保存', exact: true });
+        if (await saveDraft.isVisible() && await saveDraft.isEnabled()) await saveDraft.click();
+        if (native) await until(async () => JSON.stringify(JSON.parse(await readFile(dataPath, 'utf8')).state.notes) === JSON.stringify((await store()).notes), 'Previous native save flushed');
         const value = await page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')));
         Object.assign(value.state, { activeView: 'notes', notes, selectedNoteId: notes[0]?.id ?? null, noteViewMode: 'tree', noteSearchText: '', activeNoteTagId: 'all' });
         value.state.settings.ai = configured ? { activeProviderId: 'custom-weekly', providers: [{ id: 'custom-weekly', type: 'custom', name: '测试接口', model: 'test-weekly', apiEndpoint: endpoint, apiKey: 'test-only-not-a-real-key' }] } : { providers: [] };
         const raw = JSON.stringify(value);
         if (native) await writeFile(dataPath, raw); else await page.evaluate(raw => localStorage.setItem('project-todo-app', raw), raw);
         await page.reload(); await page.getByRole('button', { name: '一键生成周报', exact: true }).waitFor();
+        await until(async () => JSON.stringify((await store()).notes.map(n => n.id)) === JSON.stringify(notes.map(n => n.id)), 'Isolated note fixtures loaded');
     };
-    const panel = page.getByRole('region', { name: '本周周报', exact: true });
+    const panel = page.getByRole('region', { name: '工作周报', exact: true });
     const open = async () => { await page.getByRole('button', { name: '一键生成周报', exact: true }).click(); await panel.waitFor(); };
     const close = () => page.getByRole('button', { name: '一键生成待办事项', exact: true }).click();
     const content = page.getByRole('textbox', { name: '周报正文', exact: true });
@@ -98,10 +124,10 @@ try {
     await until(async () => await content.inputValue() === example, 'One-click report should generate');
     assert.equal(requests.length, before + 1);
     const sent = JSON.parse(requests.at(-1).messages.at(-1).content);
-    assert.deepEqual(sent.notes.map(n => n.title), ['本周随记', '本周补充']); assert.match(sent.notes[0].content, /本周完成/);
+    assert.deepEqual(sent.notes.map(n => n.title), ['本周随记', '本周补充']); assert.match(sent.notes[0].content, /本期完成/);
     await page.screenshot({ path: `${output}/report.png` });
     assert.deepEqual(await page.getByRole('region', { name: '随记编辑区' }).boundingBox(), editorBounds);
-    assert.equal(await page.getByRole('dialog', { name: '本周周报' }).count(), 0);
+    assert.equal(await page.getByRole('dialog', { name: '工作周报' }).count(), 0);
     assert.equal(await page.locator('.notes-center-ai-panel .weekly-report-panel').count(), 1);
     await page.getByRole('button', { name: '一键生成周报', exact: true }).click();
     assert.equal(requests.length, before + 1, 'Reopening the active panel must not duplicate generation');
@@ -154,7 +180,7 @@ try {
     await panel.getByRole('button', { name: '配置 AI', exact: true }).waitFor(); assert.equal(requests.length, unconfiguredCount);
     await panel.getByRole('button', { name: '配置 AI', exact: true }).click(); await page.locator('#ai-provider-name').waitFor();
     await page.locator('.ai-settings-close-btn').click(); await page.locator('#ai-provider-name').waitFor({ state: 'hidden' });
-    await close(); await seed([], true); await open(); await page.getByText('本周还没有可汇总的随记', { exact: true }).waitFor(); assert.equal(requests.length, unconfiguredCount); await close();
+    await close(); await seed([], true); await open(); await page.getByText('所选日期内没有可汇总的随记', { exact: true }).waitFor(); assert.equal(requests.length, unconfiguredCount); await close();
     await seed(); const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     await body.click(); await body.press('Control+End'); await page.keyboard.type('LIVE-DRAFT-WEEKLY');
     replies.push({}); await open(); await until(async () => await content.inputValue() === example, 'Draft report generated'); assert.match(requests.at(-1).messages.at(-1).content, /LIVE-DRAFT-WEEKLY/);
@@ -179,7 +205,90 @@ try {
     replies.push({ delay: 5000, payload: { report: 'stale closed dialog' } }); const closingCount = requests.length;
     await page.getByRole('button', { name: '重新生成' }).click(); await until(() => requests.length > closingCount, 'Close request started'); await close();
     replies.push({}); await open(); await until(async () => await content.inputValue() === example, 'Reopened dialog uses its own request');
-    await close(); assert.deepEqual(errors, []);
+    await close();
+    const historical = (id, edited, completed) => makeNote(id, `<ul data-type="taskList"><li data-type="taskItem" data-checked="true" data-completed-at="${completed}"><p>${id}</p></li></ul>`, { updatedAt: new Date(edited).getTime() });
+    await seed([
+        historical('跨年首日', '2025-12-31T00:00:00+08:00', '2025-12-30T23:59:59+08:00'),
+        historical('跨年末日', '2026-01-01T23:59:59.999+08:00', '2026-01-01T23:59:59+08:00'),
+        historical('单日内容', '2026-01-02T00:00:00+08:00', '2026-01-02T00:00:00+08:00'),
+    ]);
+    const dateButton = panel.getByRole('button', { name: /^选择周报日期/ });
+    const startDate = panel.getByLabel('开始日期', { exact: true });
+    const endDate = panel.getByLabel('结束日期', { exact: true });
+    const applyDates = panel.getByRole('button', { name: '应用日期', exact: true });
+    const setDates = async (start, end) => { await dateButton.click(); await startDate.fill(start); await endDate.fill(end); await applyDates.click(); };
+    const beforeDates = requests.length;
+    await dateButton.press('Enter');
+    await panel.getByRole('button', { name: '上周', exact: true }).click();
+    const lastWeek = new Date(monday); lastWeek.setDate(lastWeek.getDate() - 7);
+    const localDate = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    assert.equal(await startDate.inputValue(), localDate(lastWeek));
+    await panel.getByRole('button', { name: '本周', exact: true }).click();
+    assert.equal(await startDate.inputValue(), localDate(monday));
+    await startDate.fill('2026-01-03'); await endDate.fill('2026-01-01');
+    assert.equal(await applyDates.isDisabled(), true);
+    await panel.getByRole('alert').filter({ hasText: '结束日期不能早于开始日期' }).waitFor();
+    await startDate.fill(''); assert.equal(await applyDates.isDisabled(), true);
+    await panel.getByRole('alert').filter({ hasText: '请选择有效' }).waitFor();
+    await endDate.press('Escape'); assert.equal(await dateButton.getAttribute('aria-expanded'), 'false');
+    assert.equal(await dateButton.evaluate(el => el === document.activeElement), true);
+    await setDates('2025-12-31', '2026-01-01');
+    assert.equal(requests.length, beforeDates, 'Changing the range never calls AI');
+    assert.match(await panel.locator('.weekly-report-summary').innerText(), /2 篇随记 · 1 项期间完成/);
+    await panel.getByRole('button', { name: '查看来源', exact: true }).click();
+    assert.deepEqual(await panel.locator('.weekly-report-sources li span').allTextContents(), ['跨年首日', '跨年末日']);
+    await panel.getByRole('button', { name: '查看来源', exact: true }).click();
+    replies.push({ payload: { report: '跨年期间报告' } }); await open();
+    await until(async () => await content.inputValue() === '跨年期间报告', 'Custom range report generated');
+    const customRequest = JSON.parse(requests.at(-1).messages.at(-1).content);
+    assert.equal(customRequest.period, '2025-12-31 至 2026-01-01');
+    assert.deepEqual(customRequest.notes.map(n => n.title), ['跨年首日', '跨年末日']);
+    assert.match(customRequest.notes[0].content, /非本期完成/); assert.match(customRequest.notes[1].content, /本期完成/);
+    assert.match(requests.at(-1).messages[0].content, /范围以输入 period 为准/);
+    await content.fill('跨年报告手动修改');
+    await panel.getByRole('button', { name: '保存为随记', exact: true }).click(); await page.getByText('已保存为随记', { exact: true }).waitFor();
+    const firstSaved = (await store()).notes.find(n => n.kind === 'weekly-report');
+    assert.equal(firstSaved.title, '周报 2025-12-31 — 2026-01-01');
+    await setDates('2026-01-02', '2026-01-02');
+    assert.equal(await content.inputValue(), '跨年报告手动修改');
+    await panel.getByText(/日期已切换，下方保留的是 2025-12-31 至 2026-01-01/).waitFor();
+    await panel.getByRole('button', { name: '保存为随记', exact: true }).click(); await page.getByText('已保存为随记', { exact: true }).waitFor();
+    assert.equal((await store()).notes.filter(n => n.kind === 'weekly-report').length, 1, 'Old edited result retains its original date and save target');
+    const cancellingRange = requests.length;
+    replies.push({ delay: 1200, payload: { report: '过期请求不能覆盖正文' } });
+    await panel.getByRole('button', { name: '重新生成', exact: true }).click();
+    await until(() => requests.length > cancellingRange, 'Range request began');
+    await setDates('2025-12-31', '2026-01-01');
+    await page.waitForTimeout(1400);
+    assert.equal(await content.isEnabled(), true); assert.equal(await content.inputValue(), '跨年报告手动修改');
+    await setDates('2026-01-02', '2026-01-02');
+    replies.push({ payload: { report: '单日新报告' } }); await open();
+    await until(async () => await content.inputValue() === '单日新报告', 'Single day report generated');
+    assert.equal(JSON.parse(requests.at(-1).messages.at(-1).content).period, '2026-01-02 至 2026-01-02');
+    assert.match(await panel.locator('.weekly-report-summary').innerText(), /1 篇随记 · 1 项期间完成/);
+    await panel.getByRole('button', { name: '保存为随记', exact: true }).click(); await page.getByText('已保存为随记', { exact: true }).waitFor();
+    assert.equal((await store()).notes.filter(n => n.kind === 'weekly-report').length, 2, 'A new period cannot overwrite the saved previous period');
+    assert.equal((await store()).notes.find(n => n.id === firstSaved.id).content, '<p>跨年报告手动修改</p>');
+    if (native) await until(async () => JSON.parse(await readFile(dataPath, 'utf8')).state.notes.filter(n => n.kind === 'weekly-report').length === 2, 'Both report periods persisted natively');
+    for (const width of [1100, 1186, 1538, 1920]) {
+        await page.setViewportSize({ width, height: 700 }); await dateButton.click();
+        const p = await panel.boundingBox();
+        for (const field of [startDate, endDate, applyDates]) {
+            const b = await field.boundingBox(); assert.ok(b.width > 0 && b.x >= p.x && b.x + b.width <= p.x + p.width && b.y + b.height <= 700, 'Date fields fit the compact panel');
+        }
+        assert.equal(await panel.locator('.weekly-report-header').evaluate(el => el.scrollWidth <= el.clientWidth), true);
+        await endDate.press('Escape');
+    }
+    await dateButton.click(); await page.screenshot({ path: `${output}/custom-dates.png` }); await endDate.press('Escape');
+    await setDates('2020-01-01', '2020-01-02');
+    assert.equal(await content.inputValue(), '单日新报告');
+    assert.equal(await panel.getByRole('button', { name: '重新生成', exact: true }).isDisabled(), true);
+    await page.reload();
+    await panel.waitFor();
+    const persistedReports = (await store()).notes.filter(n => n.kind === 'weekly-report');
+    assert.deepEqual(persistedReports.map(n => n.title).sort(), ['周报 2025-12-31 — 2026-01-01', '周报 2026-01-02 — 2026-01-02']);
+    assert.deepEqual(errors, []);
+    console.log('Passed: custom dates, cross-year and single-day scope, invalid/empty dates, presets, retained drafts, cancellation, correct save titles and separate periods');
     console.log('Passed: generation, source scope, live draft, edit/copy/save/reload, cancel, errors/truncation, setup/empty states and reused side panel layout');
 } catch (error) { if (page) await page.screenshot({ path: `${output}/failure.png` }).catch(() => {}); throw error; }
 finally { if (browser) await browser.close(); if (server) await server.close(); mock.closeAllConnections(); await new Promise(resolve => mock.close(resolve)); }

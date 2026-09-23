@@ -7,7 +7,7 @@ import { AISettingsModal } from './AISettingsModal';
 import { Icon } from '../ui/Icon';
 import { FileText, ListTodo, PanelRightClose, PanelRightOpen, Settings } from 'lucide-react';
 import { WeeklyReportPanel } from './WeeklyReportPanel';
-import { collectWeeklyNotes, type WeeklyReportSource } from '../../utils/weeklyReport';
+import { collectWeeklyNotes, currentReportWeek, type WeeklyReportSource, type ReportPeriod } from '../../utils/weeklyReport';
 import { EditorToolButton } from './EditorToolbarControls';
 import type { Note } from '../../types';
 
@@ -28,14 +28,15 @@ export function NotesMain() {
 
     const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
     const [weeklySource, setWeeklySource] = useState<WeeklyReportSource | null>(null);
+    const [reportPeriod, setReportPeriod] = useState<ReportPeriod>(() => currentReportWeek());
     const [aiMode, setAiMode] = useState<'tasks' | 'weekly'>('weekly');
     const [aiPanelOpen, setAiPanelOpen] = useState(true);
     const [draft, setDraft] = useState<Pick<Note, 'id' | 'title' | 'content'> | null>(null);
 
     const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId) || null, [notes, selectedNoteId]);
-    const weeklyPreview = useMemo(() => collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null),
-        [notes, noteViewMode, draft, activeNote?.id]);
-    const startWeeklyReport = () => setWeeklySource(collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null));
+    const weeklyPreview = useMemo(() => collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null, Date.now(), reportPeriod),
+        [notes, noteViewMode, draft, activeNote?.id, reportPeriod]);
+    const startWeeklyReport = () => setWeeklySource(collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null, Date.now(), reportPeriod));
 
     const handleSaveNote = (title: string, content: string, tags?: string[]) => {
         if (activeNote) {
@@ -70,7 +71,7 @@ export function NotesMain() {
                             setAiMode('weekly');
                             setAiPanelOpen(true);
                         }} className="notes-ai-action" label="一键生成周报" icon={FileText} active={aiMode === 'weekly'}
-                            description="汇总本周编辑的随记与已完成事项，生成后可编辑、复制或保存。"><span>一键生成周报</span></EditorToolButton>
+                            description="汇总所选日期内编辑的随记与完成事项；可在周报顶部修改日期。"><span>一键生成周报</span></EditorToolButton>
                         <EditorToolButton onClick={() => { setAiMode('tasks'); setAiPanelOpen(true); setWeeklySource(null); }} className="notes-ai-action" active={aiMode === 'tasks'}
                             label="一键生成待办事项" icon={ListTodo} description="根据当前随记生成待办事项。"><span>一键生成待办事项</span></EditorToolButton>
                     </div>
@@ -91,6 +92,7 @@ export function NotesMain() {
                 <aside id="notes-ai-panel" className="notes-center-ai-panel" aria-label="AI 助手面板" hidden={!aiPanelOpen}>
                     {aiMode === 'weekly'
                         ? <WeeklyReportPanel source={weeklySource ?? weeklyPreview} autoGenerate={weeklySource !== null}
+                            onPeriodChange={period => { setReportPeriod(period); setWeeklySource(null); }}
                             onGenerate={startWeeklyReport} />
                         : <AIAssistantPanel key={activeNote?.id} note={activeNote && draft?.id === activeNote.id ? { ...activeNote, ...draft } : activeNote} />}
                 </aside>
