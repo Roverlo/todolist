@@ -197,6 +197,14 @@ export interface Settings {
   ai?: AISettings; // AI 设置
   defaultView?: 'last' | 'tasks' | 'notes'; // 默认启动视图
   updateCheck?: UpdateCheckConfig; // 自动更新检查配置
+  noteTaskTime?: NoteTaskTimeSettings;
+}
+
+export interface NoteTaskTimeSettings {
+  showCreated: boolean;
+  showCompleted: boolean;
+  createdColor: string;
+  completedColor: string;
 }
 
 export interface AutoBackupConfig {

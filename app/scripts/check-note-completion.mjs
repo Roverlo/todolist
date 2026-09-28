@@ -22,10 +22,10 @@ export async function checkNoteCompletion(page, body, openNote, saveAndReload) {
     assert.deepEqual(await states(), completedStates, 'Complete every descendant, retain old timestamps and leave siblings unchanged');
     assert.equal(await body.locator('time').count(), 4);
     const firstStamp = items.first().locator(':scope > div > p > time');
-    assert.match(await firstStamp.innerText(), /^\d{2}:04$/);
+    assert.match(await firstStamp.innerText(), /^完成 \d{2}:04$/);
     assert.match(await firstStamp.getAttribute('title'), /^完成于 2026-09-20 \d{2}:04:05$/);
     assert.equal(await firstStamp.getAttribute('aria-label'), await firstStamp.getAttribute('title'));
-    assert.match(await items.nth(3).locator('time').innerText(), /^09-19 \d{2}:03$/);
+    assert.match(await items.nth(3).locator('time').innerText(), /^完成 09-19 \d{2}:03$/);
     assert.ok(await firstStamp.evaluate(time => {
         const range = document.createRange();
         range.selectNode(time.previousSibling);
@@ -80,7 +80,7 @@ export async function checkNoteCompletion(page, body, openNote, saveAndReload) {
         task('<strong><em>强调文字</em></strong>', true, '', firstTime),
         task('长待办：' + '整理会议记录并核对附件。'.repeat(12), true, '', oldTime),
         task('', true, '', firstTime)), '紧凑完成时间');
-    assert.match(await items.first().locator('time').innerText(), /^2025-12-31 \d{2}:04$/);
+    assert.match(await items.first().locator('time').innerText(), /^完成 2025-12-31 \d{2}:04$/);
     assert.deepEqual(await items.nth(1).locator('time').evaluate(time => {
         const style = getComputedStyle(time);
         return [time.parentElement.tagName, style.display, style.fontStyle, style.fontWeight, style.textDecorationLine];
@@ -91,7 +91,7 @@ export async function checkNoteCompletion(page, body, openNote, saveAndReload) {
     const beforeDayChange = await content();
     await page.clock.setFixedTime(new Date('2026-09-21T04:05:06.000Z'));
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    assert.match(await items.nth(1).locator('time').innerText(), /^09-20 \d{2}:04$/, 'Returning the next day expands yesterday\'s time');
+    assert.match(await items.nth(1).locator('time').innerText(), /^完成 09-20 \d{2}:04$/, 'Returning the next day expands yesterday\'s time');
     assert.equal(await content(), beforeDayChange, 'Refreshing the date label must not change stored content');
     await page.setViewportSize({ width: 1280, height: 840 });
     await openNote(list(task('已完成行', true, '', firstTime)), '完成后继续编辑');

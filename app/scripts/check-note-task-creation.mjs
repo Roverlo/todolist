@@ -51,8 +51,9 @@ export async function checkNoteTaskCreation(page, body, openNote, saveAndReload)
     await page.clock.setFixedTime(new Date(third));
     await body.getByRole('checkbox', { name: /：新待办甲补充$/ }).check();
     assert.deepEqual(await dates(), [[first, third], [second, null]], 'Creation and completion are separate');
-    assert.equal(await items.first().locator('.note-task-created-at').count(), 0);
-    assert.match(await items.first().locator('.note-task-completed-at').getAttribute('title'), /完成于 .*\n创建于 /);
+    assert.equal(await items.first().locator('.note-task-created-at').isVisible(), true, 'Completing a task keeps creation time visible');
+    assert.match(await items.first().locator('.note-task-completed-at').innerText(), /^完成 \d{2}:05$/);
+    assert.match(await items.first().locator('.note-task-completed-at').getAttribute('title'), /^完成于 /);
     await page.getByRole('button', { name: '未完成在前', exact: true }).click();
     assert.deepEqual(await dates(), [[second, null], [first, third]], 'Sorting carries both timestamps');
     await body.getByRole('checkbox', { name: /：新待办甲补充$/ }).uncheck();

@@ -39,7 +39,9 @@ try {
     page.on('console', message => {
         if (/Duplicate extension|different instances of a keyed plugin/.test(message.text())) errors.push(message.text());
     });
-    await page.goto(server.resolvedUrls.local[0], { waitUntil: 'domcontentloaded', timeout: 90000 });
+    // Await the interactive app, not Vite's remaining development-module loads.
+    await page.goto(server.resolvedUrls.local[0], { waitUntil: 'commit', timeout: 90000 });
+    await page.getByTitle('切换到随记中心', { exact: true }).waitFor({ timeout: 90000 });
     const reminder = page.getByRole('button', { name: '我知道了' });
     if (await reminder.isVisible()) await reminder.click();
     await page.getByTitle('切换到随记中心', { exact: true }).click();
@@ -1199,6 +1201,7 @@ try {
     await page.screenshot({ path: 'ui-check.local/note-editor.png' });
     console.log('Note editor checks passed');
 } catch (error) {
+    console.error(error);
     console.error('Browser errors:', errors);
     if (page) {
         console.error('Editor selection:', await page.locator('.ProseMirror').evaluate(root => ({
@@ -1206,7 +1209,7 @@ try {
             focused: root.editor.view.hasFocus(), active: document.activeElement?.tagName,
             anchor: window.getSelection()?.anchorOffset, focus: window.getSelection()?.focusOffset,
         })).catch(() => null));
-        await page.screenshot({ path: 'ui-check.local/note-editor-failure.png' }).catch(() => {});
+        await page.screenshot({ path: 'ui-check.local/note-editor-failure.png', timeout: 5000 }).catch(() => {});
         console.error((await page.locator('.ProseMirror').innerHTML().catch(() => '')).slice(0, 2500));
         console.error((await page.locator('body').innerText().catch(() => '')).slice(0, 3000));
     }

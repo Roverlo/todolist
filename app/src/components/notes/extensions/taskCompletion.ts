@@ -85,26 +85,27 @@ export function withTaskCompletion(taskItem: TiptapNode) {
                     if (node.type.name !== 'taskItem' || !node.firstChild) return;
                     const createdAt = completionTime(node.attrs.createdAt);
                     const completedAt = node.attrs.checked ? completionTime(node.attrs.completedAt) : null;
-                    const value = completedAt || createdAt;
-                    if (!value) return;
-                    // Keep the typing placeholder on a newly inserted empty task row.
-                    if (!completedAt && !node.firstChild.content.size) return;
-                    const date = dayjs(value);
-                    const label = date.format(date.isSame(today, 'day') ? 'HH:mm'
-                        : date.isSame(today, 'year') ? 'MM-DD HH:mm' : 'YYYY-MM-DD HH:mm');
-                    const title = `${completedAt ? '完成于' : '创建于'} ${date.format('YYYY-MM-DD HH:mm:ss')}`
-                        + (completedAt && createdAt ? `\n创建于 ${dayjs(createdAt).format('YYYY-MM-DD HH:mm:ss')}` : '');
-                    // Keep the metadata at the end of the first paragraph, outside its text marks.
-                    widgets.push(Decoration.widget(pos + node.firstChild.nodeSize, () => {
-                        const time = document.createElement('time');
-                        time.className = completedAt ? 'note-task-completed-at' : 'note-task-created-at';
-                        time.dateTime = value;
-                        time.textContent = completedAt ? label : `创建 ${label}`;
-                        time.title = title;
-                        time.setAttribute('aria-label', time.title);
-                        time.contentEditable = 'false';
-                        return time;
-                    }, { key: `${pos}:${value}:${title}:${label}`, side: 1, marks: [] }));
+                    for (const [kind, value, prefix, side] of [
+                        ['created', createdAt, '创建', 1], ['completed', completedAt, '完成', 2],
+                    ] as const) {
+                        // Keep the typing placeholder on a newly inserted empty task row.
+                        if (!value || (!completedAt && !node.firstChild.content.size)) continue;
+                        const date = dayjs(value);
+                        const label = `${prefix} ${date.format(date.isSame(today, 'day') ? 'HH:mm'
+                            : date.isSame(today, 'year') ? 'MM-DD HH:mm' : 'YYYY-MM-DD HH:mm')}`;
+                        const title = `${prefix}于 ${date.format('YYYY-MM-DD HH:mm:ss')}`;
+                        // Two independent widgets keep both dates outside editable text and marks.
+                        widgets.push(Decoration.widget(pos + node.firstChild.nodeSize, () => {
+                            const time = document.createElement('time');
+                            time.className = `note-task-${kind}-at`;
+                            time.dateTime = value;
+                            time.textContent = label;
+                            time.title = title;
+                            time.setAttribute('aria-label', title);
+                            time.contentEditable = 'false';
+                            return time;
+                        }, { key: `${pos}:${kind}:${value}:${label}`, side, marks: [] }));
+                    }
                 });
                 return DecorationSet.create(doc, widgets);
             };

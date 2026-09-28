@@ -66,6 +66,8 @@
 
 待办创建时间由 `scripts/check-note-task-creation.mjs` 覆盖，集成在生产 `test-note-completion.mjs`（含独立时间模拟）和原生 `-NoteCompletion`：工具栏、回车、快捷输入、旧数据兼容、两类时间独立、缩进与排序、撤销/重做、跨天显示、保存重开。`test-weekly-report.mjs` 检查 AI 请求里创建时间不误作完成时间。
 
+同一入口的 `check-note-task-time-settings.mjs` 检查创建/完成同时显示、两个开关的四种组合、独立颜色、恢复默认、键盘关闭返回焦点、应用前取消、设置重载、写入失败保留草稿及重试；确认完成态颜色不被灰字样式覆盖，隐藏仍记录时间，不修改随记正文或编辑日期。1100/1186/1280/1538/1920px 检查工具栏保持两行及弹窗不溢出；周报素材在两项时间隐藏时仍保留真实时间。
+
 待办前导空行由 `scripts/check-note-leading-blank.mjs` 覆盖，集成在 `npm run test:notes`、`node scripts/test-note-completion.mjs` 和原生 `-NoteCompletion`。检查从首项开头按 Backspace 或空行按 Delete（含 Ctrl 组合键）、空白与有文字的首项、连续空行、撤销/重做及保存重开；确认序号、勾选、格式、完成时间、子项和引用/单元格边界保留，不能删除父待办所需的段落。
 
 随记编号与统计由 `scripts/check-note-task-indicators.mjs` 覆盖，集成在 `npm run test:notes`、`node scripts/test-note-completion.mjs` 以及原生 `-NoteCompletion` 流程。检查两种排序后的父/子编号、撤销/重做、增删和层级调整、完成联动、保存重载、普通正文/引用/单元格范围、零待办和 100 项统计；在 1536、1186、1100、900px 检查标题与统计不重叠、编号和勾选框为 4px 间隔。900px 是网页压力检查，原生最小窗口宽度仍以 Tauri 配置为准。

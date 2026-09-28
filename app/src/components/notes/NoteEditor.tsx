@@ -1,5 +1,5 @@
 import { embedAttachments } from '../../utils/noteAttachments';
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
 import type { Note } from '../../types';
@@ -10,6 +10,8 @@ import { noteExtensions } from './extensions/NoteExtensions';
 import { useToastStore } from '../../state/toastStore';
 import { EditorToolbar } from './EditorToolbar';
 import { NoteTagSelector } from './NoteTagSelector';
+import { useAppStore } from '../../state/appStore';
+import { noteTaskTimeSettings } from '../../utils/noteTaskTime';
 import 'reactjs-tiptap-editor/style.css';
 import './RichTextEditor.css';
 
@@ -27,6 +29,7 @@ export function NoteEditor(props: NoteEditorProps) {
 }
 
 function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditorProps) {
+    const timeSettings = noteTaskTimeSettings(useAppStore(state => state.settings.noteTaskTime));
     const [title, setTitle] = useState(note?.title || '');
     const [tags, setTags] = useState<string[]>(note?.tags || []);
     const [contentHtml, setContentHtml] = useState(note?.content || '');
@@ -222,7 +225,8 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
     const taskPercent = taskTotal ? taskCompleted / taskTotal * 100 : 0;
 
     return (
-        <div className="note-editor">
+        <div className="note-editor" data-show-created={timeSettings.showCreated} data-show-completed={timeSettings.showCompleted}
+            style={{ '--note-task-created-color': timeSettings.createdColor, '--note-task-completed-color': timeSettings.completedColor } as CSSProperties}>
             <div className="note-editor-heading">
                 <input
                     className="note-editor-title"

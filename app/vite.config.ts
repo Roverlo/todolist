@@ -21,9 +21,12 @@ export default defineConfig({
   },
   // Use relative assets so the bundle loads inside Tauri's local protocol.
   base: './',
+  // Native build artifacts and QA HTML are not development entry points.
+  optimizeDeps: { entries: ['index.html'] },
   server: {
     host: true, // Listen on all addresses, including IPv4
     port: 5173,
     strictPort: true,
+    watch: { ignored: ['**/src-tauri/**', '**/ui-check.local/**'] },
   },
 })

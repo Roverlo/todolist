@@ -4,6 +4,7 @@
 }
 
 .editor-toolbar {
+    container: note-tools / inline-size;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -33,7 +34,7 @@
 .editor-toolbar .editor-size-select { width: 56px; }
 .editor-toolbar .editor-line-select { width: 54px; }
 .editor-toolbar .editor-line-select .custom-select-trigger { padding: 0 3px; gap: 2px; }
-@container note-document (max-width: 950px) {
+@container note-tools (max-width: 950px) {
     .editor-toolbar .editor-todo-btn { width: 28px; padding: 0; }
     .editor-toolbar .editor-todo-btn span { display: none; }
     .editor-toolbar-row:nth-child(2) .editor-toolbar-group { gap: 0; }
@@ -185,6 +186,21 @@ div[data-richtext-portal] { z-index: 1200; }
     white-space: nowrap;
     user-select: none;
 }
+.note-editor .ProseMirror.ProseMirror.ProseMirror .note-task-created-at { color: var(--note-task-created-color, #6b7280) !important; }
+.note-editor .ProseMirror.ProseMirror.ProseMirror .note-task-completed-at { color: var(--note-task-completed-color, #6b7280) !important; }
+.note-editor[data-show-created='false'] .note-task-created-at,
+.note-editor[data-show-completed='false'] .note-task-completed-at { display: none; }
+.note-editor[data-show-created='true'] .note-task-created-at + .note-task-completed-at { margin-inline-start: 4px; }
+.note-editor[data-show-created='true'] .note-task-created-at + .note-task-completed-at::before { content: '/'; margin-inline-end: 4px; }
+.note-task-time-popover { width: 260px; left: 0; right: auto; }
+.note-task-time-option { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-block: 12px; }
+.note-task-time-option label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.note-task-time-option input[type='checkbox'] { margin: 0; accent-color: rgb(var(--primary-rgb)); }
+.note-task-time-option input[type='color'] { width: 32px; height: 26px; padding: 2px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; }
+.note-task-time-preview { padding-block: 10px; border-block: 1px solid var(--border); font-size: 11px; color: var(--text-secondary); }
+.note-task-time-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.note-task-time-actions .btn { min-height: 30px; padding: 4px 12px; font-size: 12px; }
+.note-task-time-error { margin: 8px 0 0; color: #b91c1c; font-size: 12px; }
 .note-editor .ProseMirror h1 { font-size: 2em; }
 .note-editor .ProseMirror h2 { font-size: 1.6em; }
 .note-editor .ProseMirror h3 { font-size: 1.35em; }

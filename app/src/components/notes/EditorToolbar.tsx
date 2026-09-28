@@ -13,6 +13,7 @@ import { insertNoteFiles } from './extensions/NoteAttachments';
 import { sortNoteTasks } from './extensions/sortNoteTasks';
 import { clearNoteFormatting } from './extensions/clearNoteFormatting';
 import { NOTE_DATE_EDIT_EVENT } from './extensions/NoteDate';
+import { NoteTaskTimeSettings } from './NoteTaskTimeSettings';
 
 const COLOR_PALETTE = [
     ['黑色', '#000000'], ['深灰', '#595959'], ['灰色', '#a5a5a5'], ['浅灰', '#d9d9d9'], ['白色', '#ffffff'],
@@ -316,6 +317,7 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
                     <EditorToolButton label="已完成在前" icon={CircleCheck} className="editor-toolbar-text-button"
                         description="将同一层级的已完成待办排在前面，子项随父项移动，说明文字保留原位。可撤销。"
                         onClick={() => sortTasks(true)}><span>已完成在前</span></EditorToolButton>
+                    <NoteTaskTimeSettings />
                 </div>
                 <div className="editor-toolbar-group" role="group" aria-label="列表">
                     <EditorSelect className="editor-list-select" aria-label="项目符号样式" description="选择项目符号，或取消当前列表。" value={lists.bullet} placeholder="项目符号"

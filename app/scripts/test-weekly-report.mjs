@@ -42,7 +42,8 @@ try {
             } }] });
         await server.listen(); browser = await chromium.launch({ channel: 'msedge', headless: true });
         page = await browser.newPage({ viewport: { width: 1538, height: 840 }, timezoneId: 'Asia/Shanghai' });
-        await page.goto(server.resolvedUrls.local[0], { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto(server.resolvedUrls.local[0], { waitUntil: 'commit', timeout: 60000 });
+        await page.getByTitle('切换到随记中心', { exact: true }).waitFor({ timeout: 90000 });
         const reminder = page.getByRole('button', { name: '我知道了' }); if (await reminder.isVisible()) await reminder.click();
     }
     page.on('pageerror', error => errors.push(error.message));
@@ -106,6 +107,7 @@ try {
         const value = await page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')));
         Object.assign(value.state, { activeView: 'notes', notes, selectedNoteId: notes[0]?.id ?? null, noteViewMode: 'tree', noteSearchText: '', activeNoteTagId: 'all' });
         value.state.settings.ai = configured ? { activeProviderId: 'custom-weekly', providers: [{ id: 'custom-weekly', type: 'custom', name: '测试接口', model: 'test-weekly', apiEndpoint: endpoint, apiKey: 'test-only-not-a-real-key' }] } : { providers: [] };
+        value.state.settings.noteTaskTime = { showCreated: false, showCompleted: false, createdColor: '#6b7280', completedColor: '#6b7280' };
         const raw = JSON.stringify(value);
         if (native) await writeFile(dataPath, raw); else await page.evaluate(raw => localStorage.setItem('project-todo-app', raw), raw);
         await page.reload(); await page.getByRole('button', { name: '一键生成周报', exact: true }).waitFor();
@@ -296,5 +298,5 @@ try {
     assert.deepEqual(errors, []);
     console.log('Passed: custom dates, cross-year and single-day scope, invalid/empty dates, presets, retained drafts, cancellation, correct save titles and separate periods');
     console.log('Passed: generation, source scope, live draft, edit/copy/save/reload, cancel, errors/truncation, setup/empty states and reused side panel layout');
-} catch (error) { if (page) await page.screenshot({ path: `${output}/failure.png` }).catch(() => {}); throw error; }
+} catch (error) { console.error(error); if (page) await page.screenshot({ path: `${output}/failure.png`, timeout: 5000 }).catch(() => {}); throw error; }
 finally { if (browser) await browser.close(); if (server) await server.close(); mock.closeAllConnections(); await new Promise(resolve => mock.close(resolve)); }
