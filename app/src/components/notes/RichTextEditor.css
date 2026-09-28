@@ -170,7 +170,8 @@ div[data-richtext-portal] { z-index: 1200; }
 .note-editor .ProseMirror li[data-type='taskItem'][data-checked='true'] > div > p { text-decoration-line: line-through; }
 .note-editor .ProseMirror li[data-type='taskItem'][data-checked='true'] > div > p,
 .note-editor .ProseMirror li[data-type='taskItem'][data-checked='true'] > div > p * { color: #6b7280 !important; }
-.note-editor .ProseMirror .note-task-completed-at {
+.note-editor .ProseMirror .note-task-completed-at,
+.note-editor .ProseMirror .note-task-created-at {
     /* Inline-block keeps the parent's completion strike out of the timestamp. */
     display: inline-block;
     margin-inline-start: 8px;

@@ -1,17 +1,28 @@
 import type { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 import { closeHistory } from '@tiptap/pm/history';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import dayjs from 'dayjs';
 
 const completionTime = (value: unknown) => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : null;
+const newTaskTime = 'new';
 
 export function withTaskCompletion(taskItem: TiptapNode) {
     return taskItem.extend({
         addAttributes() {
             return {
                 ...this.parent?.(),
+                createdAt: {
+                    // New schema nodes get a timestamp in the originating transaction;
+                    // Empty string overrides the schema default when parsing legacy HTML
+                    // (Tiptap drops null parse results), so opening never invents history.
+                    default: newTaskTime,
+                    keepOnSplit: false,
+                    parseHTML: element => completionTime(element.getAttribute('data-created-at')) || '',
+                    renderHTML: attributes => completionTime(attributes.createdAt)
+                        ? { 'data-created-at': attributes.createdAt } : {},
+                },
                 completedAt: {
                     default: null,
                     keepOnSplit: false,
@@ -47,6 +58,9 @@ export function withTaskCompletion(taskItem: TiptapNode) {
                             tr.setNodeMarkup(pos + 1 + offset, undefined, { ...child.attrs, checked: true, completedAt: now });
                         }
                     });
+                    // The next toolbar action belongs to the clicked item, not a stale
+                    // caret in another task's child list, quote or table cell.
+                    tr.setSelection(TextSelection.near(tr.doc.resolve(pos + 1)));
                     // Completion and its descendants are one undo step, separate from typing and later clicks.
                     editor.view.dispatch(closeHistory(tr));
                     editor.view.dispatch(closeHistory(editor.state.tr));
@@ -68,27 +82,45 @@ export function withTaskCompletion(taskItem: TiptapNode) {
                 const widgets: Decoration[] = [];
                 const today = dayjs();
                 doc.descendants((node, pos) => {
-                    const completedAt = completionTime(node.attrs.completedAt);
-                    if (node.type.name !== 'taskItem' || !node.attrs.checked || !completedAt || !node.firstChild) return;
-                    const completed = dayjs(completedAt);
-                    const label = completed.format(completed.isSame(today, 'day') ? 'HH:mm'
-                        : completed.isSame(today, 'year') ? 'MM-DD HH:mm' : 'YYYY-MM-DD HH:mm');
+                    if (node.type.name !== 'taskItem' || !node.firstChild) return;
+                    const createdAt = completionTime(node.attrs.createdAt);
+                    const completedAt = node.attrs.checked ? completionTime(node.attrs.completedAt) : null;
+                    const value = completedAt || createdAt;
+                    if (!value) return;
+                    // Keep the typing placeholder on a newly inserted empty task row.
+                    if (!completedAt && !node.firstChild.content.size) return;
+                    const date = dayjs(value);
+                    const label = date.format(date.isSame(today, 'day') ? 'HH:mm'
+                        : date.isSame(today, 'year') ? 'MM-DD HH:mm' : 'YYYY-MM-DD HH:mm');
+                    const title = `${completedAt ? '完成于' : '创建于'} ${date.format('YYYY-MM-DD HH:mm:ss')}`
+                        + (completedAt && createdAt ? `\n创建于 ${dayjs(createdAt).format('YYYY-MM-DD HH:mm:ss')}` : '');
                     // Keep the metadata at the end of the first paragraph, outside its text marks.
                     widgets.push(Decoration.widget(pos + node.firstChild.nodeSize, () => {
                         const time = document.createElement('time');
-                        time.className = 'note-task-completed-at';
-                        time.dateTime = completedAt;
-                        time.textContent = label;
-                        time.title = `完成于 ${completed.format('YYYY-MM-DD HH:mm:ss')}`;
+                        time.className = completedAt ? 'note-task-completed-at' : 'note-task-created-at';
+                        time.dateTime = value;
+                        time.textContent = completedAt ? label : `创建 ${label}`;
+                        time.title = title;
                         time.setAttribute('aria-label', time.title);
                         time.contentEditable = 'false';
                         return time;
-                    }, { key: `${pos}:${completedAt}:${label}`, side: 1, marks: [] }));
+                    }, { key: `${pos}:${value}:${title}:${label}`, side: 1, marks: [] }));
                 });
                 return DecorationSet.create(doc, widgets);
             };
             return [...(this.parent?.() || []), new Plugin({
                 key,
+                appendTransaction: (transactions, _oldState, state) => {
+                    if (!transactions.some(tr => tr.docChanged)) return null;
+                    const tr = state.tr;
+                    const now = new Date().toISOString();
+                    state.doc.descendants((node, pos) => {
+                        if (node.type.name === 'taskItem' && node.attrs.createdAt === newTaskTime) {
+                            tr.setNodeMarkup(pos, undefined, { ...node.attrs, createdAt: now });
+                        }
+                    });
+                    return tr.docChanged ? tr : null;
+                },
                 state: {
                     init: (_, state) => decorate(state.doc),
                     apply: (tr, previous) => tr.docChanged || tr.getMeta(key) ? decorate(tr.doc) : previous,

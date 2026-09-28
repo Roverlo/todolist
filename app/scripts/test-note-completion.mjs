@@ -3,6 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { preview } from 'vite';
 import { checkNoteCompletion } from './check-note-completion.mjs';
+import { checkNoteTaskCreation } from './check-note-task-creation.mjs';
 import { checkNoteTaskSort } from './check-note-task-sort.mjs';
 import { checkNoteTaskListMerge } from './check-note-task-list-merge.mjs';
 import { checkNoteLeadingBlank } from './check-note-leading-blank.mjs';
@@ -53,6 +54,7 @@ try {
         await checkNoteTaskIndicators(page, body, openNote, saveAndReload);
         await checkNoteTaskListMerge(page, body, openNote, saveAndReload);
     }
+    await checkNoteTaskCreation(page, body, openNote, saveAndReload);
     await checkNoteCompletion(page, body, openNote, saveAndReload);
     if (!clockOnly) {
         await checkNoteTaskSort(page, body, openNote, saveAndReload);

@@ -194,5 +194,31 @@ export async function checkNoteTaskSort(page, body, openNote, saveAndReload) {
     assert.deepEqual(await names(firstList.locator(':scope > li').first().locator('ul')), ['当前子未完成', '当前子完成']);
     assert.deepEqual(await names(firstList.locator(':scope > li').nth(1).locator('ul')), ['别处子完成', '别处子未完成']);
     assert.equal(await body.getByText('子项说明', { exact: true }).count(), 1);
+
+    // A checkbox click selects its own sorting scope, even after editing elsewhere.
+    for (const completedFirst of [false, true]) {
+        await openNote(list(task('父甲', completedFirst, list(task('子甲', completedFirst), task('子乙', completedFirst))),
+            task('父乙', completedFirst), task('父丙', !completedFirst)), '勾选后重复同向排序');
+        const direction = completedFirst ? '已完成在前' : '未完成在前';
+        await focus('父甲');
+        await choose(direction);
+        await focus('子甲');
+        const checkbox = body.getByRole('checkbox', { name: /：父甲$/ });
+        await checkbox.setChecked(!completedFirst);
+        assert.deepEqual(await names(firstList), ['父甲', '父乙', '父丙'], 'Checking must not auto-sort');
+        await choose(direction);
+        assert.deepEqual(await names(firstList), ['父乙', '父甲', '父丙'], 'Repeated sort uses the checked parent scope');
+        assert.equal(await page.locator('.toast-message').last().innerText(), `已按“${direction}”整理同级待办。`);
+        await saveAndReload();
+        assert.deepEqual(await names(firstList), ['父乙', '父甲', '父丙']);
+    }
+    await openNote(list(task('父甲', false, list(task('甲子一'), task('甲子二'))),
+        task('父乙', false, list(task('乙子一'), task('乙子二')))), '勾选不同父项的子待办');
+    await focus('甲子一');
+    await choose('未完成在前');
+    await body.getByRole('checkbox', { name: /：乙子一$/ }).check();
+    await choose('未完成在前');
+    assert.deepEqual(await names(firstList.locator(':scope > li').nth(1).locator('ul')), ['乙子二', '乙子一']);
+    assert.deepEqual(await names(firstList.locator(':scope > li').first().locator('ul')), ['甲子一', '甲子二']);
     console.log('Passed: stable checklist sorting across empty/text paragraphs both ways, parent/child isolation, rich text, timestamps, caret, separate undo, keyboard, persistence and narrow layout');
 }

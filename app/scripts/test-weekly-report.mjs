@@ -95,7 +95,7 @@ try {
     const now = Date.now(); const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
     const makeNote = (id, content, extra = {}) => ({ id, title: id, content, date: '2025-01-01', createdAt: monday.getTime() - 86400000, updatedAt: now - 1000, tags: [], ...extra });
     const fixtures = [makeNote('本周随记', '<p>正在确认部署方案，计划 <time data-type="noteDate" datetime="2026-10-01">2026-10-01</time> 提交验收资料。</p><ul data-type="taskList"><li data-type="taskItem" data-checked="true" data-completed-at="' + new Date(now - 1000).toISOString() + '"><p>原计划 <time data-type="noteDate" datetime="2026-09-25">2026-09-25</time> 完成接口回归测试</p></li></ul>'),
-        makeNote('本周补充', '<p>本周补充内容</p>'), makeNote('上周未修改', '<p>不应发送上周内容</p>', { updatedAt: monday.getTime() - 1 }),
+        makeNote('本周补充', '<p>本周补充内容</p><ul data-type="taskList"><li data-type="taskItem" data-checked="false" data-created-at="2026-09-28T02:03:04.000Z"><p>新增接口联调</p></li></ul>'), makeNote('上周未修改', '<p>不应发送上周内容</p>', { updatedAt: monday.getTime() - 1 }),
         makeNote('回收站内容', '<p>不应发送回收站</p>', { deletedAt: now }), makeNote('已生成周报', '<p>不应反馈周报</p>', { kind: 'weekly-report' })];
     const seed = async (notes = fixtures, configured = true) => {
         // Flush the preceding scenario's editor before replacing isolated fixtures;
@@ -128,6 +128,8 @@ try {
     assert.match(sent.notes[0].content, /计划 2026-10-01 提交验收资料/);
     assert.match(sent.notes[0].content, /原计划 2026-09-25 完成接口回归测试/);
     assert.doesNotMatch(sent.notes[0].content, /<time|noteDate|data-weekday/);
+    assert.match(sent.notes[1].content, /- \[ \] 【创建时间 2026-09-28 10:03】新增接口联调/);
+    assert.doesNotMatch(sent.notes[1].content, /完成时间|本期完成/);
     console.log('Passed: report request retains ISO dates from body and completed tasks without chip markup');
     await page.screenshot({ path: `${output}/report.png` });
     assert.deepEqual(await page.getByRole('region', { name: '随记编辑区' }).boundingBox(), editorBounds);

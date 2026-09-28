@@ -108,7 +108,8 @@ export async function checkNoteCompletion(page, body, openNote, saveAndReload) {
     await body.press('Enter');
     assert.deepEqual(await states(), [['true', firstTime], ['false', null]], 'New items must inherit neither completion nor timestamps');
     await page.keyboard.insertText('新待办');
-    assert.equal(await items.nth(1).locator('p').innerText(), '新待办');
+    assert.equal(await body.evaluate(root => root.editor.state.selection.$from.parent.textContent), '新待办');
+    assert.equal(await items.nth(1).getAttribute('data-created-at'), '2026-09-21T04:05:06.000Z');
     await saveAndReload();
     assert.deepEqual(await states(), [['true', firstTime], ['false', null]]);
     await page.clock.setSystemTime(new Date());
