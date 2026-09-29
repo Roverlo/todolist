@@ -175,8 +175,12 @@ async function testDownloadSelectors(preferences) {
   await preferences.getByRole('option', { name: '64 分片', exact: true }).click();
   assert.equal(await connections.innerText(), '64 分片');
   assert.equal(await concurrent.innerText(), '3 个文件');
-  await connections.press('ArrowDown'); await connections.press('Home'); await connections.press('Enter');
-  assert.equal(await connections.innerText(), '1（不分片）');
+  await connections.press('ArrowDown');
+  await preferences.getByRole('listbox', { name: '单文件分片数', exact: true }).waitFor();
+  await connections.press('Home');
+  await until(async () => (await connections.getAttribute('aria-activedescendant'))?.endsWith('-0'), 'Home activates the first split option');
+  await connections.press('Enter');
+  await until(async () => (await connections.innerText()) === '1（不分片）', 'Keyboard selection is rendered');
   await connections.click();
   await concurrent.click();
   assert.equal(await preferences.getByRole('listbox', { name: '单文件分片数', exact: true }).count(), 0);
@@ -341,6 +345,12 @@ try {
     await until(() => largePeak === 8, 'Eight simultaneous connections reach Range server');
     await request({ action: 'pause', id: largeId });
     await until(() => largeActive === 0, 'All range connections paused');
+    for (let sample = 0; sample < 4; sample++) {
+      const paused = (await snapshot()).tasks.find(t => t.id === largeId);
+      assert.equal(paused.status, 'paused');
+      assert.equal(paused.speed, 0, 'Paused tasks never contribute a stale speed to the total');
+      await sleep(500);
+    }
     await request({ action: 'settings', settings: { ...settings, connections: 1, limitKib: 512 } });
     largePeak = 0;
     await request({ action: 'resume', id: largeId });

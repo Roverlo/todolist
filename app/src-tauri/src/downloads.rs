@@ -440,7 +440,8 @@ impl ManagerState {
             }
             task.total = number(&status["totalLength"]);
             task.completed = number(&status["completedLength"]);
-            task.speed = number(&status["downloadSpeed"]);
+            // aria2 can retain a recent speed after pausing or completing a task.
+            task.speed = if next == "active" { number(&status["downloadSpeed"]) } else { 0 };
         }
         if changed || self.dirty { self.persist()?; }
         self.error = None;
