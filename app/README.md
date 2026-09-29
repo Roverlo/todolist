@@ -24,11 +24,14 @@ npm run dev
 ```powershell
 npm run lint
 npm run build
+npm run engine:prepare
 npm run tauri:build -- --no-bundle
 ./scripts/create-portable.ps1
 ```
 
 网页输出在 `dist/`。原生 EXE 默认是 `src-tauri/target/release/app.exe`；设置了 `CARGO_TARGET_DIR` 时使用其 `release/app.exe`。便携脚本复制为仓库根目录下的 `portable/01_Offline_Portable/ProjectTodo_<构建时间>.exe`，并生成对应说明文件。
+
+下载中心使用独立 aria2 进程。首次原生开发/构建前执行 `npm run engine:prepare` 获取锁定的 Windows x64 引擎并校验压缩包及 EXE 的 SHA-256；只写项目 vendor 目录，不安装全局工具。引擎嵌入应用 EXE，运行下载时释放到本地数据目录。详细范围、数据位置和发布许可要求见 [下载中心](docs/DOWNLOAD_CENTER.md)。
 
 当前 Tauri 配置没有指定安装包 targets，也没有配置签名；不能把普通构建描述为已签名的 MSI/NSIS，或声称 EXE 位于 bundle/app。安装包和签名必须按当次明确要求另行配置、验证。
 

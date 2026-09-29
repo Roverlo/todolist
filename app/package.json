@@ -4,6 +4,7 @@
   "version": "2.3.0",
   "type": "module",
   "scripts": {
+    "engine:prepare": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-download-engine.ps1",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

@@ -5,6 +5,8 @@ import { Icon } from '../ui/Icon';
 import clsx from 'clsx';
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { DownloadSidebar } from '../downloads/DownloadCenter';
+import { ListTodo, FileText, ArrowDownToLine } from 'lucide-react';
 
 interface AppSidebarProps {
     collapsed: boolean;
@@ -60,37 +62,17 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: A
             ) : (
                 <>
                     {/* View Switcher Header - Now at the Top */}
-                    <div className="sidebar-switcher">
-                        {/* Tasks Switch */}
-                        <div
-                            className={clsx("view-switch-item", {
-                                active: activeView === 'tasks',
-                                inactive: activeView !== 'tasks'
-                            })}
-                            onClick={() => setActiveView('tasks')}
-                            title="切换到待办事项"
-                        >
-                            <div className="view-switch-icon-box">
-                                <div className={clsx("task-icon-circle", { inactive: activeView !== 'tasks' })}>待</div>
-                            </div>
-                            <span className="view-switch-label">待办事项</span>
-                        </div>
-
-                        {/* Notes Switch */}
-                        <div
-                            className={clsx("view-switch-item", {
-                                active: activeView === 'notes',
-                                inactive: activeView !== 'notes'
-                            })}
-                            onClick={() => setActiveView('notes')}
-                            title="切换到随记中心"
-                        >
-                            <div className="view-switch-icon-box">
-                                <Icon name="note" size={18} />
-                            </div>
-                            <span className="view-switch-label">随记中心</span>
-                        </div>
-                    </div>
+                    <nav className="sidebar-switcher" aria-label="功能中心">
+                        {([
+                            { id: 'tasks', label: '待办事项', icon: ListTodo },
+                            { id: 'notes', label: '随记中心', icon: FileText },
+                            { id: 'downloads', label: '下载中心', icon: ArrowDownToLine },
+                        ] as const).map(({ id, label, icon: TabIcon }) => <button
+                            key={id} type="button" className={clsx('view-switch-item', { active: activeView === id, inactive: activeView !== id })}
+                            aria-current={activeView === id ? 'page' : undefined} onClick={() => setActiveView(id)} title={`切换到${label}`}>
+                            <TabIcon size={14} aria-hidden="true" /><span className="view-switch-label">{label}</span>
+                        </button>)}
+                    </nav>
 
 
 
@@ -147,6 +129,8 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: A
                     <div className="sidebar-content" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
                         {activeView === 'tasks' ? (
                             <TaskSidebarContent onProjectSelected={onProjectSelected} />
+                        ) : activeView === 'downloads' ? (
+                            <DownloadSidebar />
                         ) : (
                             <NotesSidebar
                                 selectedNoteId={selectedNoteId ?? null}

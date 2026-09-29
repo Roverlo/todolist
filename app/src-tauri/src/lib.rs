@@ -8,6 +8,7 @@ use ssh2::Session;
 
 mod close_guard;
 mod attachments;
+mod downloads;
 
 /// 获取统一的数据存储路径：用户文档目录下的 ProjectTodo/data.json
 /// 所有版本的 EXE 都会读写这个位置，确保数据共享
@@ -479,6 +480,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
+            app.manage(downloads::Service::start(app.handle().clone()));
             use tauri::image::Image;
             use tauri::menu::{MenuBuilder, MenuItemBuilder};
             use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -531,6 +533,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            downloads::downloads_request, downloads::downloads_inspect,
             close_guard::set_close_handler_ready, close_guard::respond_to_close_request,
             frontend_log, load_data, save_data, get_data_directory, open_data_directory,
             attachments::write_attachment, attachments::read_attachment, attachments::reveal_attachment,
@@ -539,6 +542,11 @@ pub fn run() {
             smb_test_connection, smb_upload, smb_download,
             ssh_test_connection, ssh_upload, ssh_download
         ])
-        .run(context)
-        .expect("error while running tauri application");
+        .build(context)
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                if let Some(service) = app.try_state::<downloads::Service>() { service.stop(); }
+            }
+        });
 }

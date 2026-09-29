@@ -326,7 +326,7 @@ export interface AppStore extends AppData {
   updateAISettings: (settings: AISettings) => void;
 
   // View Switching
-  setActiveView: (view: 'tasks' | 'notes') => void;
+  setActiveView: (view: 'tasks' | 'notes' | 'downloads') => void;
   setNoteViewMode: (mode: 'tree' | 'trash') => void;
   setSelectedNoteId: (id: string | null) => void;
 

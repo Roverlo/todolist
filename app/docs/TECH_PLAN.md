@@ -11,6 +11,7 @@
 | 任务筛选与排序 | [src/hooks/useVisibleTasks.ts](../src/hooks/useVisibleTasks.ts) |
 | 项目、任务与周期任务 | src/components/sidebar/、src/components/task-table/、src/components/toolbar/ |
 | 随记编辑与 AI 交互 | src/components/notes/、src/services/、src/utils/noteAI.ts |
+| 下载队列、引擎与下载设置 | src/components/downloads/、src/state/downloadStore.ts、src-tauri/src/downloads.rs；[设计与边界](DOWNLOAD_CENTER.md) |
 | 备份、图片与恢复 | src/utils/backupUtils.ts、src/utils/noteAttachments.ts、src/utils/noteImages.ts、src/components/toolbar/BackupModal.tsx |
 | 导入、导出与远程同步 | src/components/toolbar/ImportModal.tsx、src/components/toolbar/ExportModal.tsx、src/components/toolbar/CloudSyncModal.tsx |
 | 原生存储、同步命令与窗口生命周期 | [src-tauri/src/lib.rs](../src-tauri/src/lib.rs)、src-tauri/src/ |

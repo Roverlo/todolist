@@ -37,10 +37,23 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { exit } from '@tauri-apps/plugin-process';
 import { Search, ListFilter, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { DownloadCenter } from './components/downloads/DownloadCenter';
+import { useDownloadStore } from './state/downloadStore';
 
 const NotesMain = lazy(() => import('./components/notes/NotesMain').then(module => ({ default: module.NotesMain })));
 
 function App() {
+  useEffect(() => {
+    if (!isTauri()) return;
+    let disposed = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      await useDownloadStore.getState().refresh();
+      if (!disposed) timer = setTimeout(poll, useAppStore.getState().activeView === 'downloads' ? 1000 : 4000);
+    };
+    void poll();
+    return () => { disposed = true; clearTimeout(timer); };
+  }, []);
   useAutoBackup(); // 启动自动备份 hook
   const { updateInfo, showUpdateModal, setShowUpdateModal, skipCurrentVersion } = useAutoUpdateCheck(); // 自动更新检查
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -504,6 +517,8 @@ function App() {
               <TaskTable onTaskFocus={setActiveTaskId} activeTaskId={activeTaskId} />
             </section>
           </>
+        ) : activeView === 'downloads' ? (
+          <DownloadCenter onTheme={() => setThemeOpen(true)} />
         ) : (
           <Suspense fallback={<div role="status">正在打开随记…</div>}>
             <NotesMain />
