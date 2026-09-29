@@ -53,7 +53,7 @@
 .download-dialog::backdrop { background: #0f172a66; }
 .download-dialog header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
 .download-dialog h2 { margin: 0; font-size: 18px; }
-.download-dialog form > label, .download-setting-grid label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 500; margin: 16px 0; }
+.download-dialog form > label, .download-setting-field { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 500; margin: 16px 0; }
 .download-dialog input:not([type=checkbox]), .download-dialog select { box-sizing: border-box; width: 100%; height: 38px; padding: 8px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text-main); font: inherit; font-size: 13px; min-width: 0; }
 .download-dialog input[type=checkbox] { accent-color: var(--primary); width: 16px; height: 16px; }
 .download-directory { display: flex; align-items: center; gap: 8px; }
@@ -69,6 +69,8 @@
 .download-add-dialog footer > span { margin-right: auto; align-self: center; font-size: 12px; color: var(--text-secondary); }
 .download-help { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin: -6px 0 16px; }
 .download-setting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.download-dialog .custom-select-trigger { height: 38px; padding: 0 10px; justify-content: space-between; text-align: left; }
+.download-license + .download-help { margin-top: 8px; }
 .download-dialog form > .download-checkbox { flex-direction: row; align-items: center; }
 .download-dialog footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border); padding-top: 18px; margin-top: 22px; }
 .download-dialog .download-error { font-size: 13px; line-height: 1.6; }

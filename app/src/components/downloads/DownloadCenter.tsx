@@ -5,6 +5,7 @@ import { ArrowDownToLine, CheckCheck, CircleAlert, FolderOpen, List, Pause, Play
 import { useDownloadStore, matchesFilter, formatBytes, type DownloadFilter, type DownloadSettings, type DownloadTask } from '../../state/downloadStore';
 import { useToastStore } from '../../state/toastStore';
 import { extractDownloadLinks, importDownloadFile } from '../../utils/downloadImport';
+import { CustomSelect } from '../ui/CustomSelect';
 import './DownloadCenter.css';
 import engineLicense from '../../../src-tauri/licenses/aria2-COPYING.txt?raw';
 
@@ -120,9 +121,9 @@ function DownloadPreferences({ onClose }: { onClose: () => void }) {
   }}>
     <label>默认保存目录<div className="download-directory"><input required value={draft.directory} onChange={e => setDraft({ ...draft, directory: e.target.value })} placeholder="在桌面版选择保存目录" /><button type="button" aria-label="选择默认保存目录" disabled={!isTauri() || busy} onClick={() => void chooseDirectory(draft.directory, directory => setDraft({ ...draft, directory })).catch(e => setError(String(e)))}><FolderOpen size={17} /></button></div></label>
     <p className="download-help">仅影响新建下载，已有任务保留原来的保存位置。</p>
-    <div className="download-setting-grid"><label>同时下载数<select value={draft.concurrent} onChange={e => setDraft({ ...draft, concurrent: Number(e.target.value) })}>{[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} 个文件</option>)}</select></label>
-    <label>单文件连接数<select aria-describedby="download-connections-help" value={draft.connections} onChange={e => setDraft({ ...draft, connections: Number(e.target.value) })}>{[1,4,8,16,32,64].map(n => <option key={n} value={n}>{n === 1 ? '1（单连接）' : `${n} 个连接`}</option>)}</select></label></div>
-    <p id="download-connections-help" className="download-help">单文件分片下载的连接上限，实际数量取决于文件大小和服务器支持。新任务采用此设置；已有任务暂停后继续生效。</p>
+    <div className="download-setting-grid"><div className="download-setting-field"><span>同时下载数</span><CustomSelect aria-label="同时下载数" value={draft.concurrent} onChange={value => setDraft({ ...draft, concurrent: Number(value) })} options={[1,2,3,4,5,6,7,8].map(n => ({ value: String(n), label: `${n} 个文件` }))} /></div>
+    <div className="download-setting-field"><span>单文件分片数</span><CustomSelect aria-label="单文件分片数" aria-describedby="download-connections-help" value={draft.connections} onChange={value => setDraft({ ...draft, connections: Number(value) })} options={[1,4,8,16,32,64].map(n => ({ value: String(n), label: n === 1 ? '1（不分片）' : `${n} 分片` }))} /></div></div>
+    <p id="download-connections-help" className="download-help">多路并行下载可提速，实际分片数取决于文件大小和服务器支持，并非越多越快。新任务采用此设置；已有任务暂停后继续生效。</p>
     <label>总速度上限（KiB/s）<input required type="number" min="0" max="1048576" step="1" value={draft.limitKib} onChange={e => setDraft({ ...draft, limitKib: Number(e.target.value) })} /></label>
     <p className="download-help">填 0 表示不限速；1024 KiB/s ≈ 1 MiB/s。设置立即生效。</p>
     <label className="download-checkbox"><input type="checkbox" checked={draft.notify} onChange={e => setDraft({ ...draft, notify: e.target.checked })} />下载完成时显示系统通知</label>

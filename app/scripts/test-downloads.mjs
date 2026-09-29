@@ -152,6 +152,43 @@ async function testNativeBatch(directory) {
   assert.equal((await snapshot()).tasks.some(t => t.name === 'stop-second.zip'), false);
   await add.getByRole('button', { name: '取消', exact: true }).click();
 }
+async function testDownloadSelectors(preferences) {
+  for (const [label, values] of [['同时下载数', ['1','2','3','4','5','6','7','8']], ['单文件分片数', ['1','4','8','16','32','64']]]) {
+    const trigger = preferences.getByRole('combobox', { name: label, exact: true });
+    await trigger.click();
+    const menu = preferences.getByRole('listbox', { name: label, exact: true });
+    await menu.waitFor();
+    assert.deepEqual(await menu.getByRole('option').evaluateAll(items => items.map(item => item.dataset.value)), values);
+    assert.equal(await menu.evaluate(node => node.closest('dialog')?.open), true, 'Menu is inside the modal top layer');
+    for (const option of await menu.getByRole('option').all()) {
+      await option.scrollIntoViewIfNeeded();
+      assert.equal(await option.evaluate(node => { const rect = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)); }), true, `${label} option is not covered or clipped`);
+    }
+    await page.screenshot({ path: path.join(output, label === '同时下载数' ? 'concurrent-open.png' : 'split-open.png') });
+    await trigger.press('Escape');
+    await menu.waitFor({ state: 'hidden' });
+    assert.equal(await preferences.isVisible(), true, 'Escape only closes the menu');
+  }
+  const connections = preferences.getByRole('combobox', { name: '单文件分片数', exact: true });
+  const concurrent = preferences.getByRole('combobox', { name: '同时下载数', exact: true });
+  await connections.click();
+  await preferences.getByRole('option', { name: '64 分片', exact: true }).click();
+  assert.equal(await connections.innerText(), '64 分片');
+  assert.equal(await concurrent.innerText(), '3 个文件');
+  await connections.press('ArrowDown'); await connections.press('Home'); await connections.press('Enter');
+  assert.equal(await connections.innerText(), '1（不分片）');
+  await connections.click();
+  await concurrent.click();
+  assert.equal(await preferences.getByRole('listbox', { name: '单文件分片数', exact: true }).count(), 0);
+  await preferences.getByRole('option', { name: '8 个文件', exact: true }).click();
+  assert.equal(await concurrent.innerText(), '8 个文件');
+  await concurrent.click(); await concurrent.press('Tab');
+  assert.equal(await preferences.getByRole('listbox').count(), 0, 'Tab closes menu');
+  await connections.click(); await preferences.getByRole('spinbutton').click();
+  assert.equal(await preferences.getByRole('listbox').count(), 0, 'Outside click closes menu');
+  await concurrent.click(); await preferences.getByRole('option', { name: '3 个文件', exact: true }).click();
+  await connections.click(); await preferences.getByRole('option', { name: '4 分片', exact: true }).click();
+}
 try {
   if (native) {
     assert.ok(process.env.PROJECTTODO_TEST_DATA_DIR && path.resolve(arg('--data')).startsWith(path.resolve(process.env.PROJECTTODO_TEST_DATA_DIR) + path.sep));
@@ -176,11 +213,17 @@ try {
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '下载设置', exact: true }).click();
     const preferences = page.getByRole('dialog', { name: '下载设置' });
-    const connections = preferences.getByRole('combobox', { name: '单文件连接数', exact: true });
-    assert.equal(await connections.inputValue(), '4');
-    assert.deepEqual(await connections.locator('option').evaluateAll(options => options.map(option => option.value)), ['1', '4', '8', '16', '32', '64']);
-    await connections.selectOption('64');
-    assert.equal(await preferences.getByRole('combobox', { name: '同时下载数', exact: true }).inputValue(), '3');
+    await testDownloadSelectors(preferences);
+    for (const height of [668, 500]) {
+      await page.setViewportSize({ width: 1480, height });
+      const trigger = preferences.getByRole('combobox', { name: '同时下载数', exact: true });
+      await trigger.click();
+      const menu = preferences.getByRole('listbox', { name: '同时下载数', exact: true });
+      await until(async () => menu.evaluate(node => { const r = node.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.width > 0; }), `Menu stays inside ${height}px viewport`);
+      await preferences.getByRole('option', { name: '8 个文件', exact: true }).click();
+      await trigger.click(); await preferences.getByRole('option', { name: '3 个文件', exact: true }).click();
+    }
+    await page.setViewportSize({ width: 1538, height: 840 });
     await preferences.screenshot({ path: path.join(output, 'settings.png') });
     await page.keyboard.press('Escape');
     for (const theme of ['blue', 'green', 'purple', 'orange', 'mono', 'sky', 'rose', 'indigo']) {
@@ -197,9 +240,17 @@ try {
     }
     await page.getByRole('button', { name: '待办事项', exact: true }).click();
     await page.getByText('任务看板', { exact: true }).waitFor();
+    await page.getByRole('button', { name: '展开/收起筛选', exact: true }).click();
+    const priority = page.getByRole('combobox', { name: '筛选优先级', exact: true });
+    await priority.click();
+    const priorityMenu = page.getByRole('listbox', { name: '筛选优先级', exact: true });
+    assert.equal(await priorityMenu.evaluate(node => node.parentElement === document.body), true, 'Non-modal menus still use the body portal');
+    await priorityMenu.getByRole('option', { name: '高', exact: true }).click();
+    assert.equal(await priority.innerText(), '高');
+    await page.getByRole('button', { name: '清空筛选', exact: true }).click();
     await page.getByRole('button', { name: '随记中心', exact: true }).click();
     await page.locator('.notes-main-root').waitFor();
-    console.log('PASS: browser preview guard, 8 themes, 5 widths, dialogs, three-way navigation');
+    console.log('PASS: selector pointer/keyboard/Escape/Tab/outside dismissal, 668/500px menu bounds, modal and body portals, browser preview guard, 8 themes, 5 widths, dialogs, three-way navigation');
   } else {
     await until(async () => !(await page.getByRole('button', { name: '新建下载', exact: true }).first().isDisabled()), 'Native ready');
     let state = await snapshot();
@@ -208,7 +259,9 @@ try {
     assert.equal(state.settings.connections, 4);
     await page.getByRole('button', { name: '下载设置', exact: true }).click();
     const preferences = page.getByRole('dialog', { name: '下载设置' });
-    await preferences.getByRole('combobox', { name: '单文件连接数', exact: true }).selectOption('32');
+    await testDownloadSelectors(preferences);
+    await preferences.getByRole('combobox', { name: '单文件分片数', exact: true }).click();
+    await preferences.getByRole('option', { name: '32 分片', exact: true }).click();
     await preferences.getByRole('button', { name: '保存设置', exact: true }).click();
     await preferences.waitFor({ state: 'hidden' });
     assert.equal((await snapshot()).settings.connections, 32);

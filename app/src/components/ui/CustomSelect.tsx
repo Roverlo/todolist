@@ -85,6 +85,7 @@ export const CustomSelect = ({ value, options, onChange, placeholder, className,
         <span className="custom-select-value">{selectedOption?.label || placeholder || '请选择'}</span>
         <ChevronDown size={14} className="custom-select-arrow" aria-hidden="true" />
       </button>
+      {/* Modal dialogs make body siblings inert; keep the menu inside their top layer. */}
       {isOpen && createPortal(
         <div className="custom-select-dropdown" id={listId} role="listbox" aria-label={label || placeholder || '请选择'}
           ref={menuRef} style={position}>
@@ -96,7 +97,7 @@ export const CustomSelect = ({ value, options, onChange, placeholder, className,
               {option.label}{option.value === String(value) && <Check size={14} aria-hidden="true" />}
             </button>
           ))}
-        </div>, document.body
+        </div>, triggerRef.current?.closest('dialog[open]') ?? document.body
       )}
     </div>
   );
