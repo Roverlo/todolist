@@ -143,7 +143,7 @@ export function DownloadCenter({ onTheme }: { onTheme: () => void }) {
   const speed = tasks.reduce((sum, t) => sum + t.speed, 0);
   const run = (action: 'pause' | 'resume' | 'reveal' | 'remove', id: string) => request({ action, id }).catch(reason => { useToastStore.getState().addToast(String(reason), 'error'); });
   return <section className="download-center" aria-label="下载中心">
-    <header className="download-header"><div><h1>下载中心</h1><p>文件集中管理，下载在后台继续</p></div><div className="download-header-actions">
+    <header className="download-header"><div><h1>下载中心</h1><p>多线程分片下载，充分利用带宽 · 支持断点续传，中断后接着下</p><p className="download-benefits-note">提速效果受带宽和服务器限制（如酒店出口限速）；断点续传需服务器支持。</p></div><div className="download-header-actions">
       <button className="download-primary" disabled={!loaded || busy} onClick={() => setModal('add')}><Plus size={17} />新建下载</button>
       <button onClick={() => setModal('settings')} disabled={!loaded || busy}><Settings size={17} />下载设置</button>
       <button className="download-icon" onClick={onTheme} aria-label="更改主题色" title="更改主题色"><Palette size={18} /></button>

@@ -9,6 +9,7 @@
 .download-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 0 14px; border-bottom: 1px solid var(--border); }
 .download-header h1 { margin: 0; font-size: 22px; line-height: 1.4; }
 .download-header p { margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); }
+.download-header .download-benefits-note { margin-top: 3px; font-size: 11px; line-height: 1.5; color: var(--text-subtle); }
 .download-header-actions, .download-row-actions { display: flex; align-items: center; gap: 8px; }
 .download-notice { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--primary-soft); padding: 10px 12px; border-radius: 8px; font-size: 12px; }
 .download-notice svg { flex-shrink: 0; }
