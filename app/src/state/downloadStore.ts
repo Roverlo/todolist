@@ -8,7 +8,7 @@ export interface DownloadTask {
   total: number; completed: number; speed: number; error: string;
   createdAt: number; finishedAt: number | null;
 }
-export interface DownloadSettings { directory: string; concurrent: number; limitKib: number; notify: boolean }
+export interface DownloadSettings { directory: string; concurrent: number; connections: number; limitKib: number; notify: boolean }
 interface Snapshot { tasks: DownloadTask[]; settings: DownloadSettings; engineVersion: string; error: string | null }
 export type DownloadRequest = { action: 'list' } | { action: 'add'; url: string; name: string; directory: string }
   | { action: 'pause' | 'resume' | 'remove' | 'reveal'; id: string } | { action: 'settings'; settings: DownloadSettings };
@@ -20,7 +20,7 @@ interface DownloadStore extends Snapshot {
 }
 
 export const useDownloadStore = create<DownloadStore>((set, get) => ({
-  tasks: [], settings: { directory: '', concurrent: 3, limitKib: 0, notify: true }, engineVersion: '', error: null,
+  tasks: [], settings: { directory: '', concurrent: 3, connections: 4, limitKib: 0, notify: true }, engineVersion: '', error: null,
   filter: 'all', busy: false, loaded: !isTauri(),
   setFilter: filter => set({ filter }),
   refresh: async () => {

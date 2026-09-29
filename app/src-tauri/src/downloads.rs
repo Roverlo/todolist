@@ -7,12 +7,15 @@ use tauri_plugin_notification::NotificationExt;
 
 const ENGINE: &[u8] = include_bytes!("../vendor/aria2/aria2c.exe");
 const ENGINE_VERSION: &str = "1.37.0-motrix.16";
+fn default_connections() -> u8 { 4 }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     directory: String,
     concurrent: u8,
+    #[serde(default = "default_connections")]
+    connections: u8,
     limit_kib: u32,
     notify: bool,
 }
@@ -205,7 +208,7 @@ impl ManagerState {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 let directory = if std::env::var_os("PROJECTTODO_TEST_DATA_DIR").is_some() { root.join("files") }
                     else { dirs::download_dir().unwrap_or(root.clone()).join("ProjectTodo") };
-                Journal { version: 1, settings: Settings { directory: directory.to_string_lossy().into(), concurrent: 3, limit_kib: 0, notify: true }, tasks: vec![] }
+                Journal { version: 1, settings: Settings { directory: directory.to_string_lossy().into(), concurrent: 3, connections: default_connections(), limit_kib: 0, notify: true }, tasks: vec![] }
             }
             Err(_) => return Err("下载记录无法读取，未修改原文件".into()),
         };
@@ -242,10 +245,12 @@ impl ManagerState {
         let secret = random_hex(32)?;
         let client = reqwest::Client::builder().no_proxy().timeout(Duration::from_secs(2)).build().map_err(|_| "无法初始化下载服务")?;
         let mut command = Command::new(&binary);
-        command.args(["--no-conf=true", "--no-netrc=true", "--enable-rpc=true", "--rpc-listen-all=false", "--rpc-allow-origin-all=false", "--quiet=true", "--console-log-level=error", "--auto-save-interval=1", "--allow-overwrite=false", "--auto-file-renaming=false", "--continue=true", "--file-allocation=none", "--enable-dht=false", "--enable-dht6=false", "--enable-peer-exchange=false", "--follow-torrent=false", "--follow-metalink=false", "--check-certificate=true", "--split=4", "--max-connection-per-server=4", "--max-tries=3", "--retry-wait=2", "--connect-timeout=15", "--timeout=30", "--max-download-result=10000"])
+        command.args(["--no-conf=true", "--no-netrc=true", "--enable-rpc=true", "--rpc-listen-all=false", "--rpc-allow-origin-all=false", "--quiet=true", "--console-log-level=error", "--auto-save-interval=1", "--allow-overwrite=false", "--auto-file-renaming=false", "--continue=true", "--file-allocation=none", "--enable-dht=false", "--enable-dht6=false", "--enable-peer-exchange=false", "--follow-torrent=false", "--follow-metalink=false", "--check-certificate=true", "--max-tries=3", "--retry-wait=2", "--connect-timeout=15", "--timeout=30", "--max-download-result=10000"])
             .arg(format!("--rpc-listen-port={port}")).arg(format!("--rpc-secret={secret}"))
             .arg(format!("--stop-with-process={}", std::process::id()))
             .arg(format!("--max-concurrent-downloads={}", self.journal.settings.concurrent))
+            .arg(format!("--split={}", self.journal.settings.connections))
+            .arg(format!("--max-connection-per-server={}", self.journal.settings.connections))
             .arg(format!("--max-overall-download-limit={}K", self.journal.settings.limit_kib))
             .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
         #[cfg(windows)] { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
@@ -282,7 +287,8 @@ impl ManagerState {
         if path.exists() && !PathBuf::from(format!("{}.aria2", path.display())).is_file() {
             return Err("目标文件已存在且没有续传记录，请更换文件名新建下载".into());
         }
-        self.rpc("addUri", vec![json!([task.url]), json!({"gid": task.id, "dir": task.directory, "out": task.name, "pause": if paused {"true"} else {"false"}})])?;
+        self.rpc("addUri", vec![json!([task.url]), json!({"gid": task.id, "dir": task.directory, "out": task.name, "pause": if paused {"true"} else {"false"},
+            "split": self.journal.settings.connections.to_string(), "max-connection-per-server": self.journal.settings.connections.to_string()})])?;
         Ok(())
     }
 
@@ -325,6 +331,8 @@ impl ManagerState {
                 if self.journal.tasks[index].status == "complete" { return Err("此文件已下载完成".into()); }
                 self.start_engine()?;
                 if self.journal.tasks[index].status == "paused" {
+                    // aria2 only changes these options while a task is reserved/paused.
+                    self.rpc("changeOption", vec![json!(id), json!({"split": self.journal.settings.connections.to_string(), "max-connection-per-server": self.journal.settings.connections.to_string()})])?;
                     self.rpc("unpause", vec![json!(id)])?;
                 } else if self.journal.tasks[index].status == "error" {
                     let _ = self.rpc("removeDownloadResult", vec![json!(id)]);
@@ -461,6 +469,7 @@ fn validate_directory(directory: &str) -> Result<(), String> {
 fn validate_settings(settings: &Settings) -> Result<(), String> {
     validate_directory(&settings.directory)?;
     if !(1..=8).contains(&settings.concurrent) || settings.limit_kib > 1_048_576 { return Err("同时下载数须为 1–8，限速须为 0–1048576 KiB/s".into()); }
+    if ![1, 4, 8, 16, 32, 64].contains(&settings.connections) { return Err("单文件连接数须为 1、4、8、16、32 或 64".into()); }
     Ok(())
 }
 fn error_message(code: &str) -> String {
@@ -487,6 +496,43 @@ fn random_hex(_length: usize) -> Result<String, String> { Err("下载中心当�
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn legacy_settings_keep_four_connections() {
+        let mut settings: Settings = serde_json::from_value(json!({"directory": std::env::temp_dir(), "concurrent": 3, "limitKib": 0, "notify": false})).unwrap();
+        assert_eq!(settings.connections, 4);
+        for count in [0, 2, 3, 65, 255] { settings.connections = count; assert!(validate_settings(&settings).is_err()); }
+        for count in [1, 4, 8, 16, 32, 64] { settings.connections = count; assert!(validate_settings(&settings).is_ok()); }
+    }
+    #[test] fn connection_choices_reach_real_engine_for_new_and_resumed_tasks() {
+        let root = std::env::temp_dir().join(format!("projecttodo-connections-test-{}", random_hex(8).unwrap()));
+        // Own the endpoint but leave responses pending: no external network or user data.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let settings = Settings { directory: root.to_string_lossy().into(), concurrent: 3, connections: 64, limit_kib: 0, notify: false };
+        let mut manager = ManagerState { root: root.clone(), journal: Journal { version: 1, settings, tasks: vec![] }, engine: None, error: None, dirty: false, pending_notifications: vec![] };
+        manager.start_engine().unwrap();
+        let global = manager.rpc("getGlobalOption", vec![]).unwrap();
+        assert_eq!(global["split"], "64");
+        assert_eq!(global["max-connection-per-server"], "64");
+        for count in [1, 4, 8, 16, 32, 64] {
+            let mut settings = manager.journal.settings.clone(); settings.connections = count;
+            manager.request(Request::Settings { settings }).unwrap();
+            let id = random_hex(8).unwrap();
+            manager.journal.tasks.push(Task { id: id.clone(), url: format!("http://{}/fixture.zip", listener.local_addr().unwrap()), name: format!("{count}.zip"), directory: root.to_string_lossy().into(), status: "paused".into(), total: 0, completed: 0, speed: 0, error: String::new(), created_at: 0, finished_at: None });
+            manager.enqueue(manager.journal.tasks.len() - 1, true).unwrap();
+            let options = manager.rpc("getOption", vec![json!(id)]).unwrap();
+            assert_eq!(options["split"], count.to_string());
+            assert_eq!(options["max-connection-per-server"], count.to_string());
+            // Deliberately leave stale options on a paused task; Resume must replace both.
+            manager.rpc("changeOption", vec![json!(id), json!({"split":"2", "max-connection-per-server":"2"})]).unwrap();
+            manager.request(Request::Resume { id: id.clone() }).unwrap();
+            let options = manager.rpc("getOption", vec![json!(id)]).unwrap();
+            assert_eq!(options["split"], count.to_string());
+            assert_eq!(options["max-connection-per-server"], count.to_string());
+            manager.request(Request::Remove { id }).unwrap();
+        }
+        manager.stop();
+        drop(manager);
+        fs::remove_dir_all(root).unwrap();
+    }
     #[test] fn rejects_unsafe_input() {
         for name in ["../other.exe", "C:\\other", "NUL.zip", "COM1", "bad:stream", "name.", "a\nb"] { assert!(validate_name(name).is_err(), "{name}"); }
         assert!(validate_name("中文文件 2026.zip").is_ok());
@@ -504,7 +550,7 @@ mod tests {
         fs::create_dir_all(root.join("history.json.tmp")).unwrap();
         let previous = b"previous journal";
         fs::write(root.join("history.json"), previous).unwrap();
-        let journal = Journal { version: 1, settings: Settings { directory: root.to_string_lossy().into(), concurrent: 3, limit_kib: 0, notify: false }, tasks: vec![] };
+        let journal = Journal { version: 1, settings: Settings { directory: root.to_string_lossy().into(), concurrent: 3, connections: 4, limit_kib: 0, notify: false }, tasks: vec![] };
         assert!(save_journal(&root, &journal).is_err());
         assert_eq!(fs::read(root.join("history.json")).unwrap(), previous);
         fs::remove_dir_all(root).unwrap();

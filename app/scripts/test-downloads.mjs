@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile, rmdir, stat } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rmdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
@@ -17,28 +17,33 @@ const until = async (check, label, timeout = 25000) => {
   assert.fail(label);
 };
 const errors = [], ranges = [];
+let largeActive = 0, largePeak = 0;
 const bytes = Buffer.alloc(6 * 1024 * 1024);
 for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 37 + Math.floor(i / 1031)) % 256;
 const digest = data => createHash('sha256').update(data).digest('hex');
 const mock = createServer((req, res) => {
   if (req.url === '/missing') { res.writeHead(404); res.end(); return; }
   const body = req.url === '/small.zip' ? bytes.subarray(0, 65536) : bytes;
+  const large = req.url === '/connections.zip';
+  const length = large ? 160 * 1024 * 1024 : body.length;
   const range = req.headers.range?.match(/bytes=(\d+)-(\d*)/);
   const start = range ? Number(range[1]) : 0;
-  const end = range?.[2] ? Math.min(Number(range[2]), body.length - 1) : body.length - 1;
+  const end = range?.[2] ? Math.min(Number(range[2]), length - 1) : length - 1;
   if (range) ranges.push({ start, end });
   const headers = { 'Content-Type': 'application/octet-stream', 'Content-Length': end - start + 1, 'Accept-Ranges': 'bytes', ETag: '"fixture-v1"' };
   if (req.url === '/small.zip') headers['Content-Disposition'] = "attachment; filename=fallback.zip; filename*=UTF-8''%E6%9C%8D%E5%8A%A1%E7%AB%AF.zip";
-  if (range) headers['Content-Range'] = `bytes ${start}-${end}/${body.length}`;
+  if (range) headers['Content-Range'] = `bytes ${start}-${end}/${length}`;
   res.writeHead(range ? 206 : 200, headers);
   if (req.method === 'HEAD') { res.end(); return; }
+  if (large) { largeActive++; largePeak = Math.max(largePeak, largeActive); }
   let offset = start;
   const timer = setInterval(() => {
     const next = Math.min(offset + 32768, end + 1);
-    res.write(body.subarray(offset, next)); offset = next;
+    if (res.writableNeedDrain) return;
+    res.write(large ? body.subarray(0, next - offset) : body.subarray(offset, next)); offset = next;
     if (offset > end) { clearInterval(timer); res.end(); }
   }, 15);
-  res.on('close', () => clearInterval(timer));
+  res.on('close', () => { clearInterval(timer); if (large) largeActive--; });
 });
 await new Promise(resolve => mock.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${mock.address().port}`;
@@ -72,7 +77,13 @@ try {
     await add.screenshot({ path: path.join(output, 'add.png') });
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '下载设置', exact: true }).click();
-    await page.getByRole('dialog', { name: '下载设置' }).screenshot({ path: path.join(output, 'settings.png') });
+    const preferences = page.getByRole('dialog', { name: '下载设置' });
+    const connections = preferences.getByRole('combobox', { name: '单文件连接数', exact: true });
+    assert.equal(await connections.inputValue(), '4');
+    assert.deepEqual(await connections.locator('option').evaluateAll(options => options.map(option => option.value)), ['1', '4', '8', '16', '32', '64']);
+    await connections.selectOption('64');
+    assert.equal(await preferences.getByRole('combobox', { name: '同时下载数', exact: true }).inputValue(), '3');
+    await preferences.screenshot({ path: path.join(output, 'settings.png') });
     await page.keyboard.press('Escape');
     for (const theme of ['blue', 'green', 'purple', 'orange', 'mono', 'sky', 'rose', 'indigo']) {
       await page.evaluate(async theme => { const { useAppStore } = await import('/src/state/appStore.ts'); useAppStore.getState().setSettings({ colorScheme: theme }); }, theme);
@@ -96,7 +107,14 @@ try {
     let state = await snapshot();
     const directory = state.settings.directory;
     const root = path.join(process.env.PROJECTTODO_TEST_DATA_DIR, 'downloads');
-    const settings = { ...state.settings, concurrent: 1, limitKib: 256, notify: false };
+    assert.equal(state.settings.connections, 4);
+    await page.getByRole('button', { name: '下载设置', exact: true }).click();
+    const preferences = page.getByRole('dialog', { name: '下载设置' });
+    await preferences.getByRole('combobox', { name: '单文件连接数', exact: true }).selectOption('32');
+    await preferences.getByRole('button', { name: '保存设置', exact: true }).click();
+    await preferences.waitFor({ state: 'hidden' });
+    assert.equal((await snapshot()).settings.connections, 32);
+    const settings = { ...state.settings, connections: 32, concurrent: 1, limitKib: 256, notify: false };
     const info = await page.evaluate(url => window.__TAURI_INTERNALS__.invoke('downloads_inspect', { url }), `${base}/small.zip`);
     assert.equal(info.name, '服务端.zip'); assert.equal(info.total, 65536); assert.equal(info.fromServer, true);
     await request({ action: 'settings', settings });
@@ -135,6 +153,7 @@ try {
       await until(async () => (await snapshot()).tasks.length === 2, 'History restored');
       assert.equal((await snapshot()).tasks.find(t => t.id === id).status, 'paused');
       assert.equal((await snapshot()).settings.limitKib, 256);
+      assert.equal((await snapshot()).settings.connections, 32);
       await request({ action: 'resume', id });
       await until(() => ranges.length > rangeCount && ranges.slice(rangeCount).some(range => range.start > 0), 'Restart uses Range resume');
     }
@@ -151,10 +170,12 @@ try {
     await rejected(() => request({ action: 'add', url: `${base}/small.zip`, name: '../escape.zip', directory }), /文件名/);
     await rejected(() => request({ action: 'add', url: `${base}/small.zip`, name: '中文资料.zip', directory }), /同名/);
     await rejected(() => request({ action: 'settings', settings: { ...settings, concurrent: 0 } }), /1–8/);
+    for (const connections of [0, 3, 65]) await rejected(() => request({ action: 'settings', settings: { ...settings, connections } }), /单文件连接数/);
     const history = await readFile(path.join(root, 'history.json'));
     await mkdir(path.join(root, 'history.json.tmp'));
-    await rejected(() => request({ action: 'settings', settings: { ...settings, concurrent: 7 } }), /保存/);
+    await rejected(() => request({ action: 'settings', settings: { ...settings, connections: 64, concurrent: 7 } }), /保存/);
     assert.deepEqual(await readFile(path.join(root, 'history.json')), history);
+    assert.equal((await snapshot()).settings.connections, 32);
     await rmdir(path.join(root, 'history.json.tmp'));
     await request({ action: 'settings', settings: { ...settings, limitKib: 0 } });
     await goDownloads();
@@ -162,9 +183,26 @@ try {
     await page.getByRole('dialog', { name: '移除下载记录' }).getByRole('button', { name: '移除记录', exact: true }).click();
     await until(async () => !(await snapshot()).tasks.some(t => t.id === id), 'Remove only record');
     assert.equal((await stat(path.join(directory, '中文资料.zip'))).size, bytes.length);
+    await request({ action: 'settings', settings: { ...settings, connections: 8, limitKib: 512 } });
+    const added = await request({ action: 'add', url: `${base}/connections.zip`, name: 'connections-fixture.zip', directory });
+    const largeId = added.tasks.find(t => t.name === 'connections-fixture.zip').id;
+    await until(() => largePeak === 8, 'Eight simultaneous connections reach Range server');
+    await request({ action: 'pause', id: largeId });
+    await until(() => largeActive === 0, 'All range connections paused');
+    await request({ action: 'settings', settings: { ...settings, connections: 1, limitKib: 512 } });
+    largePeak = 0;
+    await request({ action: 'resume', id: largeId });
+    await until(() => largeActive === 1, 'Resumed with one connection');
+    await sleep(2000);
+    assert.equal(largePeak, 1);
+    await request({ action: 'remove', id: largeId });
+    await until(() => largeActive === 0, 'Connection fixture stopped');
+    // Only remove the two known files created by this isolated test.
+    await unlink(path.join(directory, 'connections-fixture.zip'));
+    await unlink(path.join(directory, 'connections-fixture.zip.aria2'));
     assert.deepEqual(JSON.parse(await readFile(arg('--data'), 'utf8')).state.notes, beforeNotes);
     await page.screenshot({ path: path.join(output, 'complete.png') });
-    console.log('PASS: HTTP/HTTPS bytes/SHA-256, concurrency, pause/resume, native restart/Range, background, 404, invalid input, overwrite guard, save failure, record-only removal, notes untouched');
+    console.log('PASS: HTTP/HTTPS bytes/SHA-256, concurrency, 8 real connections, pause/resume applies 1 connection, settings UI/restart/rollback, native restart/Range, background, 404, invalid input, overwrite guard, save failure, record-only removal, notes untouched');
   }
   assert.deepEqual(errors, []);
   await writeFile(path.join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, ranges, errors }, null, 2));
