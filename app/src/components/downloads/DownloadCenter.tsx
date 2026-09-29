@@ -116,7 +116,7 @@ function DownloadPreferences({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   return <Modal title="下载设置" onClose={onClose}><form onSubmit={async event => {
     event.preventDefault(); setError('');
-    try { await request({ action: 'settings', settings: draft }); onClose(); useToastStore.getState().addToast('下载设置已保存', 'success'); }
+    try { await request({ action: 'settings', settings: draft }); onClose(); useToastStore.getState().addToast('下载设置已保存', 'success', 4500); }
     catch (reason) { setError(String(reason)); }
   }}>
     <label>默认保存目录<div className="download-directory"><input required value={draft.directory} onChange={e => setDraft({ ...draft, directory: e.target.value })} placeholder="在桌面版选择保存目录" /><button type="button" aria-label="选择默认保存目录" disabled={!isTauri() || busy} onClick={() => void chooseDirectory(draft.directory, directory => setDraft({ ...draft, directory })).catch(e => setError(String(e)))}><FolderOpen size={17} /></button></div></label>

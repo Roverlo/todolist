@@ -9,6 +9,11 @@
   pointer-events: none;
 }
 
+/* Desktop notifications must start below the 32px window controls. */
+.native-window .toast-container {
+  top: 52px;
+}
+
 .toast-item {
   display: flex;
   align-items: center;

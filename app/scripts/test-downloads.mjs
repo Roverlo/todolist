@@ -268,6 +268,21 @@ try {
     await preferences.getByRole('option', { name: '32 分片', exact: true }).click();
     await preferences.getByRole('button', { name: '保存设置', exact: true }).click();
     await preferences.waitFor({ state: 'hidden' });
+    const savedToast = page.locator('.toast-item').filter({ hasText: '下载设置已保存' });
+    await savedToast.waitFor();
+    await savedToast.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished)));
+    const toastBounds = await savedToast.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const titleBottom = document.querySelector('.desktop-titlebar').getBoundingClientRect().bottom;
+      return { top: rect.top, bottom: rect.bottom, titleBottom, viewport: innerHeight,
+        topVisible: node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + 2)) };
+    });
+    await page.screenshot({ path: path.join(output, 'settings-saved-toast.png') });
+    await writeFile(path.join(output, 'settings-saved-toast.json'), JSON.stringify(toastBounds));
+    assert.ok(toastBounds.top >= toastBounds.titleBottom + 12 && toastBounds.bottom <= toastBounds.viewport && toastBounds.topVisible, 'Saved toast is fully visible below desktop controls');
+    await sleep(3200);
+    assert.equal(await savedToast.isVisible(), true, 'Saved message remains readable after three seconds');
+    await savedToast.waitFor({ state: 'hidden', timeout: 3000 });
     assert.equal((await snapshot()).settings.connections, 32);
     const settings = { ...state.settings, connections: 32, concurrent: 1, limitKib: 256, notify: false };
     const info = await page.evaluate(url => window.__TAURI_INTERNALS__.invoke('downloads_inspect', { url }), `${base}/small.zip`);

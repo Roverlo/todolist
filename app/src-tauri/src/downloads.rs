@@ -200,18 +200,43 @@ fn disposition_name(header: &str) -> Option<String> {
 struct Engine { child: Child, client: reqwest::Client, endpoint: String, secret: String }
 impl Engine {
     fn rpc(&self, method: &str, args: Vec<Value>) -> Result<Value, String> {
-        let mut params = vec![json!(format!("token:{}", self.secret))];
-        params.extend(args);
-        tauri::async_runtime::block_on(async {
-            let response = self.client.post(&self.endpoint).header("Content-Type", "application/json")
-                .body(json!({"jsonrpc":"2.0", "id":"projecttodo", "method":format!("aria2.{method}"), "params":params}).to_string())
-                .send().await.map_err(|_| "无法连接下载引擎，请重试".to_string())?;
-            let bytes = response.bytes().await.map_err(|_| "下载引擎响应异常".to_string())?;
-            let result: Value = serde_json::from_slice(&bytes).map_err(|_| "下载引擎响应异常".to_string())?;
-            if result.get("error").is_some() { return Err("下载引擎未能执行操作，请刷新后重试".to_string()); }
-            result.get("result").cloned().ok_or_else(|| "下载引擎返回空结果".to_string())
-        })
+        engine_rpc(&self.client, &self.endpoint, &self.secret, method, args)
     }
+}
+
+fn engine_rpc(client: &reqwest::Client, endpoint: &str, secret: &str, method: &str, args: Vec<Value>) -> Result<Value, String> {
+    let mut params = vec![json!(format!("token:{secret}"))];
+    params.extend(args);
+    let body = json!({"jsonrpc":"2.0", "id":"projecttodo", "method":format!("aria2.{method}"), "params":params}).to_string();
+    // A lost status reply is safe to repeat. Never replay an add/settings/pause operation.
+    let attempts = if method == "tellStatus" { 2 } else { 1 };
+    for attempt in 1..=attempts {
+        let started = std::time::Instant::now();
+        let response = tauri::async_runtime::block_on(async {
+            client.post(endpoint).header("Content-Type", "application/json").body(body.clone())
+                .send().await?.error_for_status()?.bytes().await
+        });
+        match response {
+            Ok(bytes) => {
+                let result: Value = serde_json::from_slice(&bytes).map_err(|_| "下载引擎响应异常".to_string())?;
+                if result.get("error").is_some() { return Err("下载引擎未能执行操作，请刷新后重试".to_string()); }
+                let result = result.get("result").cloned().ok_or_else(|| "下载引擎返回空结果".to_string())?;
+                if attempt > 1 { log::info!("Download RPC recovered method={method} attempt={attempt}"); }
+                return Ok(result);
+            }
+            Err(error) => {
+                // Do not log request bodies, URLs, RPC secrets or raw reqwest errors.
+                let kind = if error.is_timeout() { "timeout" } else if error.is_connect() { "connect" }
+                    else if error.is_status() { "http_status" } else { "transport" };
+                log::warn!("Download RPC failed method={method} kind={kind} attempt={attempt} elapsed_ms={}", started.elapsed().as_millis());
+                if attempt == attempts || error.is_status() {
+                    return Err(if method == "tellStatus" { "暂时无法读取下载状态，正在自动重试" } else { "无法连接下载引擎，请重试" }.into());
+                }
+                std::thread::sleep(Duration::from_millis(150));
+            }
+        }
+    }
+    unreachable!()
 }
 impl Drop for Engine {
     fn drop(&mut self) { let _ = self.child.kill(); let _ = self.child.wait(); }
@@ -528,6 +553,75 @@ fn random_hex(_length: usize) -> Result<String, String> { Err("下载中心当�
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn rpc_fixture(replies: Vec<(u64, Option<&'static str>)>) -> (String, std::thread::JoinHandle<usize>) {
+        use std::io::Read;
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = format!("http://{}/jsonrpc", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let worker = std::thread::spawn(move || {
+            let mut received = 0;
+            for (delay_ms, reply) in replies {
+                let deadline = std::time::Instant::now() + Duration::from_secs(1);
+                let mut socket = loop {
+                    match listener.accept() {
+                        Ok((socket, _)) => break socket,
+                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock && std::time::Instant::now() < deadline => std::thread::sleep(Duration::from_millis(5)),
+                        _ => return received,
+                    }
+                };
+                socket.set_nonblocking(false).unwrap();
+                socket.set_read_timeout(Some(Duration::from_millis(500))).unwrap();
+                let mut request = Vec::new();
+                loop {
+                    let mut buffer = [0; 2048];
+                    let count = socket.read(&mut buffer).unwrap();
+                    if count == 0 { break; }
+                    request.extend_from_slice(&buffer[..count]);
+                    if let Some(end) = request.windows(4).position(|bytes| bytes == b"\r\n\r\n") {
+                        let header = String::from_utf8_lossy(&request[..end]).to_ascii_lowercase();
+                        let length: usize = header.lines().find_map(|line| line.strip_prefix("content-length:")).unwrap().trim().parse().unwrap();
+                        if request.len() >= end + 4 + length { break; }
+                    }
+                }
+                received += 1;
+                std::thread::sleep(Duration::from_millis(delay_ms));
+                if let Some(body) = reply {
+                    let response = if body.starts_with("HTTP/") { body.to_string() }
+                        else { format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()) };
+                    let _ = socket.write_all(response.as_bytes());
+                }
+            }
+            received
+        });
+        (endpoint, worker)
+    }
+
+    #[test] fn status_rpc_recovers_once_without_replaying_operations() {
+        const OK: &str = r#"{"jsonrpc":"2.0","id":"projecttodo","result":{"status":"active","completedLength":"1024"}}"#;
+        let client = reqwest::Client::builder().no_proxy().timeout(Duration::from_millis(250)).build().unwrap();
+        for failure in [(0, None), (350, Some(OK))] {
+            let (endpoint, worker) = rpc_fixture(vec![failure, (0, Some(OK))]);
+            let result = engine_rpc(&client, &endpoint, "fixture-only", "tellStatus", vec![json!("fixture")]).unwrap();
+            assert_eq!(result["completedLength"], "1024");
+            assert_eq!(worker.join().unwrap(), 2);
+        }
+        // A sustained outage remains visible; a subsequent successful poll recovers.
+        let (endpoint, worker) = rpc_fixture(vec![(0, None), (0, None), (0, Some(OK))]);
+        assert!(engine_rpc(&client, &endpoint, "fixture-only", "tellStatus", vec![]).is_err());
+        assert!(engine_rpc(&client, &endpoint, "fixture-only", "tellStatus", vec![]).is_ok());
+        assert_eq!(worker.join().unwrap(), 3);
+        for method in ["addUri", "changeGlobalOption", "forcePause", "unpause", "forceRemove"] {
+            let (endpoint, worker) = rpc_fixture(vec![(0, None), (0, Some(OK))]);
+            assert!(engine_rpc(&client, &endpoint, "fixture-only", method, vec![]).is_err());
+            assert_eq!(worker.join().unwrap(), 1, "Must not replay {method} after losing its reply");
+        }
+        for reply in [r#"{"error":{"code":1,"message":"fixture failure"}}"#, "invalid json", "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"] {
+            let (endpoint, worker) = rpc_fixture(vec![(0, Some(reply)), (0, Some(OK))]);
+            assert!(engine_rpc(&client, &endpoint, "fixture-only", "tellStatus", vec![]).is_err());
+            assert_eq!(worker.join().unwrap(), 1, "Application errors must not be hidden by a retry");
+        }
+    }
+
     #[test] fn legacy_settings_keep_four_connections() {
         let mut settings: Settings = serde_json::from_value(json!({"directory": std::env::temp_dir(), "concurrent": 3, "limitKib": 0, "notify": false})).unwrap();
         assert_eq!(settings.connections, 4);
