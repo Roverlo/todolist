@@ -226,8 +226,8 @@
 }
 
 .ai-provider-item:hover {
-    background: #eff6ff;
-    color: #1f2937;
+    background: var(--primary-soft);
+    color: var(--text-main);
 }
 
 .ai-provider-item.active {
