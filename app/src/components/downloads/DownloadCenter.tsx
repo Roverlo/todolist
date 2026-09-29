@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { invoke, isTauri } from '@tauri-apps/api/core';
+import { isTauri } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { ArrowDownToLine, CheckCheck, CircleAlert, FolderOpen, List, Pause, Play, Plus, RotateCcw, Search, Settings, Trash2, X, Palette } from 'lucide-react';
 import { useDownloadStore, matchesFilter, formatBytes, type DownloadFilter, type DownloadSettings, type DownloadTask } from '../../state/downloadStore';
 import { useToastStore } from '../../state/toastStore';
+import { extractDownloadLinks, importDownloadFile } from '../../utils/downloadImport';
 import './DownloadCenter.css';
 import engineLicense from '../../../src-tauri/licenses/aria2-COPYING.txt?raw';
 
@@ -25,11 +26,11 @@ export function DownloadSidebar() {
   </nav>;
 }
 
-function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+function Modal({ title, children, onClose, locked = false, className = '' }: { title: string; children: ReactNode; onClose: () => void; locked?: boolean; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { const dialog = ref.current; dialog?.showModal(); return () => dialog?.close(); }, []);
-  return <dialog ref={ref} className="download-dialog" aria-label={title} onCancel={event => { event.preventDefault(); onClose(); }}>
-    <header><h2>{title}</h2><button type="button" className="download-icon" aria-label="关闭弹窗" onClick={onClose}><X size={18} /></button></header>
+  return <dialog ref={ref} className={`download-dialog ${className}`} aria-label={title} onCancel={event => { event.preventDefault(); if (!locked) onClose(); }}>
+    <header><h2>{title}</h2><button type="button" className="download-icon" aria-label="关闭弹窗" disabled={locked} onClick={onClose}><X size={18} /></button></header>
     {children}
   </dialog>;
 }
@@ -41,47 +42,70 @@ async function chooseDirectory(current: string, set: (directory: string) => void
 
 function AddDownload({ onClose }: { onClose: () => void }) {
   const { settings, request, busy } = useDownloadStore();
-  const [url, setUrl] = useState('');
-  const [name, setName] = useState('');
-  const [renaming, setRenaming] = useState(false);
+  const [text, setText] = useState('');
   const [directory, setDirectory] = useState(settings.directory);
   const [error, setError] = useState('');
-  const [inspecting, setInspecting] = useState(false);
-  const [info, setInfo] = useState('');
-  const [detectedName, setDetectedName] = useState('');
-  useEffect(() => {
-    let cancelled = false;
-    setDetectedName(''); setInfo(''); setInspecting(false);
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [stopping, setStopping] = useState(false);
+  const stop = useRef(false), fileInput = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const locked = importing || progress !== null;
+  let parsed = { urls: [] as string[], duplicates: 0, invalid: 0 }, parseError = '';
+  try { parsed = extractDownloadLinks(text); } catch (reason) { parseError = String(reason); }
+  async function importFiles(files: File[]) {
+    if (locked || busy || !files.length) return;
+    if (parseError) { setError(parseError); return; }
+    if (files.length > 20) { setError('一次最多导入 20 个文件'); return; }
+    setImporting(true); setError('');
     try {
-      const parsed = new URL(url.trim());
-      if (!['http:', 'https:'].includes(parsed.protocol)) return;
-      setDetectedName(decodeURIComponent(parsed.pathname.split('/').pop() || ''));
-    } catch { return; }
-    if (!isTauri()) return;
-    setInspecting(true);
-    const timer = window.setTimeout(() => {
-      void invoke<{ name: string | null; total: number | null }>('downloads_inspect', { url }).then(result => {
-        if (cancelled) return;
-        setDetectedName(result.name || '');
-        setInfo(result.total !== null ? formatBytes(result.total) : '');
-      }).catch(() => { if (!cancelled) setInfo('开始下载时自动命名'); })
-        .finally(() => { if (!cancelled) setInspecting(false); });
-    }, 400);
-    return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [url]);
-  return <Modal title="新建下载" onClose={onClose}><form onSubmit={async event => {
-    event.preventDefault(); setError('');
-    try { await request({ action: 'add', url, name: renaming ? name : '', directory }); onClose(); useToastStore.getState().addToast('已加入下载队列', 'success'); }
-    catch (reason) { setError(String(reason)); }
+      // Publish the merged input only after every selected file has parsed successfully.
+      const urls = [...parsed.urls];
+      for (const file of files) urls.push(...await importDownloadFile(file));
+      setText(extractDownloadLinks(urls.join('\n')).urls.join('\n'));
+    } catch (reason) { setError(String(reason)); }
+    finally { setImporting(false); }
+  }
+  return <Modal title="新建下载" className="download-add-dialog" locked={locked} onClose={onClose}><form onSubmit={async event => {
+    event.preventDefault();
+    if (locked || busy || !parsed.urls.length || parseError) return;
+    setError(''); stop.current = false; setStopping(false);
+    const pending: string[] = [];
+    let added = 0, lastError = '';
+    setProgress({ done: 0, total: parsed.urls.length });
+    for (let index = 0; index < parsed.urls.length; index++) {
+      if (stop.current) { pending.push(...parsed.urls.slice(index)); break; }
+      const url = parsed.urls[index];
+      const previous = new Set(useDownloadStore.getState().tasks.map(task => task.id));
+      try { await request({ action: 'add', url, directory }); added++; }
+      catch (reason) {
+        // An engine failure can leave a retryable record. Do not add that URL twice.
+        if (useDownloadStore.getState().tasks.some(task => !previous.has(task.id) && task.url === url)) added++;
+        else pending.push(url);
+        lastError = String(reason);
+      }
+      setProgress({ done: index + 1, total: parsed.urls.length });
+    }
+    setProgress(null); setText(pending.join('\n')); setStopping(false);
+    if (added) useToastStore.getState().addToast(`已加入 ${added} 项下载`, 'success');
+    if (!pending.length) { onClose(); if (lastError) useToastStore.getState().addToast('部分下载失败，可在下载列表中重试', 'error'); }
+    else setError(`已加入 ${added} 项，输入框保留 ${pending.length} 项未添加链接。${lastError || '已停止添加。'}`);
   }}>
-    <label>下载链接<input autoFocus type="url" required placeholder="粘贴 HTTP / HTTPS 文件链接" value={url} disabled={busy} onChange={event => setUrl(event.target.value)} /></label>
-    <p className="download-help">使用文件直链；需要登录的网页或网盘分享页面暂不支持。</p>
-    <div className="download-auto-name"><div role="status"><span>{detectedName || '文件名会自动识别，无需填写'}</span>{(inspecting || info) && <small>{inspecting ? '正在识别…' : info}</small>}</div><button type="button" disabled={busy} aria-expanded={renaming} aria-controls="download-custom-name" onClick={() => setRenaming(!renaming)}>{renaming ? '使用原名' : '重命名'}</button></div>
-    {renaming && <label id="download-custom-name">另存为（可选）<input disabled={busy} maxLength={180} value={name} onChange={event => setName(event.target.value)} placeholder={detectedName || '留空使用自动识别的名称'} /></label>}
-    <label>保存到<div className="download-directory"><input required value={directory} onChange={event => setDirectory(event.target.value)} placeholder="在桌面版选择保存目录" /><button type="button" aria-label="选择保存目录" disabled={!isTauri() || busy} onClick={() => void chooseDirectory(directory, setDirectory).catch(e => setError(String(e)))}><FolderOpen size={17} /></button></div></label>
-    {error && <p role="alert" className="download-error">{error}</p>}
+    <div className={`download-link-drop${dragging ? ' is-dragging' : ''}`} onDragOver={event => { event.preventDefault(); if (!locked) setDragging(true); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }} onDrop={event => {
+      event.preventDefault(); setDragging(false); if (locked || busy) return;
+      if (event.dataTransfer.files.length) void importFiles(Array.from(event.dataTransfer.files));
+      else { const dropped = event.dataTransfer.getData('text/uri-list') || event.dataTransfer.getData('text/plain'); if (dropped) setText(current => `${current}\n${dropped}`); }
+    }}>
+      <label htmlFor="download-links">下载链接</label>
+      <textarea id="download-links" autoFocus required rows={6} spellCheck={false} maxLength={1048576} placeholder={'粘贴包含链接的整段文字，自动识别多个 URL\n支持空格、换行、逗号等分隔，也可拖入 TXT、CSV 或 Excel 文件'} value={text} disabled={locked || busy} onChange={event => { setText(event.target.value); setError(''); }} />
+      <div className="download-import-actions"><span role="status">{importing ? '正在读取文件…' : `已识别 ${parsed.urls.length} 个链接${parsed.duplicates ? ` · 去重 ${parsed.duplicates} 项` : ''}${parsed.invalid ? ` · 忽略 ${parsed.invalid} 个无效链接` : ''}`}</span><button type="button" disabled={locked || busy} onClick={() => fileInput.current?.click()}><FolderOpen size={15} />选择文件</button></div>
+      <input ref={fileInput} type="file" hidden multiple accept=".txt,.csv,.tsv,.xlsx" aria-label="导入链接文件" onChange={event => { void importFiles(Array.from(event.target.files || [])); event.target.value = ''; }} />
+    </div>
+    <p className="download-help download-import-help">支持 TXT、CSV、TSV、Excel（.xlsx），可一次选择多个文件。</p>
+    <label>保存到<div className="download-directory"><input required value={directory} disabled={locked || busy} onChange={event => setDirectory(event.target.value)} placeholder="在桌面版选择保存目录" /><button type="button" aria-label="选择保存目录" disabled={!isTauri() || busy || locked} onClick={() => void chooseDirectory(directory, setDirectory).catch(e => setError(String(e)))}><FolderOpen size={17} /></button></div></label>
+    {(error || parseError) && <p role="alert" className="download-error">{error || parseError}</p>}
     {!isTauri() && <p className="download-help">当前为浏览器预览。文件下载在 Windows 桌面版中运行。</p>}
-    <footer><button type="button" disabled={busy} onClick={onClose}>取消</button><button className="download-primary" disabled={busy || !isTauri()} type="submit">{busy ? '正在添加…' : '开始下载'}</button></footer>
+    <footer>{progress && <span role="status">{stopping ? '当前链接处理后停止' : `正在添加 ${progress.done}/${progress.total}`}</span>}<button type="button" disabled={importing || stopping} onClick={() => { if (progress) { stop.current = true; setStopping(true); } else onClose(); }}>{progress ? '停止添加' : '取消'}</button><button className="download-primary" disabled={busy || locked || !!parseError || !parsed.urls.length || !isTauri()} type="submit">{progress ? '正在添加…' : parsed.urls.length > 1 ? `开始下载（${parsed.urls.length}）` : '开始下载'}</button></footer>
   </form></Modal>;
 }
 

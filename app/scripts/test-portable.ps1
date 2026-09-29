@@ -24,6 +24,12 @@ if ($Attachments) {
     $sampleObject.state.notes[0].content = '<p>旧图片迁移</p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=">'
     $sample = $sampleObject | ConvertTo-Json -Depth 8 -Compress
 }
+if ($Downloads) {
+    # Keep unrelated online update prompts out of the isolated download fixtures.
+    $sampleObject = $sample | ConvertFrom-Json
+    $sampleObject.state | Add-Member -NotePropertyName settings -NotePropertyValue @{ updateCheck = @{ checkOnStartup = $false; autoCheck = $false; checkInterval = 60 } }
+    $sample = $sampleObject | ConvertTo-Json -Depth 8 -Compress
+}
 [IO.File]::WriteAllText($dataPath, $sample)
 $sampleHash = (Get-FileHash -LiteralPath $dataPath -Algorithm SHA256).Hash
 

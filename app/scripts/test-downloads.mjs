@@ -5,6 +5,7 @@ import { mkdir, readFile, writeFile, rmdir, stat, unlink } from 'node:fs/promise
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import JSZip from 'jszip';
 
 const arg = name => process.argv[process.argv.indexOf(name) + 1];
 const native = process.argv.includes('--cdp');
@@ -21,14 +22,16 @@ let largeActive = 0, largePeak = 0;
 const bytes = Buffer.alloc(6 * 1024 * 1024);
 for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 37 + Math.floor(i / 1031)) % 256;
 const digest = data => createHash('sha256').update(data).digest('hex');
-const mock = createServer((req, res) => {
+let failBatchSave = false;
+const mock = createServer(async (req, res) => {
+  if (req.url === '/batch-fails.zip' && req.method === 'HEAD' && failBatchSave) {
+    failBatchSave = false; await mkdir(path.join(process.env.PROJECTTODO_TEST_DATA_DIR, 'downloads', 'history.json.tmp'));
+  }
+  if (req.url === '/stop-first.zip' && req.method === 'HEAD') await sleep(1200);
   if (req.url === '/missing') { res.writeHead(404); res.end(); return; }
   if (req.url === '/redirect') { res.writeHead(302, { Location: '/redirected.zip' }); res.end(); return; }
   if (req.url === '/no-head.zip' && req.method === 'HEAD') { res.writeHead(405); res.end(); return; }
   if (req.url === '/head-fails.zip' && req.method === 'HEAD') { res.writeHead(500); res.end(); return; }
-  if (req.url === '/slow-old' && req.method === 'HEAD') {
-    setTimeout(() => { res.writeHead(200, { 'Content-Disposition': 'attachment; filename=stale.zip', 'Content-Length': 65536 }); res.end(); }, 1200); return;
-  }
   const body = ['/large.zip', '/connections.zip'].includes(req.url) ? bytes : bytes.subarray(0, 65536);
   const large = req.url === '/connections.zip';
   const length = large ? 160 * 1024 * 1024 : body.length;
@@ -37,6 +40,7 @@ const mock = createServer((req, res) => {
   const end = range?.[2] ? Math.min(Number(range[2]), length - 1) : length - 1;
   if (range) ranges.push({ start, end });
   const headers = { 'Content-Type': 'application/octet-stream', 'Content-Length': end - start + 1, 'Accept-Ranges': 'bytes', ETag: '"fixture-v1"' };
+  if (req.url === '/large.zip') headers['Content-Disposition'] = "attachment; filename*=UTF-8''%E4%B8%AD%E6%96%87%E8%B5%84%E6%96%99.zip";
   if (req.url === '/small.zip') headers['Content-Disposition'] = "attachment; filename=fallback.zip; filename*=UTF-8''%E6%9C%8D%E5%8A%A1%E7%AB%AF.zip";
   if (req.url === '/opaque?code=fixture') headers['Content-Disposition'] = req.method === 'HEAD' ? 'attachment' : "attachment; filename*=UTF-8''%E8%87%AA%E5%8A%A8%E8%AF%86%E5%88%AB.zip";
   if (req.url === '/unsafe-header') headers['Content-Disposition'] = 'attachment; filename=../escape.exe';
@@ -65,6 +69,89 @@ const goDownloads = async () => {
   await page.getByRole('button', { name: '下载中心', exact: true }).click();
   await page.getByRole('heading', { name: '下载中心', exact: true }).waitFor();
 };
+const xmlEscape = value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
+async function workbook(prefix) {
+  const zip = new JSZip();
+  const main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  const relationships = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  zip.file('[Content_Types].xml', '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/></Types>');
+  zip.file('xl/workbook.xml', `<workbook xmlns="${main}" xmlns:r="${relationships}"><sheets><sheet name="链接" sheetId="1" r:id="rId1"/><sheet name="第二页" sheetId="2" r:id="rId2"/></sheets></workbook>`);
+  zip.file('xl/sharedStrings.xml', `<sst xmlns="${main}"><si><t>${prefix}/unused.zip</t></si><si><t>${prefix}/shared.zip</t></si></sst>`);
+  zip.file('xl/worksheets/sheet1.xml', `<worksheet xmlns="${main}" xmlns:r="${relationships}"><sheetData><row r="1"><c r="A1" t="s"><v>1</v></c><c r="B1" t="inlineStr"><is><r><t>${prefix}/</t></r><r><t>inline.zip</t></r></is></c><c r="C1" t="str"><f>HYPERLINK("${prefix}/formula.zip","下载")</f><v>下载</v></c><c r="D1" t="str"><v>点击下载</v></c><c r="E1"><f>WEBSERVICE("${prefix}/do-not-fetch")</f></c></row></sheetData><hyperlinks><hyperlink ref="D1" r:id="rIdLink"/></hyperlinks></worksheet>`);
+  zip.file('xl/worksheets/_rels/sheet1.xml.rels', `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLink" Type="${relationships}/hyperlink" Target="${xmlEscape(`${prefix}/hyperlink.zip?sig=A%2FB%3D&parts=1,2;3`)}" TargetMode="External"/></Relationships>`);
+  zip.file('xl/worksheets/sheet2.xml', `<worksheet xmlns="${main}"><sheetData><row><c t="inlineStr"><is><t>${prefix}/second.zip</t></is></c></row></sheetData></worksheet>`);
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
+async function testImportForm(add) {
+  const input = add.getByRole('textbox', { name: '下载链接', exact: true });
+  const a = 'https://example.com/a.zip', b = 'https://example.com/b.zip';
+  const signed = 'https://example.com/download?sig=AA%2FB%3D&parts=1,2;3&next=https://example.com/nested';
+  for (const separator of [' ', '\n', '\t', ',', ';', '|', '，', '；', '、', ', ', ';\n']) {
+    await input.fill(`下载这些：${a}${separator}${b} ${signed} ${a}`);
+    await add.getByText('已识别 3 个链接 · 去重 1 项', { exact: true }).waitFor();
+  }
+  await input.fill('');
+  const picker = add.getByLabel('导入链接文件');
+  await picker.setInputFiles({ name: '整段.txt', mimeType: 'text/plain', buffer: Buffer.from(`（${a}），[下载](${b})；签名链接：<${signed}> https://user:password@example.com/invalid.zip https://example.com/${')'.repeat(20000)}`) });
+  await until(async () => (await input.inputValue()) === [a, b, signed].join('\n'), 'Punctuation wrappers, signed query preserved, invalid URLs skipped');
+  await input.fill('');
+  await picker.setInputFiles([{ name: '清单.txt', mimeType: 'text/plain', buffer: Buffer.from(`说明 ${a} ${b}`) }, { name: '链接.csv', mimeType: 'text/csv', buffer: Buffer.from(`名称,链接\n下载,"${signed}"\n重复,${a}`) }]);
+  await until(async () => (await input.inputValue()) === [a, b, signed].join('\n'), 'TXT/CSV merge, exact signed URL and deduplication');
+  await picker.setInputFiles({ name: 'unicode.txt', mimeType: 'text/plain', buffer: Buffer.concat([Buffer.from([255, 254]), Buffer.from(`${a}\nhttps://example.com/utf16.zip`, 'utf16le')]) });
+  await until(async () => (await input.inputValue()).includes('/utf16.zip'), 'UTF-16 text imported');
+  const xlsx = await workbook('https://example.com');
+  await picker.setInputFiles({ name: '链接.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: xlsx });
+  await until(async () => (await input.inputValue()).includes('/second.zip'), 'Multi-sheet Excel import');
+  const imported = (await input.inputValue()).split('\n');
+  for (const name of ['shared.zip', 'inline.zip', 'formula.zip', 'hyperlink.zip?sig=A%2FB%3D&parts=1,2;3', 'second.zip']) assert.ok(imported.includes(`https://example.com/${name}`));
+  assert.ok(!imported.some(url => url.includes('unused.zip') || url.includes('do-not-fetch')));
+  const beforeBad = await input.inputValue();
+  for (const [name, buffer, message] of [['bad.xlsx', Buffer.from('broken'), /Excel 文件/], ['legacy.xls', Buffer.from('legacy'), /旧版 .xls/], ['empty.txt', Buffer.from('没有链接'), /未找到/]]) {
+    await picker.setInputFiles({ name, mimeType: 'application/octet-stream', buffer });
+    await until(async () => message.test(await add.getByRole('alert').innerText()), name);
+    assert.equal(await input.inputValue(), beforeBad);
+  }
+  const bomb = new JSZip(); bomb.file('xl/workbook.xml', '<workbook/>'); bomb.file('xl/sharedStrings.xml', 'x'.repeat(21 * 1024 * 1024));
+  await picker.setInputFiles({ name: 'oversized.xlsx', mimeType: 'application/octet-stream', buffer: await bomb.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }) });
+  await until(async () => /解压内容过大/.test(await add.getByRole('alert').innerText()), 'Bounded XLSX decompression');
+  assert.equal(await input.inputValue(), beforeBad);
+  const transfer = await page.evaluateHandle(() => { const data = new DataTransfer(); data.items.add(new File(['https://example.com/drop.zip'], 'drop.txt', { type: 'text/plain' })); return data; });
+  await add.locator('.download-link-drop').dispatchEvent('drop', { dataTransfer: transfer }); await transfer.dispose();
+  await until(async () => (await input.inputValue()).includes('/drop.zip'), 'File drop');
+  await input.fill(Array.from({ length: 501 }, (_, index) => `https://example.com/${index}.zip`).join(' '));
+  await add.getByText(/一次最多添加 500/).waitFor();
+  await input.fill('');
+}
+async function testNativeBatch(directory) {
+  await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
+  const add = page.getByRole('dialog', { name: '新建下载' });
+  const input = add.getByRole('textbox', { name: '下载链接', exact: true });
+  await testImportForm(add);
+  await add.getByLabel('导入链接文件').setInputFiles({ name: 'downloads.xlsx', mimeType: 'application/octet-stream', buffer: await workbook(base) });
+  await add.getByText('已识别 5 个链接', { exact: true }).waitFor();
+  await add.getByRole('button', { name: '开始下载（5）', exact: true }).click();
+  await add.waitFor({ state: 'hidden' });
+  await until(async () => { const tasks = (await snapshot()).tasks.filter(t => ['shared.zip', 'inline.zip', 'formula.zip', 'hyperlink.zip', 'second.zip'].includes(t.name)); return tasks.length === 5 && tasks.every(t => t.status === 'complete'); }, 'Excel batch completes');
+  for (const name of ['shared.zip', 'inline.zip', 'formula.zip', 'hyperlink.zip', 'second.zip']) assert.equal(digest(await readFile(path.join(directory, name))), digest(bytes.subarray(0, 65536)));
+  await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
+  await input.fill(`${base}/batch-ok.zip,${base}/batch-fails.zip`);
+  failBatchSave = true;
+  await add.getByRole('button', { name: '开始下载（2）', exact: true }).click();
+  await add.getByText(/已加入 1 项，输入框保留 1 项未添加链接/).waitFor();
+  assert.equal(await input.inputValue(), `${base}/batch-fails.zip`);
+  await rmdir(path.join(process.env.PROJECTTODO_TEST_DATA_DIR, 'downloads', 'history.json.tmp'));
+  await add.getByRole('button', { name: '开始下载', exact: true }).click();
+  await add.waitFor({ state: 'hidden' });
+  assert.equal((await snapshot()).tasks.filter(t => t.name === 'batch-ok.zip').length, 1);
+  await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
+  await input.fill(`${base}/stop-first.zip；${base}/stop-second.zip`);
+  await add.getByRole('button', { name: '开始下载（2）', exact: true }).click();
+  await add.getByRole('button', { name: '停止添加', exact: true }).click();
+  await add.getByText(/已加入 1 项，输入框保留 1 项未添加链接/).waitFor();
+  assert.equal(await input.inputValue(), `${base}/stop-second.zip`);
+  assert.equal((await snapshot()).tasks.some(t => t.name === 'stop-second.zip'), false);
+  await add.getByRole('button', { name: '取消', exact: true }).click();
+}
 try {
   if (native) {
     assert.ok(process.env.PROJECTTODO_TEST_DATA_DIR && path.resolve(arg('--data')).startsWith(path.resolve(process.env.PROJECTTODO_TEST_DATA_DIR) + path.sep));
@@ -72,6 +159,7 @@ try {
   } else {
     browser = await chromium.launch({ channel: 'msedge', headless: true });
     page = await browser.newPage({ viewport: { width: 1538, height: 840 }, timezoneId: 'Asia/Shanghai' });
+    await page.addInitScript(() => localStorage.setItem('project-todo-app', JSON.stringify({ version: 12, state: { settings: { updateCheck: { checkOnStartup: false, autoCheck: false, checkInterval: 60 } } } })));
     await page.goto('http://127.0.0.1:52923/');
   }
   page.on('pageerror', error => errors.push(error.message));
@@ -81,17 +169,8 @@ try {
     const add = page.getByRole('dialog', { name: '新建下载' });
     assert.equal(await add.getByRole('textbox', { name: '另存为（可选）', exact: true }).count(), 0);
     assert.equal(await add.getByRole('button', { name: '识别文件', exact: true }).count(), 0);
-    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill('https://example.com/中文资料.zip');
-    await add.getByText('中文资料.zip', { exact: true }).waitFor();
-    await add.getByRole('button', { name: '重命名', exact: true }).click();
-    const customName = add.getByRole('textbox', { name: '另存为（可选）', exact: true });
-    assert.equal(await customName.getAttribute('required'), null);
-    await customName.fill('自定义.zip');
-    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill('https://example.com/another.zip');
-    assert.equal(await customName.inputValue(), '自定义.zip');
-    await add.getByRole('button', { name: '使用原名', exact: true }).click();
-    assert.equal(await customName.count(), 0);
-    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill('');
+    assert.equal(await add.getByRole('button', { name: '重命名', exact: true }).count(), 0);
+    await testImportForm(add);
     assert.equal(await add.getByRole('button', { name: '开始下载' }).isDisabled(), true);
     await add.screenshot({ path: path.join(output, 'add.png') });
     await page.keyboard.press('Escape');
@@ -140,17 +219,7 @@ try {
     const beforeNotes = JSON.parse(await readFile(arg('--data'), 'utf8')).state.notes;
     await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
     const add = page.getByRole('dialog', { name: '新建下载' });
-    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill(`${base}/slow-old`);
-    await sleep(600);
-    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill(`${base}/small.zip`);
-    await add.getByText('服务端.zip', { exact: true }).waitFor();
-    await sleep(1000);
-    assert.equal(await add.getByText('stale.zip', { exact: true }).count(), 0);
-    await add.getByRole('button', { name: '重命名', exact: true }).click();
-    await add.getByRole('textbox', { name: '另存为（可选）', exact: true }).fill('中文资料.zip');
-    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill(`${base}/large.zip`);
-    await sleep(700);
-    assert.equal(await add.getByRole('textbox', { name: '另存为（可选）', exact: true }).inputValue(), '中文资料.zip');
+    await add.getByRole('textbox', { name: '下载链接', exact: true }).fill(`${base}/large.zip`);
     await add.getByRole('button', { name: '开始下载', exact: true }).click();
     await add.waitFor({ state: 'hidden' });
     state = await snapshot(); const id = state.tasks[0].id;
@@ -233,8 +302,8 @@ try {
     await request({ action: 'settings', settings: { ...settings, limitKib: 0 } });
     await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
     const automaticAdd = page.getByRole('dialog', { name: '新建下载' });
-    await automaticAdd.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill(`${base}/opaque?code=fixture`);
-    // Submit immediately, before the debounced preview has identified anything.
+    await automaticAdd.getByRole('textbox', { name: '下载链接', exact: true }).fill(`${base}/opaque?code=fixture`);
+    // Submit directly without any filename field.
     await automaticAdd.getByRole('button', { name: '开始下载', exact: true }).click();
     await automaticAdd.waitFor({ state: 'hidden' });
     await until(async () => (await snapshot()).tasks.some(t => t.name === '自动识别.zip' && t.status === 'complete'), 'Paste and start without entering a name');
@@ -256,9 +325,10 @@ try {
     }
     assert.equal(digest(await readFile(path.join(directory, '自动识别.zip'))), digest(bytes.subarray(0, 65536)));
     assert.equal(await readFile(path.join(directory, 'existing.zip'), 'utf8'), 'keep this existing file');
+    await testNativeBatch(directory);
     assert.deepEqual(JSON.parse(await readFile(arg('--data'), 'utf8')).state.notes, beforeNotes);
     await page.screenshot({ path: path.join(output, 'complete.png') });
-    console.log('PASS: automatic/optional filenames, stale metadata, GET-only filename, redirects, HEAD failure, safe fallback, duplicate suffix/no overwrite, HTTP/HTTPS SHA-256, 8 connections, pause/resume, settings UI/restart/rollback, background, 404, invalid input, save failure, record-only removal, notes untouched');
+    console.log('PASS: batch paste/file import/retry/stop, automatic filenames, GET-only filename, redirects, HEAD failure, safe fallback, duplicate suffix/no overwrite, HTTP/HTTPS SHA-256, 8 connections, pause/resume, settings UI/restart/rollback, background, 404, invalid input, save failure, record-only removal, notes untouched');
   }
   assert.deepEqual(errors, []);
   await writeFile(path.join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, ranges, errors }, null, 2));
