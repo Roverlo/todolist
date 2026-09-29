@@ -23,7 +23,13 @@ for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 37 + Math.floor(i / 1031)
 const digest = data => createHash('sha256').update(data).digest('hex');
 const mock = createServer((req, res) => {
   if (req.url === '/missing') { res.writeHead(404); res.end(); return; }
-  const body = req.url === '/small.zip' ? bytes.subarray(0, 65536) : bytes;
+  if (req.url === '/redirect') { res.writeHead(302, { Location: '/redirected.zip' }); res.end(); return; }
+  if (req.url === '/no-head.zip' && req.method === 'HEAD') { res.writeHead(405); res.end(); return; }
+  if (req.url === '/head-fails.zip' && req.method === 'HEAD') { res.writeHead(500); res.end(); return; }
+  if (req.url === '/slow-old' && req.method === 'HEAD') {
+    setTimeout(() => { res.writeHead(200, { 'Content-Disposition': 'attachment; filename=stale.zip', 'Content-Length': 65536 }); res.end(); }, 1200); return;
+  }
+  const body = ['/large.zip', '/connections.zip'].includes(req.url) ? bytes : bytes.subarray(0, 65536);
   const large = req.url === '/connections.zip';
   const length = large ? 160 * 1024 * 1024 : body.length;
   const range = req.headers.range?.match(/bytes=(\d+)-(\d*)/);
@@ -32,6 +38,8 @@ const mock = createServer((req, res) => {
   if (range) ranges.push({ start, end });
   const headers = { 'Content-Type': 'application/octet-stream', 'Content-Length': end - start + 1, 'Accept-Ranges': 'bytes', ETag: '"fixture-v1"' };
   if (req.url === '/small.zip') headers['Content-Disposition'] = "attachment; filename=fallback.zip; filename*=UTF-8''%E6%9C%8D%E5%8A%A1%E7%AB%AF.zip";
+  if (req.url === '/opaque?code=fixture') headers['Content-Disposition'] = req.method === 'HEAD' ? 'attachment' : "attachment; filename*=UTF-8''%E8%87%AA%E5%8A%A8%E8%AF%86%E5%88%AB.zip";
+  if (req.url === '/unsafe-header') headers['Content-Disposition'] = 'attachment; filename=../escape.exe';
   if (range) headers['Content-Range'] = `bytes ${start}-${end}/${length}`;
   res.writeHead(range ? 206 : 200, headers);
   if (req.method === 'HEAD') { res.end(); return; }
@@ -71,8 +79,19 @@ try {
   if (!native) {
     await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
     const add = page.getByRole('dialog', { name: '新建下载' });
+    assert.equal(await add.getByRole('textbox', { name: '另存为（可选）', exact: true }).count(), 0);
+    assert.equal(await add.getByRole('button', { name: '识别文件', exact: true }).count(), 0);
     await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill('https://example.com/中文资料.zip');
-    assert.equal(await add.getByLabel('文件名', { exact: true }).inputValue(), '中文资料.zip');
+    await add.getByText('中文资料.zip', { exact: true }).waitFor();
+    await add.getByRole('button', { name: '重命名', exact: true }).click();
+    const customName = add.getByRole('textbox', { name: '另存为（可选）', exact: true });
+    assert.equal(await customName.getAttribute('required'), null);
+    await customName.fill('自定义.zip');
+    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill('https://example.com/another.zip');
+    assert.equal(await customName.inputValue(), '自定义.zip');
+    await add.getByRole('button', { name: '使用原名', exact: true }).click();
+    assert.equal(await customName.count(), 0);
+    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill('');
     assert.equal(await add.getByRole('button', { name: '开始下载' }).isDisabled(), true);
     await add.screenshot({ path: path.join(output, 'add.png') });
     await page.keyboard.press('Escape');
@@ -121,11 +140,17 @@ try {
     const beforeNotes = JSON.parse(await readFile(arg('--data'), 'utf8')).state.notes;
     await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
     const add = page.getByRole('dialog', { name: '新建下载' });
+    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill(`${base}/slow-old`);
+    await sleep(600);
     await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill(`${base}/small.zip`);
-    await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').press('Tab');
-    await until(async () => (await add.getByLabel('文件名', { exact: true }).inputValue()) === '服务端.zip', 'Server filename recognized in native UI');
+    await add.getByText('服务端.zip', { exact: true }).waitFor();
+    await sleep(1000);
+    assert.equal(await add.getByText('stale.zip', { exact: true }).count(), 0);
+    await add.getByRole('button', { name: '重命名', exact: true }).click();
+    await add.getByRole('textbox', { name: '另存为（可选）', exact: true }).fill('中文资料.zip');
     await add.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill(`${base}/large.zip`);
-    await add.getByLabel('文件名', { exact: true }).fill('中文资料.zip');
+    await sleep(700);
+    assert.equal(await add.getByRole('textbox', { name: '另存为（可选）', exact: true }).inputValue(), '中文资料.zip');
     await add.getByRole('button', { name: '开始下载', exact: true }).click();
     await add.waitFor({ state: 'hidden' });
     state = await snapshot(); const id = state.tasks[0].id;
@@ -149,6 +174,7 @@ try {
       restarted = spawn(path.resolve(arg('--executable')), [], { cwd: path.dirname(path.resolve(arg('--executable'))), env: process.env, windowsHide: true, stdio: 'ignore' });
       await until(async () => { try { return (await fetch(`http://127.0.0.1:${arg('--cdp')}/json/version`)).ok; } catch { return false; } }, 'Native restart', 30000);
       browser = await chromium.connectOverCDP(`http://127.0.0.1:${arg('--cdp')}`); page = browser.contexts()[0].pages()[0];
+      page.on('pageerror', error => errors.push(error.message));
       await page.waitForFunction(() => Boolean(window.__TAURI_INTERNALS__));
       await until(async () => (await snapshot()).tasks.length === 2, 'History restored');
       assert.equal((await snapshot()).tasks.find(t => t.id === id).status, 'paused');
@@ -174,6 +200,10 @@ try {
     const history = await readFile(path.join(root, 'history.json'));
     await mkdir(path.join(root, 'history.json.tmp'));
     await rejected(() => request({ action: 'settings', settings: { ...settings, connections: 64, concurrent: 7 } }), /保存/);
+    const taskCountBeforeFailure = (await snapshot()).tasks.length;
+    await rejected(() => request({ action: 'add', url: `${base}/opaque?code=fixture`, directory }), /保存/);
+    assert.equal((await snapshot()).tasks.length, taskCountBeforeFailure);
+    await assert.rejects(stat(path.join(directory, '自动识别.zip')), { code: 'ENOENT' });
     assert.deepEqual(await readFile(path.join(root, 'history.json')), history);
     assert.equal((await snapshot()).settings.connections, 32);
     await rmdir(path.join(root, 'history.json.tmp'));
@@ -200,9 +230,35 @@ try {
     // Only remove the two known files created by this isolated test.
     await unlink(path.join(directory, 'connections-fixture.zip'));
     await unlink(path.join(directory, 'connections-fixture.zip.aria2'));
+    await request({ action: 'settings', settings: { ...settings, limitKib: 0 } });
+    await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
+    const automaticAdd = page.getByRole('dialog', { name: '新建下载' });
+    await automaticAdd.getByPlaceholder('粘贴 HTTP / HTTPS 文件链接').fill(`${base}/opaque?code=fixture`);
+    // Submit immediately, before the debounced preview has identified anything.
+    await automaticAdd.getByRole('button', { name: '开始下载', exact: true }).click();
+    await automaticAdd.waitFor({ state: 'hidden' });
+    await until(async () => (await snapshot()).tasks.some(t => t.name === '自动识别.zip' && t.status === 'complete'), 'Paste and start without entering a name');
+    await writeFile(path.join(directory, 'existing.zip'), 'keep this existing file');
+    const automatic = [
+      ['/opaque?code=fixture', '自动识别 (1).zip'],
+      ['/existing.zip', 'existing (1).zip'],
+      ['/redirect', 'redirected.zip'],
+      ['/no-head.zip', 'no-head.zip'],
+      ['/head-fails.zip', 'head-fails.zip'],
+      ['/', 'download.bin'],
+      ['/unsafe-header', 'unsafe-header'],
+    ];
+    for (const [endpoint, expectedName] of automatic) {
+      const result = await request({ action: 'add', url: `${base}${endpoint}`, directory });
+      assert.equal(result.tasks.at(-1).name, expectedName);
+      await until(async () => (await snapshot()).tasks.some(t => t.name === expectedName && t.status === 'complete'), `Automatic filename: ${expectedName}`);
+      assert.equal(digest(await readFile(path.join(directory, expectedName))), digest(bytes.subarray(0, 65536)));
+    }
+    assert.equal(digest(await readFile(path.join(directory, '自动识别.zip'))), digest(bytes.subarray(0, 65536)));
+    assert.equal(await readFile(path.join(directory, 'existing.zip'), 'utf8'), 'keep this existing file');
     assert.deepEqual(JSON.parse(await readFile(arg('--data'), 'utf8')).state.notes, beforeNotes);
     await page.screenshot({ path: path.join(output, 'complete.png') });
-    console.log('PASS: HTTP/HTTPS bytes/SHA-256, concurrency, 8 real connections, pause/resume applies 1 connection, settings UI/restart/rollback, native restart/Range, background, 404, invalid input, overwrite guard, save failure, record-only removal, notes untouched');
+    console.log('PASS: automatic/optional filenames, stale metadata, GET-only filename, redirects, HEAD failure, safe fallback, duplicate suffix/no overwrite, HTTP/HTTPS SHA-256, 8 connections, pause/resume, settings UI/restart/rollback, background, 404, invalid input, save failure, record-only removal, notes untouched');
   }
   assert.deepEqual(errors, []);
   await writeFile(path.join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, ranges, errors }, null, 2));

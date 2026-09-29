@@ -43,45 +43,45 @@ function AddDownload({ onClose }: { onClose: () => void }) {
   const { settings, request, busy } = useDownloadStore();
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
+  const [renaming, setRenaming] = useState(false);
   const [directory, setDirectory] = useState(settings.directory);
   const [error, setError] = useState('');
-  const customName = useRef(false);
   const [inspecting, setInspecting] = useState(false);
   const [info, setInfo] = useState('');
-  const inspectVersion = useRef(0);
-  useEffect(() => () => { inspectVersion.current++; }, []);
-  async function inspectLink() {
-    if (!isTauri() || !url.trim()) return;
-    const version = ++inspectVersion.current;
-    setInspecting(true); setInfo('');
+  const [detectedName, setDetectedName] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    setDetectedName(''); setInfo(''); setInspecting(false);
     try {
-      const result = await invoke<{ name: string | null; total: number | null; fromServer: boolean }>('downloads_inspect', { url });
-      if (version !== inspectVersion.current) return;
-      if (result.name && !customName.current) setName(result.name);
-      setInfo(`${result.fromServer ? '已识别服务器文件名' : '可自行修改保存文件名'}${result.total !== null ? ` · ${formatBytes(result.total)}` : ''}`);
-    } catch (reason) { if (version === inspectVersion.current) setInfo(String(reason)); }
-    finally { if (version === inspectVersion.current) setInspecting(false); }
-  }
-  function changeUrl(value: string) {
-    setUrl(value); inspectVersion.current++; setInspecting(false); setInfo('');
-    if (!customName.current) {
-      try { setName(Array.from(decodeURIComponent(new URL(value.trim()).pathname.split('/').pop() || 'download.bin')).map(c => c.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(c) ? '_' : c).join('')); }
-      catch { setName(''); }
-    }
-  }
+      const parsed = new URL(url.trim());
+      if (!['http:', 'https:'].includes(parsed.protocol)) return;
+      setDetectedName(decodeURIComponent(parsed.pathname.split('/').pop() || ''));
+    } catch { return; }
+    if (!isTauri()) return;
+    setInspecting(true);
+    const timer = window.setTimeout(() => {
+      void invoke<{ name: string | null; total: number | null }>('downloads_inspect', { url }).then(result => {
+        if (cancelled) return;
+        setDetectedName(result.name || '');
+        setInfo(result.total !== null ? formatBytes(result.total) : '');
+      }).catch(() => { if (!cancelled) setInfo('开始下载时自动命名'); })
+        .finally(() => { if (!cancelled) setInspecting(false); });
+    }, 400);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [url]);
   return <Modal title="新建下载" onClose={onClose}><form onSubmit={async event => {
     event.preventDefault(); setError('');
-    try { await request({ action: 'add', url, name, directory }); onClose(); useToastStore.getState().addToast('已加入下载队列', 'success'); }
+    try { await request({ action: 'add', url, name: renaming ? name : '', directory }); onClose(); useToastStore.getState().addToast('已加入下载队列', 'success'); }
     catch (reason) { setError(String(reason)); }
   }}>
-    <label>下载链接<div className="download-directory"><input autoFocus type="url" required placeholder="粘贴 HTTP / HTTPS 文件链接" value={url} onBlur={() => void inspectLink()} onChange={event => changeUrl(event.target.value)} /><button type="button" disabled={!isTauri() || inspecting || busy || !url.trim()} onClick={() => void inspectLink()}>识别文件</button></div></label>
+    <label>下载链接<input autoFocus type="url" required placeholder="粘贴 HTTP / HTTPS 文件链接" value={url} disabled={busy} onChange={event => setUrl(event.target.value)} /></label>
     <p className="download-help">使用文件直链；需要登录的网页或网盘分享页面暂不支持。</p>
-    {(info || inspecting) && <p className="download-help" role="status">{inspecting ? '正在识别文件名和大小…' : info}</p>}
-    <label>文件名<input required maxLength={180} value={name} onChange={event => { customName.current = true; setName(event.target.value); }} placeholder="例如：资料.zip" /></label>
+    <div className="download-auto-name"><div role="status"><span>{detectedName || '文件名会自动识别，无需填写'}</span>{(inspecting || info) && <small>{inspecting ? '正在识别…' : info}</small>}</div><button type="button" disabled={busy} aria-expanded={renaming} aria-controls="download-custom-name" onClick={() => setRenaming(!renaming)}>{renaming ? '使用原名' : '重命名'}</button></div>
+    {renaming && <label id="download-custom-name">另存为（可选）<input disabled={busy} maxLength={180} value={name} onChange={event => setName(event.target.value)} placeholder={detectedName || '留空使用自动识别的名称'} /></label>}
     <label>保存到<div className="download-directory"><input required value={directory} onChange={event => setDirectory(event.target.value)} placeholder="在桌面版选择保存目录" /><button type="button" aria-label="选择保存目录" disabled={!isTauri() || busy} onClick={() => void chooseDirectory(directory, setDirectory).catch(e => setError(String(e)))}><FolderOpen size={17} /></button></div></label>
     {error && <p role="alert" className="download-error">{error}</p>}
     {!isTauri() && <p className="download-help">当前为浏览器预览。文件下载在 Windows 桌面版中运行。</p>}
-    <footer><button type="button" disabled={busy} onClick={onClose}>取消</button><button className="download-primary" disabled={busy || inspecting || !isTauri()} type="submit">{busy ? '正在添加…' : '开始下载'}</button></footer>
+    <footer><button type="button" disabled={busy} onClick={onClose}>取消</button><button className="download-primary" disabled={busy || !isTauri()} type="submit">{busy ? '正在添加…' : '开始下载'}</button></footer>
   </form></Modal>;
 }
 

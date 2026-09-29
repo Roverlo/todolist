@@ -58,6 +58,11 @@
 .download-dialog input[type=checkbox] { accent-color: var(--primary); width: 16px; height: 16px; }
 .download-directory { display: flex; align-items: center; gap: 8px; }
 .download-directory input { flex: 1; }
+.download-auto-name { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin: 16px 0; border-radius: 8px; background: var(--primary-soft); font-size: 12px; }
+.download-auto-name > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.download-auto-name span, .download-auto-name small { display: block; }
+.download-auto-name small { color: var(--text-secondary); margin-top: 4px; font-size: 11px; }
+.download-auto-name button { padding: 5px 8px; font-size: 12px; }
 .download-help { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin: -6px 0 16px; }
 .download-setting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .download-dialog form > .download-checkbox { flex-direction: row; align-items: center; }

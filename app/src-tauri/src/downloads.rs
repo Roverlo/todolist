@@ -53,7 +53,7 @@ pub struct Snapshot {
 #[serde(tag = "action", rename_all = "camelCase")]
 pub enum Request {
     List,
-    Add { url: String, name: String, directory: String },
+    Add { url: String, #[serde(default)] name: String, directory: String, #[serde(skip)] automatic_name: bool },
     Pause { id: String },
     Resume { id: String },
     Remove { id: String },
@@ -115,7 +115,15 @@ impl Service {
 }
 
 #[tauri::command]
-pub async fn downloads_request(service: tauri::State<'_, Service>, request: Request) -> Result<Snapshot, String> {
+pub async fn downloads_request(service: tauri::State<'_, Service>, mut request: Request) -> Result<Snapshot, String> {
+    if let Request::Add { url, name, directory, automatic_name } = &mut request {
+        validate_url(url.trim())?; validate_directory(directory)?;
+        if name.trim().is_empty() {
+            *automatic_name = true;
+            *name = downloads_inspect(url.clone()).await.ok().and_then(|info| info.name)
+                .or_else(|| url_name(url.trim())).unwrap_or_else(|| "download.bin".into());
+        }
+    }
     let (tx, rx) = mpsc::channel();
     service.0.send(Message::Request(request, tx)).map_err(|_| "下载服务已退出")?;
     tauri::async_runtime::spawn_blocking(move || rx.recv_timeout(Duration::from_secs(30)).map_err(|_| "下载服务响应超时，请稍后重试".to_string())?)
@@ -132,9 +140,12 @@ pub async fn downloads_inspect(url: String) -> Result<DownloadInfo, String> {
     validate_url(url)?;
     let client = reqwest::Client::builder().timeout(Duration::from_secs(15))
         .redirect(reqwest::redirect::Policy::limited(8)).build().map_err(|_| "无法初始化链接识别")?;
-    let mut response = client.head(url).send().await.map_err(|_| "暂时无法识别链接，可填写文件名后直接下载")?;
-    if matches!(response.status().as_u16(), 405 | 501) {
-        response = client.get(url).header("Range", "bytes=0-0").send().await.map_err(|_| "暂时无法识别链接，可填写文件名后直接下载")?;
+    let mut response = client.head(url).send().await.map_err(|_| "暂时无法识别链接，开始下载时将自动命名")?;
+    let head_name = response.headers().get("content-disposition").and_then(|v| v.to_str().ok()).and_then(disposition_name);
+    if matches!(response.status().as_u16(), 405 | 501) || (response.status().is_success() && head_name.is_none()) {
+        // Some download endpoints only return their filename on GET. Drop the body
+        // after reading headers, even if the server ignores this one-byte Range.
+        if let Ok(get_response) = client.get(url).header("Range", "bytes=0-0").send().await { response = get_response; }
     }
     if !response.status().is_success() { return Err(format!("链接识别返回 HTTP {}，请检查链接是否有效", response.status().as_u16())); }
     let name = response.headers().get("content-disposition").and_then(|v| v.to_str().ok()).and_then(disposition_name);
@@ -142,7 +153,15 @@ pub async fn downloads_inspect(url: String) -> Result<DownloadInfo, String> {
         .and_then(|v| v.rsplit('/').next()).and_then(|v| v.parse().ok())
         .or_else(|| response.headers().get("content-length").and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok()));
     let from_server = name.is_some();
+    let name = name.or_else(|| url_name(response.url().as_str()));
     Ok(DownloadInfo { name, total, from_server })
+}
+
+fn url_name(url: &str) -> Option<String> {
+    let parsed = reqwest::Url::parse(url).ok()?;
+    let name = decode_percent(parsed.path_segments()?.next_back()?)?;
+    validate_name(&name).ok()?;
+    Some(name)
 }
 
 fn decode_percent(value: &str) -> Option<String> {
@@ -295,16 +314,22 @@ impl ManagerState {
     fn request(&mut self, request: Request) -> Result<(), String> {
         match request {
             Request::List => {},
-            Request::Add { url, name, directory } => {
+            Request::Add { url, name, directory, automatic_name } => {
                 let url = url.trim().to_string();
-                let name = name.trim().to_string();
+                let mut name = name.trim().to_string();
                 validate_url(&url)?; validate_name(&name)?; validate_directory(&directory)?;
                 fs::create_dir_all(&directory).map_err(|_| "保存目录不可写或磁盘不可用")?;
                 let directory = fs::canonicalize(directory).map_err(|_| "保存目录不可用")?.to_string_lossy().into_owned();
-                let path = Path::new(&directory).join(&name);
-                if path.exists() || PathBuf::from(format!("{}.aria2", path.display())).exists()
-                    || self.journal.tasks.iter().any(|t| t.directory.eq_ignore_ascii_case(&directory) && t.name.eq_ignore_ascii_case(&name)) {
-                    return Err("此目录中已有同名文件或下载记录，请更换文件名".into());
+                let original = name.clone();
+                let path = Path::new(&original);
+                let stem = path.file_stem().and_then(|v| v.to_str()).unwrap_or("download");
+                let extension = path.extension().and_then(|v| v.to_str()).map(|v| format!(".{v}")).unwrap_or_default();
+                let mut suffix = 0;
+                while self.name_exists(&directory, &name) {
+                    if !automatic_name { return Err("此目录中已有同名文件或下载记录，请更换文件名".into()); }
+                    suffix += 1;
+                    name = format!("{stem} ({suffix}){extension}");
+                    if validate_name(&name).is_err() { name = format!("download ({suffix}).bin"); }
                 }
                 self.start_engine()?;
                 let task = Task { id: random_hex(8)?, url, name, directory, status: "waiting".into(), total: 0, completed: 0, speed: 0, error: String::new(), created_at: chrono::Utc::now().timestamp_millis(), finished_at: None };
@@ -381,6 +406,12 @@ impl ManagerState {
             }
         }
         Ok(())
+    }
+
+    fn name_exists(&self, directory: &str, name: &str) -> bool {
+        let path = Path::new(directory).join(name);
+        path.exists() || PathBuf::from(format!("{}.aria2", path.display())).exists()
+            || self.journal.tasks.iter().any(|t| t.directory.eq_ignore_ascii_case(directory) && t.name.eq_ignore_ascii_case(name))
     }
     fn index(&self, id: &str) -> Result<usize, String> {
         self.journal.tasks.iter().position(|task| task.id == id).ok_or_else(|| "下载记录不存在".into())
@@ -544,6 +575,8 @@ mod tests {
         assert_eq!(disposition_name("attachment; filename=fallback.zip; filename*=UTF-8''%E4%B8%AD%E6%96%87.zip"), Some("中文.zip".into()));
         assert_eq!(disposition_name("attachment; filename=../escape.exe"), None);
         assert_eq!(disposition_name("attachment; filename*=UTF-8''%ZZ.zip"), None);
+        assert_eq!(url_name("https://example.com/%E4%B8%AD%E6%96%87.zip?secret=ignored"), Some("中文.zip".into()));
+        for url in ["https://example.com/", "https://example.com/%2Fescape.exe", "https://example.com/NUL.zip"] { assert_eq!(url_name(url), None); }
     }
     #[test] fn failed_replace_preserves_journal() {
         let root = std::env::temp_dir().join(format!("projecttodo-download-test-{}", random_hex(8).unwrap()));

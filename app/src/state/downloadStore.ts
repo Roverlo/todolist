@@ -10,7 +10,7 @@ export interface DownloadTask {
 }
 export interface DownloadSettings { directory: string; concurrent: number; connections: number; limitKib: number; notify: boolean }
 interface Snapshot { tasks: DownloadTask[]; settings: DownloadSettings; engineVersion: string; error: string | null }
-export type DownloadRequest = { action: 'list' } | { action: 'add'; url: string; name: string; directory: string }
+export type DownloadRequest = { action: 'list' } | { action: 'add'; url: string; name?: string; directory: string }
   | { action: 'pause' | 'resume' | 'remove' | 'reveal'; id: string } | { action: 'settings'; settings: DownloadSettings };
 interface DownloadStore extends Snapshot {
   filter: DownloadFilter; busy: boolean; loaded: boolean;
