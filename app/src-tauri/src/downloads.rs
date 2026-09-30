@@ -331,7 +331,7 @@ impl ManagerState {
         if path.exists() && !PathBuf::from(format!("{}.aria2", path.display())).is_file() {
             return Err("目标文件已存在且没有续传记录，请更换文件名新建下载".into());
         }
-        self.rpc("addUri", vec![json!([task.url]), json!({"gid": task.id, "dir": task.directory, "out": task.name, "pause": if paused {"true"} else {"false"},
+        self.rpc("addUri", vec![json!([task.url]), json!({"gid": task.id, "dir": aria2_directory(&task.directory), "out": task.name, "pause": if paused {"true"} else {"false"},
             "split": self.journal.settings.connections.to_string(), "max-connection-per-server": self.journal.settings.connections.to_string()})])?;
         Ok(())
     }
@@ -539,6 +539,23 @@ fn error_message(code: &str) -> String {
     }.to_string()
 }
 
+fn aria2_directory(directory: &str) -> String {
+    let Some(verbatim) = directory.strip_prefix(r"\\?\") else { return directory.into(); };
+    let ordinary = if let Some(unc) = verbatim.strip_prefix(r"UNC\") {
+        format!(r"\\{unc}")
+    } else if verbatim.as_bytes().first().is_some_and(u8::is_ascii_alphabetic)
+        && verbatim.as_bytes().get(1..3) == Some(b":\\") {
+        verbatim.to_string()
+    } else { return directory.into(); };
+    // aria2 treats a verbatim prefix as //?/ and can fail mkdir with EEXIST.
+    // Keep canonical paths in the journal, and only simplify this RPC argument
+    // when Windows confirms it names the same directory (no trailing-dot/space
+    // or device-namespace reinterpretation).
+    if fs::canonicalize(&ordinary).ok().as_deref() == Some(Path::new(directory)) {
+        ordinary
+    } else { directory.into() }
+}
+
 #[cfg(windows)]
 fn random_hex(length: usize) -> Result<String, String> {
     #[link(name = "bcrypt")]
@@ -628,13 +645,31 @@ mod tests {
         for count in [0, 2, 3, 65, 255] { settings.connections = count; assert!(validate_settings(&settings).is_err()); }
         for count in [1, 4, 8, 16, 32, 64] { settings.connections = count; assert!(validate_settings(&settings).is_ok()); }
     }
+    #[test] fn engine_directory_preserves_verbatim_only_and_ordinary_paths() {
+        for directory in [r"D:\Downloads", r"\\server\share\下载", r"\\?\Volume{fixture}\", r"\\.\pipe\fixture"] {
+            assert_eq!(aria2_directory(directory), directory);
+        }
+        let root = std::env::temp_dir().join(format!("projecttodo-directory-test-{}", random_hex(8).unwrap()));
+        fs::create_dir_all(&root).unwrap();
+        let canonical = fs::canonicalize(&root).unwrap();
+        assert_eq!(aria2_directory(&canonical.to_string_lossy()), root.to_string_lossy());
+        // Both names exist, but Win32 strips the final dot. Never redirect a
+        // verbatim-only directory's download into its ordinary sibling.
+        let ordinary = root.join("different");
+        let verbatim_only = canonical.join("different.");
+        fs::create_dir(&ordinary).unwrap();
+        fs::create_dir(&verbatim_only).unwrap();
+        assert_eq!(aria2_directory(&verbatim_only.to_string_lossy()), verbatim_only.to_string_lossy());
+        fs::remove_dir_all(canonical).unwrap();
+    }
     #[test] fn connection_choices_reach_real_engine_for_new_and_resumed_tasks() {
-        let root = std::env::temp_dir().join(format!("projecttodo-connections-test-{}", random_hex(8).unwrap()));
+        let root = std::env::temp_dir().join(format!("projecttodo-connections-test-{} 中文 空格", random_hex(8).unwrap()));
         // Own the endpoint but leave responses pending: no external network or user data.
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let settings = Settings { directory: root.to_string_lossy().into(), concurrent: 3, connections: 64, limit_kib: 0, notify: false };
         let mut manager = ManagerState { root: root.clone(), journal: Journal { version: 1, settings, tasks: vec![] }, engine: None, error: None, dirty: false, pending_notifications: vec![] };
         manager.start_engine().unwrap();
+        let canonical_directory = fs::canonicalize(&root).unwrap().to_string_lossy().into_owned();
         let global = manager.rpc("getGlobalOption", vec![]).unwrap();
         assert_eq!(global["split"], "64");
         assert_eq!(global["max-connection-per-server"], "64");
@@ -642,9 +677,11 @@ mod tests {
             let mut settings = manager.journal.settings.clone(); settings.connections = count;
             manager.request(Request::Settings { settings }).unwrap();
             let id = random_hex(8).unwrap();
-            manager.journal.tasks.push(Task { id: id.clone(), url: format!("http://{}/fixture.zip", listener.local_addr().unwrap()), name: format!("{count}.zip"), directory: root.to_string_lossy().into(), status: "paused".into(), total: 0, completed: 0, speed: 0, error: String::new(), created_at: 0, finished_at: None });
+            manager.journal.tasks.push(Task { id: id.clone(), url: format!("http://{}/fixture.zip", listener.local_addr().unwrap()), name: format!("{count}.zip"), directory: canonical_directory.clone(), status: "paused".into(), total: 0, completed: 0, speed: 0, error: String::new(), created_at: 0, finished_at: None });
             manager.enqueue(manager.journal.tasks.len() - 1, true).unwrap();
             let options = manager.rpc("getOption", vec![json!(id)]).unwrap();
+            assert_eq!(options["dir"].as_str().unwrap().replace('/', "\\"), root.to_string_lossy(), "aria2 must receive a normal Windows path, not a verbatim namespace");
+            assert_eq!(manager.journal.tasks.last().unwrap().directory, canonical_directory, "Keep the stored path for collision and resume checks");
             assert_eq!(options["split"], count.to_string());
             assert_eq!(options["max-connection-per-server"], count.to_string());
             // Deliberately leave stale options on a paused task; Resume must replace both.

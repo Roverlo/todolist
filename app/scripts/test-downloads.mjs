@@ -312,15 +312,34 @@ try {
       const rangeCount = ranges.length;
       await Promise.race([page.evaluate(() => window.__TAURI_INTERNALS__.invoke('plugin:process|exit', { code: 0 })).catch(() => {}), sleep(3000)]);
       await browser.close().catch(() => {}); await sleep(3000);
+      // Seed the old release's failed-task format only after the isolated EXE exits.
+      // This is intentionally still a verbatim Windows path in history.json.
+      const legacyDirectory = path.join(directory, '历史下载 中文 空格');
+      await mkdir(legacyDirectory);
+      const legacyId = 'fedcba9876543210', legacyName = 'legacy-retry.zip';
+      const savedHistory = JSON.parse(await readFile(path.join(root, 'history.json'), 'utf8'));
+      assert.equal(savedHistory.tasks.some(task => task.id === legacyId), false);
+      savedHistory.tasks.push({ id: legacyId, name: legacyName, url: `${base}/small.zip`,
+        directory: path.toNamespacedPath(legacyDirectory), status: 'error', total: 65536,
+        completed: 0, speed: 0, error: '文件写入失败，请检查权限和磁盘', createdAt: Date.now(), finishedAt: null });
+      await writeFile(path.join(root, 'history.json'), JSON.stringify(savedHistory));
       restarted = spawn(path.resolve(arg('--executable')), [], { cwd: path.dirname(path.resolve(arg('--executable'))), env: process.env, windowsHide: true, stdio: 'ignore' });
       await until(async () => { try { return (await fetch(`http://127.0.0.1:${arg('--cdp')}/json/version`)).ok; } catch { return false; } }, 'Native restart', 30000);
       browser = await chromium.connectOverCDP(`http://127.0.0.1:${arg('--cdp')}`); page = browser.contexts()[0].pages()[0];
       page.on('pageerror', error => errors.push(error.message));
       await page.waitForFunction(() => Boolean(window.__TAURI_INTERNALS__));
-      await until(async () => (await snapshot()).tasks.length === 2, 'History restored');
+      await until(async () => (await snapshot()).tasks.length === 3, 'History restored');
       assert.equal((await snapshot()).tasks.find(t => t.id === id).status, 'paused');
       assert.equal((await snapshot()).settings.limitKib, 256);
       assert.equal((await snapshot()).settings.connections, 32);
+      assert.equal((await snapshot()).tasks.find(task => task.id === legacyId).status, 'error');
+      await goDownloads();
+      await page.getByRole('button', { name: `重试 ${legacyName}`, exact: true }).click();
+      await until(async () => (await snapshot()).tasks.find(task => task.id === legacyId).status === 'complete', 'Legacy verbatim-path record retries in place');
+      assert.equal(digest(await readFile(path.join(legacyDirectory, legacyName))), digest(bytes.subarray(0, 65536)));
+      assert.equal((await snapshot()).tasks.find(task => task.id === legacyId).directory, path.toNamespacedPath(legacyDirectory));
+      await page.screenshot({ path: path.join(output, 'legacy-path-retry.png') });
+      await rejected(() => request({ action: 'add', url: `${base}/small.zip`, name: legacyName, directory: legacyDirectory }), /同名/);
       await request({ action: 'resume', id });
       await until(() => ranges.length > rangeCount && ranges.slice(rangeCount).some(range => range.start > 0), 'Restart uses Range resume');
     }
@@ -406,7 +425,7 @@ try {
     await testNativeBatch(directory);
     assert.deepEqual(JSON.parse(await readFile(arg('--data'), 'utf8')).state.notes, beforeNotes);
     await page.screenshot({ path: path.join(output, 'complete.png') });
-    console.log('PASS: batch paste/file import/retry/stop, automatic filenames, GET-only filename, redirects, HEAD failure, safe fallback, duplicate suffix/no overwrite, HTTP/HTTPS SHA-256, 8 connections, pause/resume, settings UI/restart/rollback, background, 404, invalid input, save failure, record-only removal, notes untouched');
+    console.log('PASS: legacy verbatim-path retry/hash/no overwrite, batch paste/file import/retry/stop, automatic filenames, GET-only filename, redirects, HEAD failure, safe fallback, duplicate suffix/no overwrite, HTTP/HTTPS SHA-256, 8 connections, pause/resume, settings UI/restart/rollback, background, 404, invalid input, save failure, record-only removal, notes untouched');
   }
   assert.deepEqual(errors, []);
   await writeFile(path.join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, ranges, errors }, null, 2));
