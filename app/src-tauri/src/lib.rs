@@ -9,6 +9,8 @@ use ssh2::Session;
 mod close_guard;
 mod attachments;
 mod downloads;
+mod update_windows;
+mod portable_update;
 
 /// 获取统一的数据存储路径：用户文档目录下的 ProjectTodo/data.json
 /// 所有版本的 EXE 都会读写这个位置，确保数据共享
@@ -423,6 +425,7 @@ fn show_main_window(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if portable_update::run_helper() { return; }
     // 动态查找 webview2 目录下的任意版本运行时
     // 这样可以兼容不同版本的 Fixed Version Runtime
     if let Ok(exe_path) = std::env::current_exe() {
@@ -466,6 +469,7 @@ pub fn run() {
     builder
         .register_uri_scheme_protocol("attachment", |_context, request| attachments::image_response(&request))
         .manage(close_guard::CloseGuard::default())
+        .manage(portable_update::Updater::default())
         .on_window_event(|window, event| {
             close_guard::on_window_event(window, event);
             if matches!(event, tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_) | tauri::WindowEvent::ScaleFactorChanged { .. } | tauri::WindowEvent::Focused(true)) {
@@ -533,6 +537,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            portable_update::prepare_portable_update, portable_update::cancel_portable_update,
+            portable_update::install_portable_update, portable_update::portable_update_ready,
             downloads::downloads_request, downloads::downloads_inspect,
             close_guard::set_close_handler_ready, close_guard::respond_to_close_request,
             frontend_log, load_data, save_data, get_data_directory, open_data_directory,

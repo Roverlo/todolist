@@ -557,7 +557,7 @@ fn aria2_directory(directory: &str) -> String {
 }
 
 #[cfg(windows)]
-fn random_hex(length: usize) -> Result<String, String> {
+pub(crate) fn random_hex(length: usize) -> Result<String, String> {
     #[link(name = "bcrypt")]
     extern "system" { fn BCryptGenRandom(provider: *mut std::ffi::c_void, buffer: *mut u8, length: u32, flags: u32) -> i32; }
     let mut bytes = vec![0u8; length];

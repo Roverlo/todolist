@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory = $true)][string]$Executable, [switch]$Downloads, [switch]$EditorWorkflow, [switch]$NoteCompletion, [switch]$ClearFormatting, [switch]$Attachments, [switch]$WindowLifecycle, [switch]$UpdateSettings, [switch]$WeeklyReport, [ValidateSet('busy', 'crash')][string]$WindowRecovery)
+﻿param([Parameter(Mandatory = $true)][string]$Executable, [switch]$Downloads, [switch]$EditorWorkflow, [switch]$NoteCompletion, [switch]$ClearFormatting, [switch]$Attachments, [switch]$WindowLifecycle, [switch]$UpdateSettings, [switch]$WeeklyReport, [string]$PortableUpdateTarget, [string]$PortableUpdateVersion, [ValidateSet('busy', 'crash')][string]$WindowRecovery)
 $ErrorActionPreference = 'Stop'
 
 $source = (Get-Item -LiteralPath $Executable).FullName
@@ -24,7 +24,7 @@ if ($Attachments) {
     $sampleObject.state.notes[0].content = '<p>旧图片迁移</p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=">'
     $sample = $sampleObject | ConvertTo-Json -Depth 8 -Compress
 }
-if ($Downloads) {
+if ($Downloads -or $PortableUpdateTarget) {
     # Keep unrelated online update prompts out of the isolated download fixtures.
     $sampleObject = $sample | ConvertFrom-Json
     $sampleObject.state | Add-Member -NotePropertyName settings -NotePropertyValue @{ updateCheck = @{ checkOnStartup = $false; autoCheck = $false; checkInterval = 60 } }
@@ -49,6 +49,7 @@ if (Test-Path -LiteralPath $userRoot) {
 }
 
 $testExe = Join-Path $checkRoot 'ProjectTodo-check.exe'
+if ($PortableUpdateTarget) { $testExe = Join-Path $checkRoot '待办 便携测试.exe' }
 Copy-Item -LiteralPath $source -Destination $testExe
 $oldData = $env:PROJECTTODO_TEST_DATA_DIR
 $oldWebView = $env:WEBVIEW2_USER_DATA_FOLDER
@@ -57,7 +58,7 @@ $started = $null
 try {
     $env:PROJECTTODO_TEST_DATA_DIR = $dataRoot
     $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $checkRoot 'webview'
-    if ($Downloads -or $EditorWorkflow -or $Attachments -or $NoteCompletion -or $ClearFormatting -or $WindowLifecycle -or $UpdateSettings -or $WeeklyReport -or $WindowRecovery) {
+    if ($Downloads -or $EditorWorkflow -or $Attachments -or $NoteCompletion -or $ClearFormatting -or $WindowLifecycle -or $UpdateSettings -or $WeeklyReport -or $WindowRecovery -or $PortableUpdateTarget) {
         $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
         $probe.Start()
         $nativeDebugPort = $probe.LocalEndpoint.Port
@@ -114,6 +115,13 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Packaged update settings check failed' }
         } finally { Pop-Location }
     }
+    if ($PortableUpdateTarget) {
+        Push-Location (Split-Path -Parent $PSScriptRoot)
+        try {
+            & node (Join-Path $PSScriptRoot 'test-portable-update.mjs') --cdp $nativeDebugPort --data $dataPath --executable $testExe --candidate $PortableUpdateTarget --version $PortableUpdateVersion
+            if ($LASTEXITCODE -ne 0) { throw 'Portable in-app update check failed' }
+        } finally { Pop-Location }
+    }
     if ($WeeklyReport) {
         Push-Location (Split-Path -Parent $PSScriptRoot)
         try {
@@ -139,12 +147,16 @@ try {
         if ((Get-FileHash -LiteralPath (Join-Path $userRoot $relative) -Algorithm SHA256).Hash -ne $before[$relative]) { throw 'Existing user data changed during the check; backup retained' }
     }
     [ordered]@{
-        result = 'PASS'; downloads = [bool]$Downloads; weeklyReport = [bool]$WeeklyReport; updateSettings = [bool]$UpdateSettings; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; attachments = [bool]$Attachments; noteCompletion = [bool]$NoteCompletion; clearFormatting = [bool]$ClearFormatting; windowLifecycle = [bool]$WindowLifecycle; windowRecovery = $WindowRecovery; isolatedData = $dataPath; existingDataUnchanged = $true
+        result = 'PASS'; portableUpdateVersion = $PortableUpdateVersion; downloads = [bool]$Downloads; weeklyReport = [bool]$WeeklyReport; updateSettings = [bool]$UpdateSettings; runningSeconds = 8; editorWorkflow = [bool]$EditorWorkflow; attachments = [bool]$Attachments; noteCompletion = [bool]$NoteCompletion; clearFormatting = [bool]$ClearFormatting; windowLifecycle = [bool]$WindowLifecycle; windowRecovery = $WindowRecovery; isolatedData = $dataPath; existingDataUnchanged = $true
         executable = $source; testedExecutable = $testExe; bytes = (Get-Item -LiteralPath $testExe).Length
         sha256 = (Get-FileHash -LiteralPath $testExe -Algorithm SHA256).Hash
     } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $checkRoot 'result.json')
 } finally {
     if ($started -and -not $started.HasExited) { Stop-Process -Id $started.Id }
+    if ($PortableUpdateTarget) {
+        # Only this isolated run's executable and updater helpers, never user instances.
+        Get-Process | Where-Object { $_.Path -eq $testExe -or ($_.Path -like "$checkRoot\.projecttodo-update-*\helper.exe") } | Stop-Process
+    }
     $env:PROJECTTODO_TEST_DATA_DIR = $oldData
     $env:WEBVIEW2_USER_DATA_FOLDER = $oldWebView
     $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = $oldWebViewArguments

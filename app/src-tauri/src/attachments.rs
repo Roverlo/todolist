@@ -136,7 +136,7 @@ pub fn image_response(request: &tauri::http::Request<Vec<u8>>) -> tauri::http::R
         .body(bytes.unwrap_or_default()).unwrap()
 }
 
-fn copy_verified(source: &Path, destination: &Path) -> Result<(), String> {
+pub(crate) fn copy_verified(source: &Path, destination: &Path) -> Result<(), String> {
     fs::create_dir_all(destination).map_err(|e| e.to_string())?;
     for entry in fs::read_dir(source).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;

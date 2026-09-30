@@ -144,9 +144,15 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
     // Flush the old note's snapshot before its editor is destroyed on navigation.
     useEffect(() => {
         const flush = () => { saveDraft(); };
+        const beforeUpdate = (event: Event) => {
+            saveDraft();
+            if (pendingSave.current) event.preventDefault();
+        };
         window.addEventListener('pagehide', flush);
+        window.addEventListener('projecttodo-save-before-update', beforeUpdate);
         return () => {
             window.removeEventListener('pagehide', flush);
+            window.removeEventListener('projecttodo-save-before-update', beforeUpdate);
             flush();
         };
     }, [saveDraft]);

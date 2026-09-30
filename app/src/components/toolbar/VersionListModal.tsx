@@ -1,3 +1,4 @@
+import { UpdateModal } from './UpdateModal';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { UpdateInfo, VersionsInfo } from '../../utils/updateChecker';
 import { CURRENT_VERSION, DEFAULT_UPDATE_SERVER, getAllVersions, openDownloadUrl } from '../../utils/updateChecker';
@@ -9,6 +10,7 @@ interface VersionListModalProps {
 }
 
 export const VersionListModal = ({ open, onClose, serverUrl = DEFAULT_UPDATE_SERVER }: VersionListModalProps) => {
+    const [selectedUpdate, setSelectedUpdate] = useState<UpdateInfo | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [versionsInfo, setVersionsInfo] = useState<VersionsInfo | null>(null);
@@ -40,8 +42,10 @@ export const VersionListModal = ({ open, onClose, serverUrl = DEFAULT_UPDATE_SER
     }, [open, loadVersions]);
 
     if (!open) return null;
+    if (selectedUpdate) return <UpdateModal open updateInfo={selectedUpdate} serverUrl={serverUrl} onClose={() => setSelectedUpdate(null)} />;
 
     const handleDownload = async (version: UpdateInfo) => {
+        if (version.version > CURRENT_VERSION) { setSelectedUpdate(version); return; }
         try { await openDownloadUrl(version.downloadUrl); }
         catch { setError('无法打开下载链接，请检查系统默认浏览器后重试'); }
     };
@@ -207,7 +211,7 @@ export const VersionListModal = ({ open, onClose, serverUrl = DEFAULT_UPDATE_SER
                                             ) : (
                                                 <>
                                                     <span>⬇️</span>
-                                                    <span>回退到此版本</span>
+                                                    <span>下载旧版</span>
                                                 </>
                                             )}
                                         </button>

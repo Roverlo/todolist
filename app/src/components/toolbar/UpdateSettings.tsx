@@ -124,7 +124,7 @@ export function UpdateSettings() {
                 </select>
             </div>
             {config?.lastCheckAt && <p className="update-last-check">上次检查：{new Date(config.lastCheckAt).toLocaleString()}</p>}
-            <p className="update-portable-note"><Info size={15} aria-hidden="true" />下载新版 EXE，关闭旧版后替换，数据保留。</p>
+            <p className="update-portable-note"><Info size={15} aria-hidden="true" />免安装版支持应用内更新，重启后自动替换，数据保留。</p>
         </section>
         <aside className="update-sort-help" aria-label="排序逻辑"><h3>排序逻辑</h3>
             <div><Circle size={16} className="update-urgent" aria-hidden="true" /><p><strong>紧急区：逾期 / 今日到期</strong><small>已逾期或在今天到期的任务</small></p></div>
@@ -132,7 +132,7 @@ export function UpdateSettings() {
             <div><Circle size={16} aria-hidden="true" /><p><strong>待定区：无截止日期</strong><small>没有设置截止日期的任务</small></p></div>
             <div className="update-completed-help"><CheckCircle2 size={16} aria-hidden="true" /><p><strong>已完成自动沉底</strong><small>已完成的任务会自动移到列表底部</small></p></div>
         </aside>
-        {updateInfo && <UpdateModal open onClose={() => setUpdateInfo(null)} updateInfo={updateInfo} />}
+        {updateInfo && <UpdateModal open onClose={() => setUpdateInfo(null)} updateInfo={updateInfo} serverUrl={serverUrl} />}
         <VersionListModal open={historyOpen} onClose={() => setHistoryOpen(false)} serverUrl={serverUrl} />
     </div>;
 }

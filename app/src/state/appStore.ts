@@ -384,7 +384,10 @@ const withHistory = (set: StoreApi<AppStore>['setState'], updater: (state: Draft
 // Startup effects must not persist initial/empty state while native data and attachments are loading.
 let storageHydrated = false;
 let pendingStorageSave: Promise<void> = Promise.resolve();
-export const waitForAppSave = () => pendingStorageSave;
+export const waitForAppSave = async () => {
+  let pending;
+  do { pending = pendingStorageSave; await pending; } while (pending !== pendingStorageSave);
+};
 
 export const useAppStore = create<AppStore>()(
   persist(
@@ -1521,7 +1524,7 @@ export const useAppStore = create<AppStore>()(
           setItem: (name: string, value: string): Promise<void> => {
             if (typeof window === 'undefined' || !storageHydrated) return Promise.resolve();
 
-            pendingStorageSave = (async () => {
+            pendingStorageSave = pendingStorageSave.catch(() => {}).then(async () => {
               let saveError: unknown;
 
               // 1. 写入本地文件 (Portable)
@@ -1540,7 +1543,7 @@ export const useAppStore = create<AppStore>()(
                 if (!isTauri()) saveError = e;
               }
               if (saveError) throw new Error('无法写入数据，请检查存储目录或可用空间后重试');
-            })();
+            });
             // Automatic writes remain nonblocking; explicit saves can await the original result.
             return pendingStorageSave.catch(() => {});
           },
