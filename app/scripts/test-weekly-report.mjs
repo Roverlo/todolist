@@ -30,11 +30,15 @@ const until = async (check, label) => {
     while (Date.now() < deadline) { if (await check()) return; await new Promise(resolve => setTimeout(resolve, 50)); }
     assert.fail(label);
 };
-let server, browser, page;
+let server, browser, page, timezoneSession;
 try {
     if (native) {
         assert.ok(process.env.PROJECTTODO_TEST_DATA_DIR && dataPath.startsWith(process.env.PROJECTTODO_TEST_DATA_DIR));
         browser = await chromium.connectOverCDP(`http://127.0.0.1:${arg('--cdp')}`); page = browser.contexts()[0].pages()[0];
+        // The historical fixtures below use Shanghai calendar dates and +08:00 boundaries.
+        // Keep packaged runs deterministic on workstations configured in other timezones.
+        timezoneSession = await page.context().newCDPSession(page);
+        await timezoneSession.send('Emulation.setTimezoneOverride', { timezoneId: 'Asia/Shanghai' });
     } else {
         server = await createViteServer({ cacheDir: 'node_modules/.vite-weekly-report', logLevel: 'error', server: { host: '127.0.0.1', port: 0, strictPort: false },
             plugins: [{ name: 'mock-native-http-in-browser', enforce: 'pre', transform(code, id) {
@@ -301,4 +305,7 @@ try {
     console.log('Passed: custom dates, cross-year and single-day scope, invalid/empty dates, presets, retained drafts, cancellation, correct save titles and separate periods');
     console.log('Passed: generation, source scope, live draft, edit/copy/save/reload, cancel, errors/truncation, setup/empty states and reused side panel layout');
 } catch (error) { console.error(error); if (page) await page.screenshot({ path: `${output}/failure.png`, timeout: 5000 }).catch(() => {}); throw error; }
-finally { if (browser) await browser.close(); if (server) await server.close(); mock.closeAllConnections(); await new Promise(resolve => mock.close(resolve)); }
+finally {
+    if (timezoneSession) await timezoneSession.send('Emulation.setTimezoneOverride', { timezoneId: '' }).catch(() => {});
+    if (browser) await browser.close(); if (server) await server.close(); mock.closeAllConnections(); await new Promise(resolve => mock.close(resolve));
+}

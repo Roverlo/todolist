@@ -12,4 +12,4 @@
 
 不改变配置文件格式或迁移用户数据。AI 保存和删除等待真实写盘；失败恢复原配置、保留编辑草稿并显示错误。下载继续使用原有原生存储与错误处理。
 
-验证入口：`node scripts/test-settings-center.mjs`（需在 127.0.0.1:52923 启动 Vite）；最终 EXE 使用 `scripts/test-portable.ps1 -Executable '<EXE>' -SettingsCenter`。覆盖三个页面与收起侧栏、分类草稿、子窗口返回、响应布局、原生 AI/下载写盘失败、常用目录以及退出重启。下载、随记、周报与更新沿用各自回归脚本；最终运行结果及 Computer Use 截图记入交付 QA 报告。
+验证入口：`node scripts/test-settings-center.mjs`（需在 127.0.0.1:52923 启动 Vite）；最终 EXE 使用 `scripts/test-portable.ps1 -Executable '<EXE>' -SettingsCenter`。覆盖三个页面与收起侧栏、分类草稿、子窗口返回、响应布局、原生 AI/下载写盘失败、常用目录以及退出重启。下载、随记、周报与更新沿用各自回归脚本；最终 EXE 和 Computer Use 已通过，见[交付验收报告](SETTINGS_CENTER_QA.md)。
