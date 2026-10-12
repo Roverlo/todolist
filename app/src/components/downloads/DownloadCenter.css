@@ -20,6 +20,17 @@
 .download-overview strong { color: var(--primary); font-weight: 600; font-variant-numeric: tabular-nums; }
 .download-search { display: flex; gap: 8px; align-items: center; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-secondary); }
 .download-search input { border: 0; background: transparent; min-width: 0; width: 170px; color: var(--text-main); font: inherit; font-size: 13px; }
+.download-batch-toolbar, .download-batch-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.download-batch-toolbar { font-size: 12px; }
+.download-batch-actions { margin-left: auto; gap: 8px; }
+.download-select-all { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; cursor: pointer; }
+.download-select-all input, .download-row-select { accent-color: var(--primary); width: 16px; height: 16px; margin: 0; flex-shrink: 0; cursor: pointer; }
+.download-selection-count { color: var(--text-secondary); }
+.download-row.is-selected { background: var(--primary-soft); }
+.download-batch-feedback { border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12px; }
+.download-batch-feedback > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.download-batch-feedback details { max-height: 120px; overflow: auto; color: #b42318; overflow-wrap: anywhere; }
+.download-batch-feedback summary { cursor: pointer; }
 .download-list { min-height: 0; flex: 1; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
 .download-empty { min-height: 300px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px; text-align: center; box-sizing: border-box; }
 .download-empty > div { width: 70px; height: 70px; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); border-radius: 20px; margin-bottom: 16px; }
@@ -59,6 +70,17 @@
 .download-dialog input[type=checkbox] { accent-color: var(--primary); width: 16px; height: 16px; }
 .download-directory { display: flex; align-items: center; gap: 8px; }
 .download-directory input { flex: 1; }
+.download-directory-field { margin: 16px 0; }
+.download-directory-field > label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+.download-favorites { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--text-secondary); }
+.download-favorites > span { white-space: nowrap; padding-top: 7px; }
+.download-favorite-list { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; max-height: 120px; overflow: auto; }
+.download-favorite { display: flex; min-width: 0; max-width: 100%; }
+.download-dialog .download-favorite > button { min-width: 0; padding: 6px 8px; font-size: 12px; border-radius: 6px 0 0 6px; }
+.download-favorite > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.download-favorite svg { flex-shrink: 0; }
+.download-dialog .download-favorite > .download-favorite-remove { border-left: 0; border-radius: 0 6px 6px 0; padding: 6px; }
+.download-dialog .download-favorite button[aria-pressed=true], .download-directory button[aria-pressed=true] { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
 .download-add-dialog { width: min(620px, calc(100vw - 40px)); }
 .download-link-drop > label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; }
 .download-link-drop textarea { box-sizing: border-box; width: 100%; min-height: 156px; max-height: 35vh; padding: 12px; resize: vertical; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-main); font: inherit; font-size: 13px; line-height: 1.7; }

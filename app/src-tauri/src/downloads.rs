@@ -38,13 +38,18 @@ pub struct Task {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-struct Journal { version: u8, settings: Settings, tasks: Vec<Task> }
+struct Journal {
+    version: u8, settings: Settings, tasks: Vec<Task>,
+    #[serde(default, rename = "favoriteDirectories")]
+    favorite_directories: Vec<String>,
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
     settings: Settings,
     tasks: Vec<Task>,
+    favorite_directories: Vec<String>,
     engine_version: &'static str,
     error: Option<String>,
 }
@@ -58,6 +63,7 @@ pub enum Request {
     Resume { id: String },
     Remove { id: String },
     Settings { settings: Settings },
+    FavoriteDirectory { directory: String, favorite: bool },
     Reveal { id: String },
 }
 
@@ -252,7 +258,7 @@ impl ManagerState {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 let directory = if std::env::var_os("PROJECTTODO_TEST_DATA_DIR").is_some() { root.join("files") }
                     else { dirs::download_dir().unwrap_or(root.clone()).join("ProjectTodo") };
-                Journal { version: 1, settings: Settings { directory: directory.to_string_lossy().into(), concurrent: 3, connections: default_connections(), limit_kib: 0, notify: true }, tasks: vec![] }
+                Journal { version: 1, settings: Settings { directory: directory.to_string_lossy().into(), concurrent: 3, connections: default_connections(), limit_kib: 0, notify: true }, tasks: vec![], favorite_directories: vec![] }
             }
             Err(_) => return Err("下载记录无法读取，未修改原文件".into()),
         };
@@ -269,7 +275,7 @@ impl ManagerState {
         Ok(())
     }
     fn snapshot(&self) -> Snapshot {
-        Snapshot { settings: self.journal.settings.clone(), tasks: self.journal.tasks.clone(), engine_version: ENGINE_VERSION, error: self.error.clone() }
+        Snapshot { settings: self.journal.settings.clone(), tasks: self.journal.tasks.clone(), favorite_directories: self.journal.favorite_directories.clone(), engine_version: ENGINE_VERSION, error: self.error.clone() }
     }
     fn start_engine(&mut self) -> Result<(), String> {
         if self.engine.is_some() { return Ok(()); }
@@ -423,6 +429,19 @@ impl ManagerState {
                     }
                 }
             }
+            Request::FavoriteDirectory { directory, favorite } => {
+                validate_directory(&directory)?;
+                let key = directory_key(&directory);
+                let old = self.journal.favorite_directories.clone();
+                if favorite {
+                    if old.iter().any(|saved| directory_key(saved) == key) { return Ok(()); }
+                    if old.len() >= 20 { return Err("最多保存 20 个常用目录，请先移除不再使用的目录".into()); }
+                    self.journal.favorite_directories.push(directory);
+                } else {
+                    self.journal.favorite_directories.retain(|saved| directory_key(saved) != key);
+                }
+                if let Err(error) = self.persist() { self.journal.favorite_directories = old; return Err(error); }
+            }
             Request::Reveal { id } => {
                 let task = &self.journal.tasks[self.index(&id)?];
                 let directory = Path::new(&task.directory);
@@ -522,6 +541,9 @@ fn validate_name(name: &str) -> Result<(), String> {
 fn validate_directory(directory: &str) -> Result<(), String> {
     if !Path::new(directory).is_absolute() || directory.chars().any(|ch| ch.is_control()) { return Err("请选择有效的绝对保存路径".into()); }
     Ok(())
+}
+fn directory_key(directory: &str) -> String {
+    directory.replace('/', "\\").trim_end_matches('\\').to_lowercase()
 }
 fn validate_settings(settings: &Settings) -> Result<(), String> {
     validate_directory(&settings.directory)?;
@@ -645,6 +667,40 @@ mod tests {
         for count in [0, 2, 3, 65, 255] { settings.connections = count; assert!(validate_settings(&settings).is_err()); }
         for count in [1, 4, 8, 16, 32, 64] { settings.connections = count; assert!(validate_settings(&settings).is_ok()); }
     }
+    #[test] fn favorite_directories_migrate_deduplicate_and_roll_back_failed_writes() {
+        let root = std::env::temp_dir().join(format!("projecttodo-favorites-test-{}", random_hex(8).unwrap()));
+        let journal: Journal = serde_json::from_value(json!({"version": 1, "settings": {"directory": root, "concurrent": 3, "limitKib": 0, "notify": false}, "tasks": []})).unwrap();
+        assert!(journal.favorite_directories.is_empty());
+        let mut manager = ManagerState { root: root.clone(), journal, engine: None, error: None, dirty: false, pending_notifications: vec![] };
+        let directory = root.join("常用 目录").to_string_lossy().into_owned();
+        manager.request(Request::FavoriteDirectory { directory: directory.clone(), favorite: true }).unwrap();
+        manager.request(Request::FavoriteDirectory { directory: format!("{}/", directory.to_uppercase().replace('\\', "/")), favorite: true }).unwrap();
+        assert_eq!(manager.journal.favorite_directories, vec![directory.clone()]);
+        let saved = fs::read(root.join("history.json")).unwrap();
+        let restored: Journal = serde_json::from_slice(&saved).unwrap();
+        assert_eq!(restored.favorite_directories, vec![directory.clone()]);
+        assert!(!Path::new(&directory).exists(), "Remembering a directory must not create files or folders there");
+        assert!(manager.request(Request::FavoriteDirectory { directory: "relative/path".into(), favorite: true }).is_err());
+        fs::create_dir(root.join("history.json.tmp")).unwrap();
+        for favorite in [false, true] {
+            let target = if favorite { root.join("other").to_string_lossy().into_owned() } else { directory.clone() };
+            assert!(manager.request(Request::FavoriteDirectory { directory: target, favorite }).is_err());
+            assert_eq!(manager.journal.favorite_directories, vec![directory.clone()]);
+            assert_eq!(fs::read(root.join("history.json")).unwrap(), saved);
+        }
+        fs::remove_dir(root.join("history.json.tmp")).unwrap();
+        let mut settings = manager.journal.settings.clone(); settings.concurrent = 4;
+        manager.request(Request::Settings { settings }).unwrap();
+        assert_eq!(manager.journal.favorite_directories, vec![directory.clone()]);
+        manager.request(Request::FavoriteDirectory { directory, favorite: false }).unwrap();
+        assert!(manager.journal.favorite_directories.is_empty());
+        for index in 0..20 {
+            manager.request(Request::FavoriteDirectory { directory: root.join(index.to_string()).to_string_lossy().into_owned(), favorite: true }).unwrap();
+        }
+        assert!(manager.request(Request::FavoriteDirectory { directory: root.join("overflow").to_string_lossy().into_owned(), favorite: true }).is_err());
+        assert_eq!(manager.journal.favorite_directories.len(), 20);
+        fs::remove_dir_all(root).unwrap();
+    }
     #[test] fn engine_directory_preserves_verbatim_only_and_ordinary_paths() {
         for directory in [r"D:\Downloads", r"\\server\share\下载", r"\\?\Volume{fixture}\", r"\\.\pipe\fixture"] {
             assert_eq!(aria2_directory(directory), directory);
@@ -667,7 +723,7 @@ mod tests {
         // Own the endpoint but leave responses pending: no external network or user data.
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let settings = Settings { directory: root.to_string_lossy().into(), concurrent: 3, connections: 64, limit_kib: 0, notify: false };
-        let mut manager = ManagerState { root: root.clone(), journal: Journal { version: 1, settings, tasks: vec![] }, engine: None, error: None, dirty: false, pending_notifications: vec![] };
+        let mut manager = ManagerState { root: root.clone(), journal: Journal { version: 1, settings, tasks: vec![], favorite_directories: vec![] }, engine: None, error: None, dirty: false, pending_notifications: vec![] };
         manager.start_engine().unwrap();
         let canonical_directory = fs::canonicalize(&root).unwrap().to_string_lossy().into_owned();
         let global = manager.rpc("getGlobalOption", vec![]).unwrap();
@@ -715,7 +771,7 @@ mod tests {
         fs::create_dir_all(root.join("history.json.tmp")).unwrap();
         let previous = b"previous journal";
         fs::write(root.join("history.json"), previous).unwrap();
-        let journal = Journal { version: 1, settings: Settings { directory: root.to_string_lossy().into(), concurrent: 3, connections: 4, limit_kib: 0, notify: false }, tasks: vec![] };
+        let journal = Journal { version: 1, settings: Settings { directory: root.to_string_lossy().into(), concurrent: 3, connections: 4, limit_kib: 0, notify: false }, tasks: vec![], favorite_directories: vec![] };
         assert!(save_journal(&root, &journal).is_err());
         assert_eq!(fs::read(root.join("history.json")).unwrap(), previous);
         fs::remove_dir_all(root).unwrap();

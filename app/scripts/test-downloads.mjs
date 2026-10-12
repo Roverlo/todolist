@@ -18,6 +18,14 @@ const until = async (check, label, timeout = 25000) => {
   assert.fail(label);
 };
 const errors = [], ranges = [];
+let previewStorageFallbacks = 0;
+const captureConsole = message => {
+  if (message.type() !== 'error') return;
+  const text = message.text();
+  // Existing browser-only portable-save fallback in appStore; native runs must never emit it.
+  if (!native && text.startsWith("Failed to save portable data TypeError: Cannot read properties of undefined (reading 'invoke')") && text.includes('/src/state/appStore.ts')) { previewStorageFallbacks++; return; }
+  errors.push(text);
+};
 let largeActive = 0, largePeak = 0;
 const bytes = Buffer.alloc(6 * 1024 * 1024);
 for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 37 + Math.floor(i / 1031)) % 256;
@@ -152,6 +160,127 @@ async function testNativeBatch(directory) {
   assert.equal((await snapshot()).tasks.some(t => t.name === 'stop-second.zip'), false);
   await add.getByRole('button', { name: '取消', exact: true }).click();
 }
+async function testFavoriteDirectories(directory) {
+  const favorites = [path.join(directory, '常用 资料'), path.join(directory, '软件安装包')];
+  const history = path.join(process.env.PROJECTTODO_TEST_DATA_DIR, 'downloads', 'history.json');
+  await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
+  const add = page.getByRole('dialog', { name: '新建下载' });
+  const input = add.getByRole('textbox', { name: '保存到', exact: true });
+  for (const favorite of favorites) {
+    await input.fill(favorite);
+    await add.getByRole('button', { name: '记为常用', exact: true }).click();
+    await add.getByRole('button', { name: '已记为常用', exact: true }).waitFor();
+    assert.equal((await snapshot()).settings.directory, directory, 'Remembering does not change the default');
+  }
+  await add.getByRole('button', { name: `使用常用目录 ${favorites[0]}`, exact: true }).click();
+  assert.equal(await input.inputValue(), favorites[0]);
+  await request({ action: 'favoriteDirectory', directory: favorites[0].toUpperCase().replaceAll('\\', '/') + '/', favorite: true });
+  assert.deepEqual((await snapshot()).favoriteDirectories, favorites, 'Duplicate paths are ignored');
+  const before = await readFile(history);
+  await mkdir(`${history}.tmp`);
+  await input.fill(path.join(directory, '写入失败'));
+  await add.getByRole('button', { name: '记为常用', exact: true }).click();
+  await add.getByRole('alert').filter({ hasText: '保存' }).waitFor();
+  assert.deepEqual((await snapshot()).favoriteDirectories, favorites);
+  assert.deepEqual(await readFile(history), before);
+  await add.getByRole('button', { name: `移除常用目录 ${favorites[0]}`, exact: true }).click();
+  await add.getByRole('alert').filter({ hasText: '保存' }).waitFor();
+  assert.deepEqual((await snapshot()).favoriteDirectories, favorites);
+  await rmdir(`${history}.tmp`);
+  await input.fill('relative/path');
+  await add.getByRole('button', { name: '记为常用', exact: true }).click();
+  await add.getByRole('alert').filter({ hasText: '绝对' }).waitFor();
+  await add.getByRole('button', { name: `移除常用目录 ${favorites[1]}`, exact: true }).click();
+  await until(async () => (await snapshot()).favoriteDirectories.length === 1, 'Remove favorite');
+  await input.fill(favorites[1]);
+  await add.getByRole('button', { name: '记为常用', exact: true }).click();
+  await add.getByRole('button', { name: '已记为常用', exact: true }).waitFor();
+  await add.screenshot({ path: path.join(output, 'favorite-directories.png') });
+  await add.getByRole('button', { name: '取消', exact: true }).click();
+  await page.getByRole('button', { name: '下载设置', exact: true }).click();
+  const preferences = page.getByRole('dialog', { name: '下载设置' });
+  await preferences.getByRole('button', { name: `使用常用目录 ${favorites[0]}`, exact: true }).click();
+  assert.equal(await preferences.getByRole('textbox', { name: '默认保存目录', exact: true }).inputValue(), favorites[0]);
+  await preferences.getByRole('button', { name: '取消', exact: true }).click();
+  assert.equal((await snapshot()).settings.directory, directory);
+  return favorites;
+}
+async function testBatchControls(directory) {
+  const settings = (await snapshot()).settings;
+  const history = path.join(process.env.PROJECTTODO_TEST_DATA_DIR, 'downloads', 'history.json');
+  const addTask = async (endpoint, name) => (await request({ action: 'add', url: `${base}/${endpoint}`, name, directory })).tasks.find(task => task.name === name);
+  await request({ action: 'settings', settings: { ...settings, limitKib: 0 } });
+  const complete = await addTask('small.zip', '批量操作-完成.zip');
+  await until(async () => (await snapshot()).tasks.find(task => task.id === complete.id)?.status === 'complete', 'Completed fixture');
+  await request({ action: 'settings', settings: { ...settings, concurrent: 1, limitKib: 32 } });
+  const first = await addTask('large.zip', '批量操作-第一项.zip');
+  const second = await addTask('large.zip', '批量操作-第二项.zip');
+  const untouched = await addTask('large.zip', '不选中的任务.zip');
+  await until(async () => (await snapshot()).tasks.find(task => task.id === first.id)?.completed > 0, 'First batch file has real bytes');
+  const search = page.getByRole('textbox', { name: '搜索下载文件', exact: true });
+  await search.fill('批量操作-');
+  const all = page.getByRole('checkbox', { name: '全选当前列表', exact: true });
+  await page.getByRole('checkbox', { name: `选择 ${first.name}`, exact: true }).check();
+  assert.equal(await all.evaluate(node => node.indeterminate), true);
+  await all.check();
+  await page.getByRole('button', { name: '批量暂停（2）', exact: true }).click();
+  await page.getByText('暂停成功 2 项', { exact: true }).waitFor();
+  let tasks = (await snapshot()).tasks;
+  assert.ok([first, second].every(item => tasks.find(task => task.id === item.id).status === 'paused'));
+  assert.ok(['active', 'waiting'].includes(tasks.find(task => task.id === untouched.id).status), 'Unselected task keeps running');
+  assert.equal(tasks.find(task => task.id === complete.id).status, 'complete');
+  await request({ action: 'pause', id: untouched.id });
+  const failed = await addTask('missing', '批量操作-失败.zip');
+  await until(async () => (await snapshot()).tasks.find(task => task.id === failed.id)?.status === 'error', 'Failed fixture');
+  await page.getByRole('checkbox', { name: `选择 ${first.name}`, exact: true }).check();
+  await page.getByRole('navigation', { name: '下载分类' }).getByRole('button', { name: /^已暂停/ }).click();
+  await page.getByText('已选 0 项', { exact: true }).waitFor();
+  await page.getByRole('navigation', { name: '下载分类' }).getByRole('button', { name: /^全部下载/ }).click();
+  await page.getByRole('checkbox', { name: `选择 ${failed.name}`, exact: true }).waitFor();
+  await all.check();
+  await page.getByText('已选 4 项', { exact: true }).waitFor();
+  // Make one resume fail safely, while another selected task can still start.
+  // A failed record without a control file exercises the native retry guard.
+  await writeFile(path.join(directory, failed.name), 'keep failed target');
+  await page.getByRole('button', { name: '批量开始（3）', exact: true }).click();
+  await page.getByText('开始成功 2 项 · 失败 1 项，可重新操作', { exact: true }).waitFor();
+  await page.getByText('查看失败原因', { exact: true }).click();
+  await page.getByText(/批量操作-失败.zip：.*目标文件已存在/).waitFor();
+  assert.equal(await page.getByRole('checkbox', { name: `选择 ${failed.name}`, exact: true }).isChecked(), true);
+  assert.equal(await readFile(path.join(directory, failed.name), 'utf8'), 'keep failed target');
+  // Pause again before exercising failed and cancelled removals.
+  await all.check();
+  await page.getByRole('button', { name: '批量暂停（2）', exact: true }).click();
+  await page.getByText('暂停成功 2 项', { exact: true }).waitFor();
+  await all.check();
+  await page.screenshot({ path: path.join(output, 'batch-selected.png') });
+  await page.getByRole('button', { name: '批量删除（4）', exact: true }).click();
+  const remove = page.getByRole('dialog', { name: '批量删除下载记录', exact: true });
+  await remove.getByText(/已下载的文件和续传文件会保留/).waitFor();
+  await remove.getByRole('button', { name: '取消', exact: true }).click();
+  assert.ok((await snapshot()).tasks.some(task => task.id === first.id));
+  const savedHistory = await readFile(history);
+  await mkdir(`${history}.tmp`);
+  await page.getByRole('button', { name: '批量删除（4）', exact: true }).click();
+  await remove.getByRole('button', { name: '删除 4 项记录', exact: true }).click();
+  await page.getByText('删除记录成功 0 项 · 失败 4 项，可重新操作', { exact: true }).waitFor();
+  assert.deepEqual(await readFile(history), savedHistory);
+  tasks = (await snapshot()).tasks;
+  assert.ok([first, second, complete, failed].every(item => tasks.some(task => task.id === item.id)));
+  await rmdir(`${history}.tmp`);
+  const preserved = [path.join(directory, first.name), path.join(directory, `${first.name}.aria2`), path.join(directory, complete.name), path.join(directory, failed.name)];
+  const hashes = await Promise.all(preserved.map(async file => digest(await readFile(file))));
+  await page.getByRole('button', { name: '批量删除（4）', exact: true }).click();
+  await remove.getByRole('button', { name: '删除 4 项记录', exact: true }).click();
+  await page.getByText('删除记录成功 4 项', { exact: true }).waitFor();
+  tasks = (await snapshot()).tasks;
+  assert.ok([first, second, complete, failed].every(item => !tasks.some(task => task.id === item.id)));
+  assert.ok(tasks.some(task => task.id === untouched.id));
+  assert.deepEqual(await Promise.all(preserved.map(async file => digest(await readFile(file)))), hashes, 'Completed files, partial files and resume controls survive deletion');
+  await search.fill('');
+  await request({ action: 'remove', id: untouched.id });
+  await request({ action: 'settings', settings });
+}
 async function testDownloadSelectors(preferences) {
   for (const [label, values] of [['同时下载数', ['1','2','3','4','5','6','7','8']], ['单文件分片数', ['1','4','8','16','32','64']]]) {
     const trigger = preferences.getByRole('combobox', { name: label, exact: true });
@@ -175,6 +304,8 @@ async function testDownloadSelectors(preferences) {
   await preferences.getByRole('option', { name: '64 分片', exact: true }).click();
   assert.equal(await connections.innerText(), '64 分片');
   assert.equal(await concurrent.innerText(), '3 个文件');
+  // Keep the pointer off the reopened menu while testing keyboard-only selection.
+  await page.mouse.move(0, 0);
   await connections.press('ArrowDown');
   await preferences.getByRole('listbox', { name: '单文件分片数', exact: true }).waitFor();
   await connections.press('Home');
@@ -204,10 +335,35 @@ try {
     await page.goto('http://127.0.0.1:52923/');
   }
   page.on('pageerror', error => errors.push(error.message));
+  page.on('console', captureConsole);
   await goDownloads();
+  assert.equal(await page.title(), 'app');
+  assert.equal(await page.locator('vite-error-overlay').count(), 0);
   if (!native) {
+    assert.equal(page.url(), 'http://127.0.0.1:52923/');
+    await page.evaluate(async () => {
+      const { useDownloadStore } = await import('/src/state/downloadStore.ts');
+      useDownloadStore.setState({ favoriteDirectories: ['C:\\下载\\项目资料', 'D:\\安装包', 'D:\\下载\\一个用于验证长目录名称能够完整悬停查看且不会挤压操作按钮的常用资料目录'],
+        tasks: ['active', 'waiting', 'paused', 'error', 'complete'].map((status, index) => ({ id: `layout-${index}`, url: 'https://example.com/fixture.zip', name: `界面检查-${status}.zip`, directory: 'C:\\下载\\项目资料', status, total: 1048576, completed: 524288, speed: status === 'active' ? 32768 : 0, error: '', createdAt: 0, finishedAt: null })) });
+    });
+    await page.getByRole('checkbox', { name: '选择 界面检查-active.zip', exact: true }).check();
+    assert.equal(await page.getByRole('checkbox', { name: '全选当前列表', exact: true }).evaluate(node => node.indeterminate), true);
+    await page.getByRole('checkbox', { name: '全选当前列表', exact: true }).check();
+    await page.getByText('已选 5 项', { exact: true }).waitFor();
+    await page.getByRole('button', { name: '批量开始（2）', exact: true }).waitFor();
+    await page.getByRole('button', { name: '批量暂停（2）', exact: true }).waitFor();
+    await page.screenshot({ path: path.join(output, 'batch-selected.png') });
+    await page.getByRole('textbox', { name: '搜索下载文件' }).fill('active');
+    await page.getByText('已选 0 项', { exact: true }).waitFor();
+    await page.getByRole('checkbox', { name: '全选当前列表', exact: true }).check();
+    await page.getByText('已选 1 项', { exact: true }).waitFor();
+    await page.getByRole('textbox', { name: '搜索下载文件' }).fill('');
     await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
     const add = page.getByRole('dialog', { name: '新建下载' });
+    await add.getByRole('button', { name: '使用常用目录 D:\\安装包', exact: true }).click();
+    assert.equal(await add.getByRole('textbox', { name: '保存到', exact: true }).inputValue(), 'D:\\安装包');
+    await add.getByRole('button', { name: '已记为常用', exact: true }).waitFor();
+    await add.screenshot({ path: path.join(output, 'favorite-directories.png') });
     assert.equal(await add.getByRole('textbox', { name: '另存为（可选）', exact: true }).count(), 0);
     assert.equal(await add.getByRole('button', { name: '识别文件', exact: true }).count(), 0);
     assert.equal(await add.getByRole('button', { name: '重命名', exact: true }).count(), 0);
@@ -239,6 +395,7 @@ try {
     for (const width of [900, 1100, 1280, 1538, 1920]) {
       await page.setViewportSize({ width, height: 840 });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No overflow at ${width}`);
+      assert.equal(await page.locator('.download-batch-toolbar').evaluate(node => node.scrollWidth <= node.clientWidth), true, `Batch toolbar fits ${width}`);
       const tabs = await page.locator('.view-switch-item').evaluateAll(nodes => nodes.map(node => ({ text: node.textContent, fits: node.scrollWidth <= node.clientWidth })));
       assert.ok(tabs.every(tab => tab.fits), JSON.stringify(tabs));
     }
@@ -254,12 +411,13 @@ try {
     await page.getByRole('button', { name: '清空筛选', exact: true }).click();
     await page.getByRole('button', { name: '随记中心', exact: true }).click();
     await page.locator('.notes-main-root').waitFor();
-    console.log('PASS: selector pointer/keyboard/Escape/Tab/outside dismissal, 668/500px menu bounds, modal and body portals, browser preview guard, 8 themes, 5 widths, dialogs, three-way navigation');
+    console.log('PASS: favorites quick selection, mixed-status selection counts, search-scoped selection, selector pointer/keyboard/Escape/Tab/outside dismissal, 668/500px menu bounds, modal and body portals, browser preview guard, 8 themes, 5 widths, dialogs, three-way navigation');
   } else {
     await until(async () => !(await page.getByRole('button', { name: '新建下载', exact: true }).first().isDisabled()), 'Native ready');
     let state = await snapshot();
     const directory = state.settings.directory;
     const root = path.join(process.env.PROJECTTODO_TEST_DATA_DIR, 'downloads');
+    const favorites = await testFavoriteDirectories(directory);
     assert.equal(state.settings.connections, 4);
     await page.getByRole('button', { name: '下载设置', exact: true }).click();
     const preferences = page.getByRole('dialog', { name: '下载设置' });
@@ -327,8 +485,10 @@ try {
       await until(async () => { try { return (await fetch(`http://127.0.0.1:${arg('--cdp')}/json/version`)).ok; } catch { return false; } }, 'Native restart', 30000);
       browser = await chromium.connectOverCDP(`http://127.0.0.1:${arg('--cdp')}`); page = browser.contexts()[0].pages()[0];
       page.on('pageerror', error => errors.push(error.message));
+      page.on('console', captureConsole);
       await page.waitForFunction(() => Boolean(window.__TAURI_INTERNALS__));
       await until(async () => (await snapshot()).tasks.length === 3, 'History restored');
+      assert.deepEqual((await snapshot()).favoriteDirectories, favorites, 'Favorites survive native restart');
       assert.equal((await snapshot()).tasks.find(t => t.id === id).status, 'paused');
       assert.equal((await snapshot()).settings.limitKib, 256);
       assert.equal((await snapshot()).settings.connections, 32);
@@ -423,12 +583,24 @@ try {
     assert.equal(digest(await readFile(path.join(directory, '自动识别.zip'))), digest(bytes.subarray(0, 65536)));
     assert.equal(await readFile(path.join(directory, 'existing.zip'), 'utf8'), 'keep this existing file');
     await testNativeBatch(directory);
+    await testBatchControls(directory);
+    await page.getByRole('button', { name: '新建下载', exact: true }).first().click();
+    const favoriteAdd = page.getByRole('dialog', { name: '新建下载', exact: true });
+    await favoriteAdd.getByRole('textbox', { name: '下载链接', exact: true }).fill(`${base}/favorite-destination.zip`);
+    await favoriteAdd.getByRole('button', { name: `使用常用目录 ${favorites[0]}`, exact: true }).click();
+    await favoriteAdd.getByRole('button', { name: '开始下载', exact: true }).click();
+    await favoriteAdd.waitFor({ state: 'hidden' });
+    await until(async () => (await snapshot()).tasks.some(task => task.name === 'favorite-destination.zip' && task.status === 'complete'), 'Download into favorite directory');
+    assert.equal(digest(await readFile(path.join(favorites[0], 'favorite-destination.zip'))), digest(bytes.subarray(0, 65536)));
     assert.deepEqual(JSON.parse(await readFile(arg('--data'), 'utf8')).state.notes, beforeNotes);
     await page.screenshot({ path: path.join(output, 'complete.png') });
     console.log('PASS: legacy verbatim-path retry/hash/no overwrite, batch paste/file import/retry/stop, automatic filenames, GET-only filename, redirects, HEAD failure, safe fallback, duplicate suffix/no overwrite, HTTP/HTTPS SHA-256, 8 connections, pause/resume, settings UI/restart/rollback, background, 404, invalid input, save failure, record-only removal, notes untouched');
   }
   assert.deepEqual(errors, []);
-  await writeFile(path.join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, ranges, errors }, null, 2));
+  await writeFile(path.join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, ranges, errors, previewStorageFallbacks }, null, 2));
+} catch (error) {
+  await page?.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {});
+  throw error;
 } finally {
   if (restarted) {
     try { await Promise.race([page.evaluate(() => window.__TAURI_INTERNALS__.invoke('plugin:process|exit', { code: 0 })).catch(() => {}), sleep(3000)]); } catch { /* already closed */ }
