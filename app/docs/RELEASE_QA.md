@@ -64,6 +64,8 @@
 
 ## 可重复运行的自动化
 
+统一设置中心见 [设置整合记录](SETTINGS_CENTER.md)。`test-portable.ps1 -Executable '<EXE>' -SettingsCenter` 验证三个页面共用设置、侧栏收起与窄窗口入口、分类切换草稿、子窗口返回、AI 与下载保存失败、常用目录及真实 EXE 重启。Computer Use 另行操作最终 EXE，不能以脚本通过替代实际窗口检查。
+
 周报与窗口修改见 [周报与窗口设计记录](WEEKLY_REPORT.md)。运行 `node scripts/test-weekly-report.mjs`，最终 EXE 分别运行 `scripts/test-portable.ps1 -Executable '<EXE>' -WeeklyReport` 和 `-WindowLifecycle`。检查周报默认显示且不自动请求，周报左/待办右，收起后正文占满剩余宽度，键盘展开后结果与编辑保留。窗口标题栏仅保留最小化和关闭；启动、最小化恢复、托盘恢复和重新启动后，通过 `inspect-window-bounds.ps1` 检查 DWM 可见边框恰好等于当前显示器 workArea、正文底部只留原生细边框，贴齐任务栏上沿。透明阴影和调整边缘可能在 workArea 外，不以外框或 `isMaximized` 代替可见区域验收。运行中前端崩溃/忙碌时自绘按钮无法响应，关闭兜底须通过 Alt+F4 或托盘退出触发，不能沿用旧版“原生 X”点击证据。
 
 待办创建时间由 `scripts/check-note-task-creation.mjs` 覆盖，集成在生产 `test-note-completion.mjs`（含独立时间模拟）和原生 `-NoteCompletion`：工具栏、回车、快捷输入、旧数据兼容、两类时间独立、缩进与排序、撤销/重做、跨天显示、保存重开。`test-weekly-report.mjs` 检查 AI 请求里创建时间不误作完成时间。

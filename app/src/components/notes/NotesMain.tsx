@@ -3,15 +3,14 @@ import { useAppStore, useAppStoreShallow } from '../../state/appStore';
 import { NoteEditor } from './NoteEditor';
 import { NotesRecycleBin } from './NotesRecycleBin';
 import { AIAssistantPanel } from './AIAssistantPanel';
-import { AISettingsModal } from './AISettingsModal';
 import { Icon } from '../ui/Icon';
-import { FileText, ListTodo, PanelRightClose, PanelRightOpen, Settings } from 'lucide-react';
+import { FileText, ListTodo, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { WeeklyReportPanel } from './WeeklyReportPanel';
 import { collectWeeklyNotes, currentReportWeek, type WeeklyReportSource, type ReportPeriod } from '../../utils/weeklyReport';
 import { EditorToolButton } from './EditorToolbarControls';
 import type { Note } from '../../types';
 
-export function NotesMain() {
+export function NotesMain({ onOpenAISettings }: { onOpenAISettings: () => void }) {
     const { notes, updateNote, addNote, refreshNoteTagCounts, selectedNoteId, setSelectedNoteId } = useAppStoreShallow(state => ({
         notes: state.notes,
         updateNote: state.updateNote,
@@ -26,7 +25,6 @@ export function NotesMain() {
     // Initial tag refresh is handled by store or separate effect if needed.
     // Reducing potential for render loops.
 
-    const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
     const [weeklySource, setWeeklySource] = useState<WeeklyReportSource | null>(null);
     const [reportPeriod, setReportPeriod] = useState<ReportPeriod>(() => currentReportWeek());
     const [aiMode, setAiMode] = useState<'tasks' | 'weekly'>('weekly');
@@ -63,7 +61,6 @@ export function NotesMain() {
                     <div className="notes-ai-heading"><h2 id="notes-ai-heading">AI 助手</h2>
                         <EditorToolButton className="notes-ai-toggle" onClick={() => setAiPanelOpen(open => !open)} label={aiPanelOpen ? '收起 AI 面板' : '展开 AI 面板'}
                             icon={aiPanelOpen ? PanelRightClose : PanelRightOpen} aria-expanded={aiPanelOpen} aria-controls="notes-ai-panel"><span>{aiPanelOpen ? '收起' : '展开'}</span></EditorToolButton>
-                        <EditorToolButton onClick={() => setAiSettingsOpen(true)} label="AI 设置" icon={Settings} aria-haspopup="dialog" />
                     </div>
                     <div className="notes-ai-actions" role="group" aria-label="AI 功能">
                         <EditorToolButton onClick={() => {
@@ -91,14 +88,12 @@ export function NotesMain() {
 
                 <aside id="notes-ai-panel" className="notes-center-ai-panel" aria-label="AI 助手面板" hidden={!aiPanelOpen}>
                     {aiMode === 'weekly'
-                        ? <WeeklyReportPanel source={weeklySource ?? weeklyPreview} autoGenerate={weeklySource !== null}
+                        ? <WeeklyReportPanel onOpenAISettings={onOpenAISettings} source={weeklySource ?? weeklyPreview} autoGenerate={weeklySource !== null}
                             onPeriodChange={period => { setReportPeriod(period); setWeeklySource(null); }}
                             onGenerate={startWeeklyReport} />
-                        : <AIAssistantPanel key={activeNote?.id} note={activeNote && draft?.id === activeNote.id ? { ...activeNote, ...draft } : activeNote} />}
+                        : <AIAssistantPanel onOpenAISettings={onOpenAISettings} key={activeNote?.id} note={activeNote && draft?.id === activeNote.id ? { ...activeNote, ...draft } : activeNote} />}
                 </aside>
             </div>
-
-            {aiSettingsOpen && <AISettingsModal onClose={() => setAiSettingsOpen(false)} />}
         </div>
     );
 }

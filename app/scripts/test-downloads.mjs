@@ -197,11 +197,12 @@ async function testFavoriteDirectories(directory) {
   await add.getByRole('button', { name: '已记为常用', exact: true }).waitFor();
   await add.screenshot({ path: path.join(output, 'favorite-directories.png') });
   await add.getByRole('button', { name: '取消', exact: true }).click();
-  await page.getByRole('button', { name: '下载设置', exact: true }).click();
-  const preferences = page.getByRole('dialog', { name: '下载设置' });
+  await page.getByRole('button', { name: '设置', exact: true }).click();
+  await page.getByRole('tab', { name: '下载', exact: true }).click();
+  const preferences = page.getByRole('dialog', { name: '设置', exact: true });
   await preferences.getByRole('button', { name: `使用常用目录 ${favorites[0]}`, exact: true }).click();
   assert.equal(await preferences.getByRole('textbox', { name: '默认保存目录', exact: true }).inputValue(), favorites[0]);
-  await preferences.getByRole('button', { name: '取消', exact: true }).click();
+  await preferences.getByRole('button', { name: '关闭设置', exact: true }).click();
   assert.equal((await snapshot()).settings.directory, directory);
   return favorites;
 }
@@ -288,7 +289,7 @@ async function testDownloadSelectors(preferences) {
     const menu = preferences.getByRole('listbox', { name: label, exact: true });
     await menu.waitFor();
     assert.deepEqual(await menu.getByRole('option').evaluateAll(items => items.map(item => item.dataset.value)), values);
-    assert.equal(await menu.evaluate(node => node.closest('dialog')?.open), true, 'Menu is inside the modal top layer');
+    assert.equal(await menu.evaluate(node => !!node.closest('dialog[open], [role=dialog]')), true, 'Menu is inside the modal top layer');
     for (const option of await menu.getByRole('option').all()) {
       await option.scrollIntoViewIfNeeded();
       assert.equal(await option.evaluate(node => { const rect = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)); }), true, `${label} option is not covered or clipped`);
@@ -371,8 +372,9 @@ try {
     assert.equal(await add.getByRole('button', { name: '开始下载' }).isDisabled(), true);
     await add.screenshot({ path: path.join(output, 'add.png') });
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '下载设置', exact: true }).click();
-    const preferences = page.getByRole('dialog', { name: '下载设置' });
+    await page.getByRole('button', { name: '设置', exact: true }).click();
+    await page.getByRole('tab', { name: '下载', exact: true }).click();
+    const preferences = page.getByRole('dialog', { name: '设置', exact: true });
     await testDownloadSelectors(preferences);
     for (const height of [668, 500]) {
       await page.setViewportSize({ width: 1480, height });
@@ -419,13 +421,13 @@ try {
     const root = path.join(process.env.PROJECTTODO_TEST_DATA_DIR, 'downloads');
     const favorites = await testFavoriteDirectories(directory);
     assert.equal(state.settings.connections, 4);
-    await page.getByRole('button', { name: '下载设置', exact: true }).click();
-    const preferences = page.getByRole('dialog', { name: '下载设置' });
+    await page.getByRole('button', { name: '设置', exact: true }).click();
+    await page.getByRole('tab', { name: '下载', exact: true }).click();
+    const preferences = page.getByRole('dialog', { name: '设置', exact: true });
     await testDownloadSelectors(preferences);
     await preferences.getByRole('combobox', { name: '单文件分片数', exact: true }).click();
     await preferences.getByRole('option', { name: '32 分片', exact: true }).click();
     await preferences.getByRole('button', { name: '保存设置', exact: true }).click();
-    await preferences.waitFor({ state: 'hidden' });
     const savedToast = page.locator('.toast-item').filter({ hasText: '下载设置已保存' });
     await savedToast.waitFor();
     await savedToast.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished)));
@@ -441,6 +443,7 @@ try {
     await sleep(3200);
     assert.equal(await savedToast.isVisible(), true, 'Saved message remains readable after three seconds');
     await savedToast.waitFor({ state: 'hidden', timeout: 3000 });
+    await preferences.getByRole('button', { name: '关闭设置', exact: true }).click();
     assert.equal((await snapshot()).settings.connections, 32);
     const settings = { ...state.settings, connections: 32, concurrent: 1, limitKib: 256, notify: false };
     const info = await page.evaluate(url => window.__TAURI_INTERNALS__.invoke('downloads_inspect', { url }), `${base}/small.zip`);

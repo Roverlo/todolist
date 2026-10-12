@@ -96,7 +96,7 @@ try {
     const reminder = page.getByRole('button', { name: '我知道了', exact: true }); if (await reminder.isVisible()) await reminder.click();
     await page.getByTitle('切换到待办事项', { exact: true }).click();
     await page.getByRole('button', { name: '设置', exact: true }).click();
-    await page.getByRole('button', { name: 'ℹ️ 关于', exact: true }).click();
+    await page.getByRole('tab', { name: '关于与更新', exact: true }).click();
     await page.getByLabel('服务器地址', { exact: true }).fill(serverUrl);
     await page.getByRole('button', { name: '保存', exact: true }).click();
     await until(async () => assert.match(await page.locator('#update-server-feedback').innerText(), /地址已保存/));

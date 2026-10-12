@@ -93,6 +93,8 @@ try {
         assert.deepEqual(custom, { crossMonth: ['first', 'last'], single: ['first'], dirtyPast: ['last'], future: [], invalid: [true, true, true] });
         console.log('Passed: local week boundaries, edited date, draft overlay, exclusions, independent completion dates and escaped output');
     }
+    // Match the rendered app timezone, including runs near a week boundary.
+    process.env.TZ = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
     const now = Date.now(); const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
     const makeNote = (id, content, extra = {}) => ({ id, title: id, content, date: '2025-01-01', createdAt: monday.getTime() - 86400000, updatedAt: now - 1000, tags: [], ...extra });
     const fixtures = [makeNote('本周随记', '<p>正在确认部署方案，计划 <time data-type="noteDate" datetime="2026-10-01">2026-10-01</time> 提交验收资料。</p><ul data-type="taskList"><li data-type="taskItem" data-checked="true" data-completed-at="' + new Date(now - 1000).toISOString() + '"><p>原计划 <time data-type="noteDate" datetime="2026-09-25">2026-09-25</time> 完成接口回归测试</p></li></ul>'),
@@ -187,7 +189,7 @@ try {
     await close(); await seed(fixtures, false); const unconfiguredCount = requests.length; await open();
     await panel.getByRole('button', { name: '配置 AI', exact: true }).waitFor(); assert.equal(requests.length, unconfiguredCount);
     await panel.getByRole('button', { name: '配置 AI', exact: true }).click(); await page.locator('#ai-provider-name').waitFor();
-    await page.locator('.ai-settings-close-btn').click(); await page.locator('#ai-provider-name').waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: '关闭设置', exact: true }).click(); await page.locator('#ai-provider-name').waitFor({ state: 'hidden' });
     await close(); await seed([], true); await open(); await page.getByText('所选日期内没有可汇总的随记', { exact: true }).waitFor(); assert.equal(requests.length, unconfiguredCount); await close();
     await seed(); const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     await body.click(); await body.press('Control+End'); await page.keyboard.type('LIVE-DRAFT-WEEKLY');

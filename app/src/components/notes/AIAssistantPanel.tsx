@@ -9,7 +9,6 @@ import { getNoteDate, isNoteDate } from '../../utils/noteDate';
 import { createAIProvider } from '../../services/ai';
 import { SYSTEM_PROMPT_TASK_EXTRACTION } from '../../services/ai/prompts';
 import { TaskPreviewCard } from './TaskPreviewCard';
-import { AISettingsModal } from './AISettingsModal';
 import { noteContentForAI, parseGeneratedTasks } from '../../utils/noteAI';
 
 // 解析周期提示为 schedule 对象
@@ -73,9 +72,10 @@ function parseRecurringHint(hint: string | undefined): RecurringTemplate['schedu
 
 interface AIAssistantPanelProps {
     note: Note | null;
+    onOpenAISettings: () => void;
 }
 
-export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
+export function AIAssistantPanel({ note, onOpenAISettings }: AIAssistantPanelProps) {
     const aiSettings = useAppStore((state) => state.settings.ai);
     const addTask = useAppStore((state) => state.addTask);
     const addRecurringTemplate = useAppStore((state) => state.addRecurringTemplate);
@@ -89,7 +89,6 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
         && activeProviderConfig.model?.trim()
         && activeProviderConfig.apiEndpoint?.trim()
     );
-    const [settingsOpen, setSettingsOpen] = useState(false);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
     const request = useRef<AbortController | null>(null);
@@ -141,7 +140,7 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
 
     const handleGenerate = async () => {
         if (!note || !plainText || request.current) return;
-        if (!activeProviderConfig || !hasAIConfig) { setSettingsOpen(true); return; }
+        if (!activeProviderConfig || !hasAIConfig) { onOpenAISettings(); return; }
         const controller = new AbortController();
         request.current = controller;
         const timeout = window.setTimeout(() => controller.abort('timeout'), 120000);
@@ -372,7 +371,6 @@ export function AIAssistantPanel({ note }: AIAssistantPanelProps) {
             {tasks.length > 0 && <div className="ai-actions">
                 <button className="btn btn-primary" type="button" onClick={handleSave} disabled={selectedCount === 0 || loading}>加入待办（{selectedCount}）</button>
             </div>}
-            {settingsOpen && <AISettingsModal onClose={() => setSettingsOpen(false)} onSaved={() => setSettingsOpen(false)} />}
         </div>
     );
 }

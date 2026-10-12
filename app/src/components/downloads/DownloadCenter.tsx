@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { ArrowDownToLine, CheckCheck, CircleAlert, FolderOpen, List, Pause, Play, Plus, RotateCcw, Search, Settings, Star, Trash2, X, Palette } from 'lucide-react';
+import { ArrowDownToLine, CheckCheck, CircleAlert, FolderOpen, List, Pause, Play, Plus, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
 import { useDownloadStore, matchesFilter, formatBytes, canDownloadAction, directoryKey, type DownloadBatchAction, type DownloadFilter, type DownloadSettings, type DownloadTask } from '../../state/downloadStore';
 import { useToastStore } from '../../state/toastStore';
 import { extractDownloadLinks, importDownloadFile } from '../../utils/downloadImport';
@@ -135,34 +135,34 @@ function AddDownload({ onClose }: { onClose: () => void }) {
   </form></Modal>;
 }
 
-function DownloadPreferences({ onClose }: { onClose: () => void }) {
+export function DownloadPreferences() {
   const { settings, request, busy } = useDownloadStore();
   const [draft, setDraft] = useState<DownloadSettings>(settings);
   const [error, setError] = useState('');
-  return <Modal title="下载设置" onClose={onClose}><form onSubmit={async event => {
-    event.preventDefault(); setError('');
-    try { await request({ action: 'settings', settings: draft }); onClose(); useToastStore.getState().addToast('下载设置已保存', 'success', 4500); }
+  return <form className="download-preferences" onSubmit={async event => {
+    event.preventDefault(); if (busy) return; setError('');
+    try { await request({ action: 'settings', settings: draft }); useToastStore.getState().addToast('下载设置已保存', 'success', 4500); }
     catch (reason) { setError(String(reason)); }
-  }}>
+  }}><fieldset className="download-settings-fields" disabled={busy}>
     <DownloadDirectory label="默认保存目录" value={draft.directory} onChange={directory => setDraft(current => ({ ...current, directory }))} onError={setError} />
-    <p className="download-help">仅影响新建下载，已有任务保留原来的保存位置。</p>
+    <p className="download-help">默认目录仅影响新建下载；常用目录的添加和移除会立即保存。</p>
     <div className="download-setting-grid"><div className="download-setting-field"><span>同时下载数</span><CustomSelect aria-label="同时下载数" value={draft.concurrent} onChange={value => setDraft({ ...draft, concurrent: Number(value) })} options={[1,2,3,4,5,6,7,8].map(n => ({ value: String(n), label: `${n} 个文件` }))} /></div>
     <div className="download-setting-field"><span>单文件分片数</span><CustomSelect aria-label="单文件分片数" aria-describedby="download-connections-help" value={draft.connections} onChange={value => setDraft({ ...draft, connections: Number(value) })} options={[1,4,8,16,32,64].map(n => ({ value: String(n), label: n === 1 ? '1（不分片）' : `${n} 分片` }))} /></div></div>
     <p id="download-connections-help" className="download-help">多路并行下载可提速，实际分片数取决于文件大小和服务器支持，并非越多越快。新任务采用此设置；已有任务暂停后继续生效。</p>
     <label>总速度上限（KiB/s）<input required type="number" min="0" max="1048576" step="1" value={draft.limitKib} onChange={e => setDraft({ ...draft, limitKib: Number(e.target.value) })} /></label>
-    <p className="download-help">填 0 表示不限速；1024 KiB/s ≈ 1 MiB/s。设置立即生效。</p>
+    <p className="download-help">填 0 表示不限速；1024 KiB/s ≈ 1 MiB/s。保存后立即生效。</p>
     <label className="download-checkbox"><input type="checkbox" checked={draft.notify} onChange={e => setDraft({ ...draft, notify: e.target.checked })} />下载完成时显示系统通知</label>
     <details className="download-license"><summary>下载引擎与开源许可</summary><p>aria2 1.37.0-motrix.16 · GPL-2.0-or-later<br />Copyright © Tatsuhiro Tsujikawa and contributors</p><p>此引擎按现状提供，不提供担保。对应源码：<br /><a href="https://github.com/motrixapp/aria2/tree/v1.37.0-motrix.16" target="_blank" rel="noreferrer">motrixapp/aria2 · v1.37.0-motrix.16</a></p><pre>{engineLicense}</pre></details>
     {error && <p role="alert" className="download-error">{error}</p>}
     {!isTauri() && <p className="download-help">当前为浏览器预览，下载设置在 Windows 桌面版中保存。</p>}
-    <footer><button type="button" onClick={onClose} disabled={busy}>取消</button><button className="download-primary" type="submit" disabled={busy || !isTauri()}>{busy ? '保存中…' : '保存设置'}</button></footer>
-  </form></Modal>;
+    <footer><button type="button" onClick={() => { setDraft(settings); setError(''); }} disabled={busy}>还原修改</button><button className="download-primary" type="submit" disabled={busy || !isTauri()}>{busy ? '保存中…' : '保存设置'}</button></footer>
+  </fieldset></form>;
 }
 
-export function DownloadCenter({ onTheme }: { onTheme: () => void }) {
+export function DownloadCenter() {
   const { tasks, filter, settings, busy, error, loaded, request, requestBatch, refresh } = useDownloadStore();
   const [query, setQuery] = useState('');
-  const [modal, setModal] = useState<'add' | 'settings' | null>(null);
+  const [modal, setModal] = useState<'add' | null>(null);
   const [removing, setRemoving] = useState<DownloadTask[] | null>(null);
   const [selection, setSelection] = useState<Set<string>>(() => new Set());
   const [batchRunning, setBatchRunning] = useState(false);
@@ -192,8 +192,6 @@ export function DownloadCenter({ onTheme }: { onTheme: () => void }) {
   return <section className="download-center" aria-label="下载中心">
     <header className="download-header"><div><h1>下载中心</h1><p>多线程分片下载，充分利用带宽 · 支持断点续传，中断后接着下</p><p className="download-benefits-note">提速效果受带宽和服务器限制（如酒店出口限速）；断点续传需服务器支持。</p></div><div className="download-header-actions">
       <button className="download-primary" disabled={!loaded || busy} onClick={() => setModal('add')}><Plus size={17} />新建下载</button>
-      <button onClick={() => setModal('settings')} disabled={!loaded || busy}><Settings size={17} />下载设置</button>
-      <button className="download-icon" onClick={onTheme} aria-label="更改主题色" title="更改主题色"><Palette size={18} /></button>
     </div></header>
     {!isTauri() && <div className="download-notice"><CircleAlert size={16} />浏览器预览 · 文件下载在 Windows 桌面版中运行，可先查看界面和设置。</div>}
     {error && <div className="download-notice download-error" role="alert"><CircleAlert size={16} /><span>{error}</span><button disabled={busy} onClick={() => void refresh()}>刷新</button></div>}
@@ -231,7 +229,6 @@ export function DownloadCenter({ onTheme }: { onTheme: () => void }) {
     </div>
     <footer className="download-footer"><span>共 {tasks.length} 项 · 已完成 {tasks.filter(t => t.status === 'complete').length} 项</span><span>HTTP / HTTPS</span></footer>
     {modal === 'add' && <AddDownload onClose={() => setModal(null)} />}
-    {modal === 'settings' && <DownloadPreferences onClose={() => setModal(null)} />}
     {removing && <Modal title={removing.length > 1 ? '批量删除下载记录' : '移除下载记录'} locked={busy} onClose={() => setRemoving(null)}><p>{removing.length > 1 ? `停止并删除选中的 ${removing.length} 项下载记录？` : `停止“${removing[0].name}”并移除记录？`}已下载的文件和续传文件会保留在保存目录。</p><footer><button onClick={() => setRemoving(null)} disabled={busy}>取消</button><button className="download-primary" disabled={busy} onClick={() => void runBatch('remove', removing)}>{busy ? '正在删除…' : removing.length > 1 ? `删除 ${removing.length} 项记录` : '移除记录'}</button></footer></Modal>}
   </section>;
 }

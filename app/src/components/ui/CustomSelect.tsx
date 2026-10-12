@@ -97,7 +97,7 @@ export const CustomSelect = ({ value, options, onChange, placeholder, className,
               {option.label}{option.value === String(value) && <Check size={14} aria-hidden="true" />}
             </button>
           ))}
-        </div>, triggerRef.current?.closest('dialog[open]') ?? document.body
+        </div>, triggerRef.current?.closest('dialog[open], [role=dialog]') ?? document.body
       )}
     </div>
   );

@@ -1,20 +1,18 @@
 import { useAppStoreShallow } from '../../state/appStore';
 import { TaskSidebarContent } from './TaskSidebarContent';
 import { NotesSidebar } from '../notes/NotesSidebar';
-import { Icon } from '../ui/Icon';
 import clsx from 'clsx';
-import { useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { DownloadSidebar } from '../downloads/DownloadCenter';
-import { ListTodo, FileText, ArrowDownToLine } from 'lucide-react';
+import { ListTodo, FileText, ArrowDownToLine, Settings } from 'lucide-react';
 
 interface AppSidebarProps {
     collapsed: boolean;
+    onOpenSettings: () => void;
     onToggleCollapse: () => void;
     onProjectSelected?: () => void; // Passed to TaskSidebarContent
 }
 
-export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: AppSidebarProps) => {
+export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected, onOpenSettings }: AppSidebarProps) => {
     const { activeView, setActiveView, selectedNoteId, setSelectedNoteId, addNote } = useAppStoreShallow((state) => ({
         activeView: state.activeView,
         setActiveView: state.setActiveView,
@@ -24,22 +22,6 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: A
     }));
 
 
-
-    const [isAboutHovered, setIsAboutHovered] = useState(false);
-    const [tooltipPos, setTooltipPos] = useState<{ top: number, left: number } | null>(null);
-    const aboutRef = useRef<HTMLDivElement>(null);
-
-    const handleMouseEnter = () => {
-        if (aboutRef.current) {
-            const rect = aboutRef.current.getBoundingClientRect();
-            // Calculate position: below the element, aligned left
-            setTooltipPos({
-                top: rect.bottom + 8,
-                left: rect.left
-            });
-            setIsAboutHovered(true);
-        }
-    };
 
     const handleCreateNote = () => {
         const newNote = addNote({ content: '' });
@@ -58,6 +40,7 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: A
                     >
                         »
                     </button>
+                    <button className="sidebar-settings" onClick={onOpenSettings} aria-label="设置" title="设置" aria-haspopup="dialog"><Settings size={16} aria-hidden="true" /></button>
                 </div>
             ) : (
                 <>
@@ -76,46 +59,8 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: A
 
 
 
-                    {/* Utility Row: About + Collapse Button */}
-                    <div className="sidebar-utility-row" style={{ position: 'relative' }}>
-                        <div
-                            className="about-pill"
-                            ref={aboutRef}
-                            onMouseEnter={handleMouseEnter}
-                            onMouseLeave={() => setIsAboutHovered(false)}
-                        >
-                            <Icon name="info" size={14} />
-                            <span className="about-text-label">关于</span>
-                        </div>
-
-                        {/* Custom Tooltip Portal */}
-                        {isAboutHovered && tooltipPos && createPortal(
-                            <div
-                                className="custom-about-tooltip"
-                                style={{
-                                    top: tooltipPos.top,
-                                    left: tooltipPos.left,
-                                    position: 'fixed', // Ensure fixed positioning
-                                    zIndex: 9999 // Ensure topmost z-index
-                                }}
-                            >
-                                <div className="tooltip-section">
-                                    <span className="tooltip-label">作者：</span>
-                                    <span>网络服务处 罗发文 (luo.fawen@zte.com.cn)</span>
-                                </div>
-                                <div className="tooltip-divider" />
-                                <div className="tooltip-section">
-                                    <span className="tooltip-label">特别鸣谢：</span>
-                                    <div className="tooltip-desc">
-                                        本软件在测试与完善过程中，得到了以下领导和同事的大力支持与专业指导，在此一并表示诚挚感谢：
-                                    </div>
-                                    <div className="tooltip-names">
-                                        莫佳运、罗备、杨帅、李良泳、张夕淳、贾君、王阳、戈少贤、桂树奇
-                                    </div>
-                                </div>
-                            </div>,
-                            document.body
-                        )}
+                    <div className="sidebar-utility-row">
+                        <button className="sidebar-settings" onClick={onOpenSettings} aria-label="设置" title="设置" aria-haspopup="dialog"><Settings size={14} aria-hidden="true" /><span>设置</span></button>
 
                         <button
                             className='sidebar-collapse-btn expanded'

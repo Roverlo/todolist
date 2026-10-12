@@ -1,20 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { AlertDialog } from '../ui/AlertDialog';
-import { useAppStore } from '../../state/appStore';
+import { useAppStore, waitForAppSave } from '../../state/appStore';
 import type { AIProviderProfile } from '../../types';
 import { normalizeAIEndpoint } from '../../services/aiConfig';
 import { testAIConnection } from '../../services/aiService';
 import './AISettingsModal.css';
 
-interface AISettingsModalProps {
-    onClose: () => void;
-    onSaved?: () => void;
+interface AISettingsContentProps {
+    onSavingChange: (saving: boolean) => void;
 }
 
 const NEW_PROVIDER_ID = '__new__';
 
-export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
+export function AISettingsContent({ onSavingChange }: AISettingsContentProps) {
     const aiSettings = useAppStore((state) => state.settings.ai);
     const updateAISettings = useAppStore((state) => state.updateAISettings);
     const providers = aiSettings?.providers ?? [];
@@ -23,33 +22,18 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
     );
     const activeProvider = providers.find(provider => provider.id === selectedProviderId);
 
-    const [providerName, setProviderName] = useState('');
-    const [apiKey, setApiKey] = useState('');
-    const [model, setModel] = useState('');
-    const [endpoint, setEndpoint] = useState('');
+    const [providerName, setProviderName] = useState(activeProvider?.name ?? '');
+    const [apiKey, setApiKey] = useState(activeProvider?.apiKey ?? '');
+    const [model, setModel] = useState(activeProvider?.model ?? '');
+    const [endpoint, setEndpoint] = useState(activeProvider?.apiEndpoint ?? '');
     const [showKey, setShowKey] = useState(false);
     const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
     const [testMessage, setTestMessage] = useState('');
     const [alertOpen, setAlertOpen] = useState(false);
     const [alertContent, setAlertContent] = useState('');
 
-    useEffect(() => {
-        if (selectedProviderId === NEW_PROVIDER_ID) {
-            setProviderName('');
-            setApiKey('');
-            setModel('');
-            setEndpoint('');
-            return;
-        }
-
-        const provider = aiSettings?.providers.find(item => item.id === selectedProviderId);
-        if (provider) {
-            setProviderName(provider.name);
-            setApiKey(provider.apiKey || '');
-            setModel(provider.model || '');
-            setEndpoint(provider.apiEndpoint || '');
-        }
-    }, [aiSettings, selectedProviderId]);
+    const [saving, setSaving] = useState(false);
+    const [saveMessage, setSaveMessage] = useState('');
 
     let endpointPreview = '';
     let endpointError = '';
@@ -81,6 +65,12 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
     });
 
     const selectProvider = (id: string) => {
+        const provider = providers.find(item => item.id === id);
+        setProviderName(provider?.name ?? '');
+        setApiKey(provider?.apiKey ?? '');
+        setModel(provider?.model ?? '');
+        setEndpoint(provider?.apiEndpoint ?? '');
+        setSaveMessage('');
         setSelectedProviderId(id);
         setShowKey(false);
         clearTestStatus();
@@ -108,7 +98,9 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        if (saving) return;
+        setSaveMessage('');
         if (!apiKey.trim()) return showFormError('请输入 API Key');
         if (!model.trim()) return showFormError('请输入模型名称');
 
@@ -127,15 +119,20 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
             ? [...providers, profile]
             : providers.map(provider => provider.id === id ? profile : provider);
 
-        setProviderName(profile.name);
-        setEndpoint(normalizedEndpoint);
-        setSelectedProviderId(id);
-        clearTestStatus();
+        setSaving(true); onSavingChange(true);
         updateAISettings({ activeProviderId: id, providers: updatedProviders });
-        onSaved?.();
+        try {
+            await waitForAppSave();
+            setProviderName(profile.name); setEndpoint(normalizedEndpoint); setSelectedProviderId(id);
+            clearTestStatus(); setSaveMessage('AI 配置已保存并选中');
+        } catch {
+            updateAISettings(aiSettings ?? { providers: [] });
+            setSaveMessage('AI 配置保存失败，原配置已保留。请检查数据目录后重试。');
+        } finally { setSaving(false); onSavingChange(false); }
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
+        if (saving) return;
         if (!activeProvider || !window.confirm(`确定删除“${activeProvider.name}”吗？`)) return;
 
         const updatedProviders = providers.filter(provider => provider.id !== activeProvider.id);
@@ -143,13 +140,21 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
             ? updatedProviders[0]?.id
             : aiSettings?.activeProviderId;
 
+        setSaving(true); onSavingChange(true);
         updateAISettings({ activeProviderId: nextActiveId, providers: updatedProviders });
-        selectProvider(nextActiveId ?? updatedProviders[0]?.id ?? NEW_PROVIDER_ID);
+        try {
+            await waitForAppSave();
+            selectProvider(nextActiveId ?? updatedProviders[0]?.id ?? NEW_PROVIDER_ID);
+            setSaveMessage('AI 配置已删除');
+        } catch {
+            updateAISettings(aiSettings ?? { providers: [] });
+            setSaveMessage('删除失败，原配置已保留。请检查数据目录后重试。');
+        } finally { setSaving(false); onSavingChange(false); }
     };
 
     return (
-        <div className="ai-settings-overlay">
-            <div className="ai-settings-modal">
+        <>
+            <fieldset className="ai-settings-modal" disabled={saving || testStatus === 'testing'}>
                 <aside className="ai-settings-sidebar">
                     <div className="ai-settings-sidebar-header">AI 配置列表</div>
                     <div className="ai-settings-provider-list">
@@ -196,9 +201,6 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
                 <div className="ai-settings-content">
                     <div className="ai-settings-header">
                         <h2 className="ai-settings-title">配置 AI 接口</h2>
-                        <button className="ai-settings-close-btn" onClick={onClose} aria-label="关闭">
-                            <Icon name="close" size={20} />
-                        </button>
                     </div>
 
                     <div className="ai-settings-form">
@@ -281,6 +283,7 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
                     </div>
 
                     <div className="ai-settings-footer">
+                        {saveMessage && <p className="ai-save-status" role="status">{saveMessage}</p>}
                         <div className="ai-footer-row">
                             <div className="ai-test-area">
                                 <button
@@ -321,12 +324,12 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
                             )}
                             <button className="btn btn-primary" onClick={handleSave} type="button">
                                 <Icon name="check" size={14} />
-                                保存并选中
+                                {saving ? '保存中…' : '保存并选中'}
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </fieldset>
 
             <AlertDialog
                 open={alertOpen}
@@ -335,6 +338,6 @@ export function AISettingsModal({ onClose, onSaved }: AISettingsModalProps) {
                 variant="danger"
                 onClose={() => setAlertOpen(false)}
             />
-        </div>
+        </>
     );
 }

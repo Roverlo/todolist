@@ -98,11 +98,12 @@ try {
             colors.push(await check('.editor-insert-dialog .editor-dialog-primary', 'backgroundColor', '--primary'));
             colors.push(await check('.editor-date-preview .note-date-chip', 'color', '--primary'));
             await page.getByRole('button', { name: '关闭插入窗口', exact: true }).click();
-            await page.getByRole('button', { name: 'AI 设置', exact: true }).click();
+            await page.getByRole('button', { name: '设置', exact: true }).click();
+            await page.getByRole('tab', { name: 'AI 配置', exact: true }).click();
             await page.locator('.ai-btn-add').click();
             await page.locator('.ai-provider-item:not(.active)').hover();
             colors.push(await check('.ai-provider-item:not(.active)', 'backgroundColor', '--primary-soft'));
-            await page.locator('.ai-settings-modal').getByRole('button', { name: '关闭', exact: true }).click();
+            await page.getByRole('button', { name: '关闭设置', exact: true }).click();
             await page.mouse.move(0, 0);
         }
         for (const [selector, expected] of [

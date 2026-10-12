@@ -51,7 +51,7 @@ const openSettings = async () => {
     if (await reminder.isVisible()) await reminder.click();
     await page.getByTitle('切换到待办事项', { exact: true }).click();
     await page.getByRole('button', { name: '设置', exact: true }).click();
-    await page.getByRole('button', { name: 'ℹ️ 关于', exact: true }).click();
+    await page.getByRole('tab', { name: '关于与更新', exact: true }).click();
 };
 const field = page.getByLabel('服务器地址', { exact: true });
 const feedback = page.locator('#update-server-feedback');
@@ -163,7 +163,7 @@ try {
             return { right: Math.max(...buttons.map(x => x.right)), left: Math.min(...buttons.map(x => x.left)), viewport: innerWidth };
         });
         assert.ok(bounds.left >= 0 && bounds.right <= bounds.viewport, 'Update controls must remain within the viewport');
-        const dialog = await page.locator('.create-dialog').boundingBox();
+        const dialog = await page.locator('.settings-center').boundingBox();
         assert.ok(dialog.y >= 0 && dialog.y + dialog.height <= height, 'Settings dialog must fit a short window');
         await page.getByLabel('检查间隔').scrollIntoViewIfNeeded();
         const interval = await page.getByLabel('检查间隔').boundingBox();

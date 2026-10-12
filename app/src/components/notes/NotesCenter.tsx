@@ -4,15 +4,15 @@ import { Icon } from '../ui/Icon';
 import { NotesSidebar } from './NotesSidebar';
 import { NoteEditor } from './NoteEditor';
 import { AIAssistantPanel } from './AIAssistantPanel';
-import { AISettingsModal } from './AISettingsModal';
 import './NotesCenter.css';
 import type { Note } from '../../types';
 
 interface NotesCenterProps {
+    onOpenAISettings: () => void;
     onClose?: () => void;
 }
 
-export function NotesCenter({ onClose }: NotesCenterProps) {
+export function NotesCenter({ onClose, onOpenAISettings }: NotesCenterProps) {
     const notes = useAppStore((state) => state.notes);
     const addNote = useAppStore((state) => state.addNote);
     const updateNote = useAppStore((state) => state.updateNote);
@@ -21,7 +21,6 @@ export function NotesCenter({ onClose }: NotesCenterProps) {
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
     // const [isCreating, setIsCreating] = useState(false); // Removed: Immediate creation logic
     const [aiPanelOpen, setAiPanelOpen] = useState(true);
-    const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
 
     // 初始化：刷新标签计数
     useEffect(() => {
@@ -73,7 +72,7 @@ export function NotesCenter({ onClose }: NotesCenterProps) {
                         <span>{aiPanelOpen ? '隐藏' : '显示'} AI</span>
                     </button>
                     <button
-                        onClick={() => setAiSettingsOpen(true)}
+                        onClick={() => onOpenAISettings()}
                         className="btn btn-light"
                         title="AI 设置"
                     >
@@ -114,7 +113,7 @@ export function NotesCenter({ onClose }: NotesCenterProps) {
                 {/* 右侧 AI 面板 */}
                 {aiPanelOpen && (
                     <aside className="notes-center-ai-panel">
-                        <AIAssistantPanel
+                        <AIAssistantPanel onOpenAISettings={onOpenAISettings}
                             note={activeNote}
                         />
                     </aside>
@@ -122,9 +121,6 @@ export function NotesCenter({ onClose }: NotesCenterProps) {
             </div>
 
             {/* AI 设置弹窗 */}
-            {aiSettingsOpen && (
-                <AISettingsModal onClose={() => setAiSettingsOpen(false)} />
-            )}
         </div>
     );
 }

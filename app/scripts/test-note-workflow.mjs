@@ -133,7 +133,7 @@ try {
     assert.equal(await panel.locator('.ai-panel-generate-btn').isEnabled(), true, 'Untitled notes with content can generate tasks');
     await page.screenshot({ path: join(output, 'ai-untitled-note.png') });
     assert.equal(await page.getByRole('button', { name: '一键生成待办事项', exact: true }).getAttribute('aria-pressed'), 'true');
-    assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).locator('svg.lucide-settings').count(), 1);
+    assert.equal(await page.getByRole('button', { name: '设置', exact: true }).locator('svg.lucide-settings').count(), 1);
     assert.match(await page.getByRole('button', { name: '一键生成待办事项', exact: true }).innerText(), /一键生成待办事项/);
     await page.getByRole('combobox', { name: '编号样式', exact: true }).click();
     await page.screenshot({ path: join(output, 'editor-dropdown.png') });
@@ -146,7 +146,9 @@ try {
     await page.locator('#ai-model').fill('mock-model');
     await page.locator('#ai-endpoint').fill(endpoint);
     await page.getByRole('button', { name: '保存并选中', exact: true }).click();
-    assert.equal(await page.locator('.ai-settings-modal').count(), 0, 'Saving config should return directly to generation');
+    await page.getByText('AI 配置已保存并选中', { exact: true }).waitFor();
+    await page.getByRole('button', { name: '关闭设置', exact: true }).click();
+    assert.equal(await page.locator('.ai-settings-modal').count(), 0, 'Closing shared settings returns to generation');
     const generate = () => panel.locator('.ai-panel-generate-btn').click();
     replies.push({ delay: 15000, payload: { tasks: [{ title: '不应出现的旧结果' }] } });
     await body.fill('最新输入：周三完成接口联调，每周日整理周报。');
@@ -335,8 +337,10 @@ try {
     }
     assert.ok(before.height <= 54, 'Filter row should be no taller than the stats bar');
     assert.doesNotMatch(await page.locator('.main-header').innerText(), /🔍|⚙️/);
-    await page.locator('.about-pill').hover();
-    assert.match(await page.locator('.tooltip-names').innerText(), /桂树奇/);
+    await page.getByRole('button', { name: '设置', exact: true }).click();
+    await page.getByRole('tab', { name: '关于与更新', exact: true }).click();
+    assert.match(await page.locator('.settings-credits').innerText(), /桂树奇/);
+    await page.getByRole('button', { name: '关闭设置', exact: true }).click();
     assert.deepEqual(errors, []);
     if (native) {
         const persisted = JSON.parse(await readFile(dataPath, 'utf8')).state;

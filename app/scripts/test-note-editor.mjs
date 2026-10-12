@@ -45,8 +45,8 @@ try {
     const reminder = page.getByRole('button', { name: '我知道了' });
     if (await reminder.isVisible()) await reminder.click();
     await page.getByTitle('切换到随记中心', { exact: true }).click();
-    await page.getByRole('button', { name: 'AI 设置', exact: true }).waitFor();
-    assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'Settings must remain available without a selected note');
+    await page.getByRole('button', { name: '设置', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: '设置', exact: true }).count(), 1, 'Settings must remain available without a selected note');
     await page.getByRole('button', { name: '创建新随记' }).click();
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
     await body.waitFor();
@@ -1150,7 +1150,7 @@ try {
     const toolbarHeight = (await page.getByRole('toolbar').boundingBox()).height;
     assert.ok(toolbarHeight <= 86, 'The toolbar should occupy only two compact rows');
     assert.equal(await page.locator('.notes-center-header').count(), 0, 'Editing must not reserve a separate title bar');
-    assert.equal(await page.locator('.notes-ai-tools').getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'AI settings belong to the peer AI section');
+    assert.equal(await page.locator('.sidebar').getByRole('button', { name: '设置', exact: true }).count(), 1, 'Settings use the shared sidebar entry');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
     assert.equal(await page.getByLabel('更多工具', { exact: true }).count(), 0, 'Tools should be directly accessible');
     for (const name of ['插入日期', '查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线', '未完成在前', '已完成在前']) {
@@ -1191,7 +1191,7 @@ try {
     await page.getByRole('button', { name: /^回收站/ }).click();
     await page.locator('.notes-center-header').waitFor();
     assert.equal(await page.getByRole('toolbar').count(), 0, 'Trash must not retain editing tools');
-    assert.equal(await page.getByRole('button', { name: 'AI 设置', exact: true }).count(), 1, 'Trash must retain settings access');
+    assert.equal(await page.getByRole('button', { name: '设置', exact: true }).count(), 1, 'Trash must retain settings access');
     await page.evaluate(async () => (await import('/src/state/appStore.ts')).useAppStore.getState().setNoteViewMode('tree'));
     await body.waitFor();
     console.log(`Passed: directly accessible two-row toolbar (${toolbarHeight}px), narrow-window wrapping, image/table controls, empty/trash views and stable peer AI entries at five desktop widths`);

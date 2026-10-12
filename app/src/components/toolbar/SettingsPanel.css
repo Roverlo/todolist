@@ -1,0 +1,69 @@
+.sidebar-settings { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); cursor: pointer; font: inherit; font-size: 12px; }
+.sidebar-settings:hover { color: var(--primary); border-color: var(--primary); }
+.sidebar-collapsed-toggle .sidebar-settings { padding: 6px; margin-top: 12px; }
+.settings-overlay { align-items: center; padding: 24px; }
+.settings-center { display: flex; flex-direction: column; width: min(1040px, 100%); height: min(760px, calc(100dvh - 48px)); color: var(--text-main); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 24px 60px #0f172a40; overflow: hidden; }
+.settings-center button { cursor: pointer; font: inherit; }
+.settings-center button:disabled { opacity: .5; cursor: not-allowed; }
+.settings-center :focus-visible, .sidebar-settings:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.settings-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.settings-header h2 { margin: 0; font-size: 20px; }
+.settings-header p, .settings-section-heading p { margin: 5px 0 0; font-size: 12px; color: var(--text-subtle); line-height: 1.6; }
+.settings-close { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary); }
+.settings-close:hover { background: var(--primary-soft); }
+.settings-layout { display: grid; grid-template-columns: 172px minmax(0, 1fr); min-height: 0; flex: 1; }
+.settings-nav { display: flex; flex-direction: column; gap: 6px; padding: 18px 12px; border-right: 1px solid var(--border); background: var(--bg); }
+.settings-nav button { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px 10px; border-radius: 8px; border: 0; background: transparent; color: var(--text-secondary); font-size: 13px; white-space: nowrap; }
+.settings-nav button:hover, .settings-nav button[aria-selected=true] { background: var(--primary-soft); color: var(--primary); }
+.settings-nav button[aria-selected=true] { font-weight: 600; }
+.settings-content { min-width: 0; overflow: auto; padding: 24px; }
+.settings-section-heading { margin-bottom: 20px; }
+.settings-section-heading h3 { margin: 0; font-size: 17px; }
+.settings-center [hidden] { display: none !important; }
+.settings-fields { display: flex; flex-direction: column; gap: 14px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.settings-card, .settings-switch, .settings-action { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 16px; }
+.settings-card h4 { margin: 0 0 12px; font-size: 13px; }
+.settings-card p, .settings-data-help { color: var(--text-subtle); font-size: 12px; line-height: 1.8; }
+.settings-data-help { padding: 0 4px; }
+.settings-data-help p { margin: 0 0 6px; }
+.settings-themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.settings-themes button, .settings-choices button { display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-main); padding: 10px; font-size: 12px; }
+.settings-themes button[aria-pressed=true], .settings-choices button[aria-pressed=true] { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.settings-themes button span { width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0; }
+.settings-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.settings-switch, .settings-action { display: flex; align-items: center; justify-content: space-between; gap: 16px; text-align: left; }
+.settings-switch strong, .settings-action strong { display: block; font-size: 13px; font-weight: 500; color: var(--text-main); }
+.settings-switch small, .settings-action small { display: block; margin-top: 5px; font-size: 12px; color: var(--text-subtle); line-height: 1.6; overflow-wrap: anywhere; }
+.settings-switch input { width: 18px; height: 18px; accent-color: var(--primary); flex-shrink: 0; }
+.settings-action:hover { border-color: var(--primary); }
+.settings-action svg { color: var(--text-subtle); flex-shrink: 0; }
+.settings-credits { margin-top: 18px; }
+.settings-error { color: #b42318; font-size: 13px; }
+.settings-center .ai-settings-modal { margin: 0; padding: 0; min-width: 0; box-sizing: border-box; width: 100%; max-width: none; height: min(530px, calc(100dvh - 255px)); min-height: 300px; box-shadow: none; border: 1px solid var(--border); border-radius: 10px; z-index: auto; animation: none; }
+.settings-center .ai-settings-sidebar { width: 156px; min-width: 156px; height: auto; }
+.settings-center .ai-settings-content { height: 100%; }
+.settings-center .ai-settings-header { display: none; }
+.settings-center .ai-settings-form { padding: 18px; gap: 16px; overflow: auto; }
+.settings-center .ai-settings-footer { padding: 16px 18px; }
+.settings-center .ai-footer-row { flex-wrap: wrap; gap: 10px; }
+.settings-center .ai-settings-sidebar-header { padding: 18px 12px 10px; }
+.settings-center .ai-settings-sidebar-footer { padding: 12px; }
+.settings-center .ai-save-status { margin: 0; font-size: 12px; line-height: 1.7; }
+.settings-center .download-preferences { max-width: 660px; }
+@media (max-width: 760px) {
+  .settings-overlay { padding: 12px; }
+  .settings-center { height: calc(100dvh - 24px); }
+  .settings-layout { grid-template-columns: 132px minmax(0, 1fr); }
+  .settings-nav { padding: 12px 6px; }
+  .settings-nav button { gap: 6px; padding: 10px 6px; font-size: 12px; }
+  .settings-content { padding: 16px; }
+  .settings-themes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-center .ai-settings-modal { flex-direction: column !important; height: auto; }
+  .settings-center .ai-settings-sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); }
+  .settings-center .ai-settings-provider-list { max-height: 150px; }
+}
+
+.settings-compact-entry { display: none; }
+@media (max-width: 840px) {
+  .settings-compact-entry { display: flex; position: fixed; right: 18px; bottom: 18px; z-index: 50; padding: 10px 14px; box-shadow: 0 4px 16px #0f172a22; }
+}

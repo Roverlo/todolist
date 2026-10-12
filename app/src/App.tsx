@@ -12,13 +12,9 @@ import { SingleTaskModal } from './components/toolbar/SingleTaskModal';
 import { RecurringTaskModal } from './components/toolbar/RecurringTaskModal';
 import { ExportModal } from './components/toolbar/ExportModal';
 import { ImportModal } from './components/toolbar/ImportModal';
-import { SettingsModal } from './components/toolbar/SettingsModal';
-import { TrashSettingsModal } from './components/toolbar/TrashSettingsModal';
 import { CloudSyncModal } from './components/toolbar/CloudSyncModal';
 import { RecurringTaskManagerModal } from './components/toolbar/RecurringTaskManagerModal';
-import { SettingsPanel } from './components/toolbar/SettingsPanel';
-import { ThemeModal } from './components/toolbar/ThemeModal';
-import { FontSizeModal } from './components/toolbar/FontSizeModal';
+import { SettingsPanel, type SettingsTab } from './components/toolbar/SettingsPanel';
 import { useAutoBackup } from './hooks/useAutoBackup';
 import { useAutoUpdateCheck } from './hooks/useAutoUpdateCheck';
 import { UpdateModal } from './components/toolbar/UpdateModal';
@@ -62,9 +58,6 @@ function App() {
   const [addOpen, setAddOpen] = useState(false);
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [themeOpen, setThemeOpen] = useState(false);
-  const [fontSizeOpen, setFontSizeOpen] = useState(false);
   const [emptyTrashConfirmOpen, setEmptyTrashConfirmOpen] = useState(false);
   const [newTaskChoiceOpen, setNewTaskChoiceOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
@@ -75,10 +68,9 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
-  const [trashSettingsOpen, setTrashSettingsOpen] = useState(false);
   const [cloudSyncOpen, setCloudSyncOpen] = useState(false);
   const [recurringManagerOpen, setRecurringManagerOpen] = useState(false);
-  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null);
   const activeView = useAppStore((state) => state.activeView);
   const colorScheme = useAppStore((state) => state.settings.colorScheme);
   const settings = useAppStore((state) => state.settings);
@@ -318,7 +310,9 @@ function App() {
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         onProjectSelected={handleProjectSelected}
+        onOpenSettings={() => setSettingsTab('appearance')}
       />
+      <button className="sidebar-settings settings-compact-entry" onClick={() => setSettingsTab('appearance')} aria-label="设置" title="设置" aria-haspopup="dialog"><Settings size={16} aria-hidden="true" />设置</button>
       <main className='main'>
         {activeView === 'tasks' ? (
           <>
@@ -488,14 +482,6 @@ function App() {
                     >
                       <ListFilter size={16} aria-hidden='true' /> 筛选 {filterPanelOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     </button>
-                    <button
-                      className='btn btn-light'
-                      onClick={() => setSettingsPanelOpen(true)}
-                      aria-label='设置'
-                      title='设置'
-                    >
-                      <Settings size={16} aria-hidden='true' /> 设置
-                    </button>
                   </>
                 )}
               </div>
@@ -526,10 +512,10 @@ function App() {
             </section>
           </>
         ) : activeView === 'downloads' ? (
-          <DownloadCenter onTheme={() => setThemeOpen(true)} />
+          <DownloadCenter />
         ) : (
           <Suspense fallback={<div role="status">正在打开随记…</div>}>
-            <NotesMain />
+            <NotesMain onOpenAISettings={() => setSettingsTab('ai')} />
           </Suspense>
         )}
       </main>
@@ -562,9 +548,6 @@ function App() {
         projectMap={projectMap}
       />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <ThemeModal open={themeOpen} onClose={() => setThemeOpen(false)} />
-      <FontSizeModal open={fontSizeOpen} onClose={() => setFontSizeOpen(false)} />
       <BackupModal open={backupOpen} onClose={() => setBackupOpen(false)} />
       <DueReminderModal
         open={reminderOpen}
@@ -590,10 +573,6 @@ function App() {
         open={closeConfirmOpen}
         onClose={() => setCloseConfirmOpen(false)}
       />
-      <TrashSettingsModal
-        open={trashSettingsOpen}
-        onClose={() => setTrashSettingsOpen(false)}
-      />
       <CloudSyncModal
         open={cloudSyncOpen}
         onClose={() => setCloudSyncOpen(false)}
@@ -602,15 +581,15 @@ function App() {
         open={recurringManagerOpen}
         onClose={() => setRecurringManagerOpen(false)}
       />
-      <SettingsPanel
-        open={settingsPanelOpen}
-        onClose={() => setSettingsPanelOpen(false)}
+      {settingsTab && <SettingsPanel
+        initialTab={settingsTab}
+        onClose={() => setSettingsTab(null)}
         onImport={() => setImportOpen(true)}
         onExport={() => setExportOpen(true)}
         onBackup={() => setBackupOpen(true)}
         onCloudSync={() => setCloudSyncOpen(true)}
         onRecurringTasks={() => setRecurringManagerOpen(true)}
-      />
+      />}
       {showUpdateModal && updateInfo && <UpdateModal open updateInfo={updateInfo}
         onClose={() => setShowUpdateModal(false)} onSkip={() => skipCurrentVersion(updateInfo.version)} />}
     </div>

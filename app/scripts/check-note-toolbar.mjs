@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 
 export async function checkNoteToolbar(page, body) {
     const toolbar = page.getByRole('toolbar', { name: '随记编辑工具' });
-    const button = name => (name === 'AI 设置' ? page : toolbar).getByRole('button', { name, exact: true });
+    const button = name => toolbar.getByRole('button', { name, exact: true });
     const tooltip = page.getByRole('tooltip');
     assert.equal(await toolbar.locator('[title]').count(), 0, 'Toolbar must not mix native title popups with shared tooltips');
-    for (const name of ['撤销', '重做', '清除格式', '插入日期', '分隔线', 'AI 设置', '未完成在前', '已完成在前']) {
+    for (const name of ['撤销', '重做', '清除格式', '插入日期', '分隔线', '未完成在前', '已完成在前']) {
         assert.equal(await button(name).getAttribute('aria-pressed'), null, `${name} is an action, not a toggle`);
     }
     const icons = await toolbar.locator('.editor-tool-button:not(.editor-color-menu) > svg').evaluateAll(elements => elements.map(el => ({
@@ -14,7 +14,7 @@ export async function checkNoteToolbar(page, body) {
     assert.ok(icons.length >= 25 && icons.every(icon => icon.width === '18px' && icon.height === '18px' && icon.stroke === '1.75px'),
         `Toolbar icons must share size and stroke: ${JSON.stringify(icons)}`);
     let tooltipStyle;
-    for (const control of [button('加粗'), button('插入日期'), toolbar.getByRole('combobox', { name: '正文字体' }), button('AI 设置'), button('重做')]) {
+    for (const control of [button('加粗'), button('插入日期'), toolbar.getByRole('combobox', { name: '正文字体' }), button('重做')]) {
         await control.locator('..').hover();
         await tooltip.waitFor();
         assert.equal(await tooltip.count(), 1, 'Only one tooltip should be visible');

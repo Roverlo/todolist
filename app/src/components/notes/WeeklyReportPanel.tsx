@@ -4,10 +4,9 @@ import dayjs from 'dayjs';
 import { useAppStore, waitForAppSave } from '../../state/appStore';
 import { createAIProvider } from '../../services/ai';
 import { WEEKLY_REPORT_PROMPT, currentReportWeek, reportPeriodError, parseWeeklyReport, reportAsHtml, weeklyReportInput, type WeeklyReportSource, type ReportPeriod } from '../../utils/weeklyReport';
-import { AISettingsModal } from './AISettingsModal';
 import './WeeklyReportPanel.css';
 
-export function WeeklyReportPanel({ source, autoGenerate, onGenerate, onPeriodChange }: { source: WeeklyReportSource; autoGenerate: boolean; onGenerate: () => void; onPeriodChange: (period: ReportPeriod) => void }) {
+export function WeeklyReportPanel({ source, autoGenerate, onGenerate, onPeriodChange, onOpenAISettings }: { onOpenAISettings: () => void; source: WeeklyReportSource; autoGenerate: boolean; onGenerate: () => void; onPeriodChange: (period: ReportPeriod) => void }) {
     const request = useRef<AbortController | null>(null);
     const savedReport = useRef<{ id: string; title: string } | null>(null);
     const dateToggle = useRef<HTMLButtonElement>(null);
@@ -19,7 +18,6 @@ export function WeeklyReportPanel({ source, autoGenerate, onGenerate, onPeriodCh
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
-    const [settingsOpen, setSettingsOpen] = useState(false);
     const [sourcesOpen, setSourcesOpen] = useState(false);
     const settings = useAppStore(state => state.settings.ai);
     const profile = settings?.providers.find(provider => provider.id === settings.activeProviderId);
@@ -126,7 +124,7 @@ export function WeeklyReportPanel({ source, autoGenerate, onGenerate, onPeriodCh
                 {source.undatedCompleted > 0 && <p>{source.undatedCompleted} 项已勾选但未记录完成时间，会在周报中明确说明。</p>}
             </div>
             {!source.sources.length && <div className="weekly-report-empty"><FileText size={28} /><strong>所选日期内没有可汇总的随记</strong><p>请选择其他日期；已删除的随记和已生成的周报不参与。</p></div>}
-            {source.sources.length > 0 && !configured && <div className="weekly-report-empty"><strong>先配置用于生成周报的 AI</strong><p>周报与待办提取使用同一个 AI 接口。</p><button className="btn btn-primary" onClick={() => setSettingsOpen(true)}>配置 AI</button></div>}
+            {source.sources.length > 0 && !configured && <div className="weekly-report-empty"><strong>先配置用于生成周报的 AI</strong><p>周报与待办提取使用同一个 AI 接口。</p><button className="btn btn-primary" onClick={() => onOpenAISettings()}>配置 AI</button></div>}
             {staleReport && <p className="weekly-report-notice" role="status">日期已切换，下方保留的是 {reportPeriod.start} 至 {reportPeriod.end} 的周报；请重新生成以更新。</p>}
             {(report || (source.sources.length > 0 && configured)) && <><div className="weekly-report-label"><label htmlFor="weekly-report-content">周报正文</label><span>可直接修改</span></div>
                 {loading && <div className="weekly-report-loading" role="status"><LoaderCircle size={18} className="weekly-report-spinner" />正在整理所选日期的记录…<button onClick={cancel}>取消生成</button></div>}
@@ -143,6 +141,5 @@ export function WeeklyReportPanel({ source, autoGenerate, onGenerate, onPeriodCh
             }}><Copy size={15} />复制周报</button>
             <button className="btn btn-primary" disabled={!report.trim() || loading || saving} onClick={() => void save()}><Save size={15} />{saving ? '正在保存…' : '保存为随记'}</button>
         </footer>
-        {settingsOpen && <AISettingsModal onClose={() => setSettingsOpen(false)} />}
     </section>;
 }
