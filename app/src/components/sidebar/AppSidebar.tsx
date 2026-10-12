@@ -3,16 +3,15 @@ import { TaskSidebarContent } from './TaskSidebarContent';
 import { NotesSidebar } from '../notes/NotesSidebar';
 import clsx from 'clsx';
 import { DownloadSidebar } from '../downloads/DownloadCenter';
-import { ListTodo, FileText, ArrowDownToLine, Settings } from 'lucide-react';
+import { ListTodo, FileText, ArrowDownToLine } from 'lucide-react';
 
 interface AppSidebarProps {
     collapsed: boolean;
-    onOpenSettings: () => void;
     onToggleCollapse: () => void;
     onProjectSelected?: () => void; // Passed to TaskSidebarContent
 }
 
-export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected, onOpenSettings }: AppSidebarProps) => {
+export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected }: AppSidebarProps) => {
     const { activeView, setActiveView, selectedNoteId, setSelectedNoteId, addNote } = useAppStoreShallow((state) => ({
         activeView: state.activeView,
         setActiveView: state.setActiveView,
@@ -40,7 +39,6 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected, onO
                     >
                         »
                     </button>
-                    <button className="sidebar-settings" onClick={onOpenSettings} aria-label="设置" title="设置" aria-haspopup="dialog"><Settings size={16} aria-hidden="true" /></button>
                 </div>
             ) : (
                 <>
@@ -60,8 +58,6 @@ export const AppSidebar = ({ collapsed, onToggleCollapse, onProjectSelected, onO
 
 
                     <div className="sidebar-utility-row">
-                        <button className="sidebar-settings" onClick={onOpenSettings} aria-label="设置" title="设置" aria-haspopup="dialog"><Settings size={14} aria-hidden="true" /><span>设置</span></button>
-
                         <button
                             className='sidebar-collapse-btn expanded'
                             onClick={onToggleCollapse}

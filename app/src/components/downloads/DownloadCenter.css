@@ -25,7 +25,8 @@
 .download-batch-actions { margin-left: auto; gap: 8px; }
 .download-select-all { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; cursor: pointer; }
 .download-select-all input, .download-row-select { accent-color: var(--primary); width: 16px; height: 16px; margin: 0; flex-shrink: 0; cursor: pointer; }
-.download-selection-count { color: var(--text-secondary); }
+.download-selection-count { color: var(--text-secondary); min-width: 10em; font-variant-numeric: tabular-nums; }
+.download-batch-actions > button { width: 108px; height: 36px; flex: 0 0 108px; }
 .download-row.is-selected { background: var(--primary-soft); }
 .download-batch-feedback { border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12px; }
 .download-batch-feedback > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

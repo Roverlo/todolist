@@ -303,6 +303,8 @@ function App() {
     return () => clearTimeout(timer);
   }, [isHydrated, allTasks, allProjectMap, reminderShown, settings.dueReminderEnabled, settings.dueReminderSnoozeUntil]);
 
+  const settingsButton = <button className="app-settings" onClick={() => setSettingsTab('appearance')} aria-label="设置" title="设置" aria-haspopup="dialog"><Settings size={16} aria-hidden="true" /><span>设置</span></button>;
+
   return (
     <div className={`app theme-${colorScheme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}${isTauri() ? ' native-window' : ''}`}>
       {isTauri() && <DesktopTitleBar />}
@@ -310,9 +312,7 @@ function App() {
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         onProjectSelected={handleProjectSelected}
-        onOpenSettings={() => setSettingsTab('appearance')}
       />
-      <button className="sidebar-settings settings-compact-entry" onClick={() => setSettingsTab('appearance')} aria-label="设置" title="设置" aria-haspopup="dialog"><Settings size={16} aria-hidden="true" />设置</button>
       <main className='main'>
         {activeView === 'tasks' ? (
           <>
@@ -484,6 +484,7 @@ function App() {
                     </button>
                   </>
                 )}
+                {settingsButton}
               </div>
             </div>
 
@@ -512,10 +513,10 @@ function App() {
             </section>
           </>
         ) : activeView === 'downloads' ? (
-          <DownloadCenter />
+          <DownloadCenter settingsButton={settingsButton} />
         ) : (
           <Suspense fallback={<div role="status">正在打开随记…</div>}>
-            <NotesMain onOpenAISettings={() => setSettingsTab('ai')} />
+            <NotesMain settingsButton={settingsButton} onOpenAISettings={() => setSettingsTab('ai')} />
           </Suspense>
         )}
       </main>

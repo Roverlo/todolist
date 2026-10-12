@@ -304,6 +304,7 @@ export interface AppStore extends AppData {
   addNote: (note: { title?: string; content: string; tags?: string[]; date?: string; kind?: Note['kind'] }) => Note;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
+  mergeNotes: (sourceId: string, targetId: string) => Promise<void>;
   toggleNotePin: (id: string) => void;
 
   // Note Tag Actions
@@ -327,7 +328,7 @@ export interface AppStore extends AppData {
 
   // View Switching
   setActiveView: (view: 'tasks' | 'notes' | 'downloads') => void;
-  setNoteViewMode: (mode: 'tree' | 'trash') => void;
+  setNoteViewMode: (mode: 'tree' | 'trash' | 'overview') => void;
   setSelectedNoteId: (id: string | null) => void;
 
   // Note Trash Actions
@@ -1309,6 +1310,43 @@ export const useAppStore = create<AppStore>()(
             state.selectedNoteId = null;
           }
         }));
+        get().refreshNoteTagCounts();
+      },
+
+      mergeNotes: async (sourceId, targetId) => {
+        if (sourceId === targetId) throw new Error('请选择另一篇随记进行合并');
+        // Flush even the latest keystroke before taking the merge snapshot.
+        if (!window.dispatchEvent(new Event('projecttodo-save-before-update', { cancelable: true }))) {
+          throw new Error('当前随记尚未保存，请保存后重试');
+        }
+        // Retry the current snapshot as well, so a previous disk failure is recoverable.
+        set({});
+        await waitForAppSave();
+        const source = get().notes.find(note => note.id === sourceId && !note.deletedAt);
+        const target = get().notes.find(note => note.id === targetId && !note.deletedAt);
+        if (!source || !target) throw new Error('随记已变化，请重新选择后合并');
+        const content = [source, target].sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))
+          .map(note => note.content).filter(Boolean).join('<p></p>');
+        const now = Date.now();
+        set(produce((state: AppStore) => {
+          const from = state.notes.find(note => note.id === sourceId)!;
+          const into = state.notes.find(note => note.id === targetId)!;
+          into.content = content;
+          into.tags = [...new Set([...(target.tags ?? []), ...(source.tags ?? [])])];
+          into.updatedAt = now;
+          from.deletedAt = now;
+          from.updatedAt = now;
+        }));
+        try {
+          await waitForAppSave();
+        } catch (error) {
+          // Restore only these notes; unrelated state must not be rolled back.
+          set(produce((state: AppStore) => {
+            state.notes = state.notes.map(note => note.id === sourceId ? source : note.id === targetId ? target : note);
+          }));
+          await waitForAppSave().catch(() => {});
+          throw error;
+        }
         get().refreshNoteTagCounts();
       },
 

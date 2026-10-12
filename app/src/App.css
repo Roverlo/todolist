@@ -311,7 +311,7 @@ body {
 /* Sidebar Utility Row (About + Collapse) */
 .sidebar-utility-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   padding: 0 4px;
   margin: 0 8px;

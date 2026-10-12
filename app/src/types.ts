@@ -255,7 +255,7 @@ export interface AppData {
   activeNoteTagId?: string | null;
   noteTreeExpandedState?: Record<string, boolean>;
   activeView?: 'tasks' | 'notes' | 'downloads'; // 当前视图模式
-  noteViewMode?: 'tree' | 'trash'; // 笔记视图模式：树形列表或回收站
+  noteViewMode?: 'tree' | 'trash' | 'overview'; // 随记编辑、回收站或全部随记汇总
   selectedNoteId?: string | null; // 全局选中的笔记 ID
 }
 

@@ -153,8 +153,15 @@ export async function checkNoteDates(page, body, { openNote, saveAndReload, stor
     await page.screenshot({ path: 'ui-check.local/note-date-chips.png' });
 
     await openNote('<pre><code>日期：</code></pre>', '代码块日期');
+    await body.focus();
+    await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.view.hasFocus());
+    await page.evaluate(() => new Promise(requestAnimationFrame));
     await body.press('Control+End');
     await waitSelection();
+    await page.waitForFunction(() => {
+        const { doc, selection } = document.querySelector('.ProseMirror').editor.state;
+        return selection.empty && selection.to === doc.content.size - 1;
+    });
     await dateButton.click();
     await input.fill('2026-09-23');
     await apply.click();

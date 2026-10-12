@@ -130,6 +130,11 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
             {/* 搜索框 (置顶) */}
             <NotesSearch />
 
+            <button type="button" className={`notes-overview-entry${noteViewMode === 'overview' ? ' active' : ''}`}
+                aria-current={noteViewMode === 'overview' ? 'page' : undefined} onClick={() => setNoteViewMode('overview')}>
+                <Icon name="note" size={16} /><span>全部随记汇总</span><span>{notes.filter(note => !note.deletedAt).length}</span>
+            </button>
+
 
 
             <div className="notes-sidebar-calendar-container">
@@ -202,7 +207,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                 {hasFilters && filteredNotes.length === 0 && <p className="notes-filter-empty">没有符合条件的随记</p>}
                 <NotesTree
                     tree={tree}
-                    selectedNoteId={selectedNoteId}
+                    selectedNoteId={noteViewMode === 'tree' ? selectedNoteId : null}
                     onNodeClick={handleNodeClick}
                     onCreateNote={onCreateNote}
                 />

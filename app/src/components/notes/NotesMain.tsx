@@ -9,8 +9,9 @@ import { WeeklyReportPanel } from './WeeklyReportPanel';
 import { collectWeeklyNotes, currentReportWeek, type WeeklyReportSource, type ReportPeriod } from '../../utils/weeklyReport';
 import { EditorToolButton } from './EditorToolbarControls';
 import type { Note } from '../../types';
+import { NotesOverview } from './NotesOverview';
 
-export function NotesMain({ onOpenAISettings }: { onOpenAISettings: () => void }) {
+export function NotesMain({ onOpenAISettings, settingsButton }: { onOpenAISettings: () => void; settingsButton?: React.ReactNode }) {
     const { notes, updateNote, addNote, refreshNoteTagCounts, selectedNoteId, setSelectedNoteId } = useAppStoreShallow(state => ({
         notes: state.notes,
         updateNote: state.updateNote,
@@ -48,6 +49,8 @@ export function NotesMain({ onOpenAISettings }: { onOpenAISettings: () => void }
         setSelectedNoteId(newNote.id);
     };
 
+    if (noteViewMode === 'overview') return <NotesOverview settingsButton={settingsButton} />;
+
     return (
         <div className="notes-main-root">
             <div className="notes-command-bar">
@@ -72,6 +75,7 @@ export function NotesMain({ onOpenAISettings }: { onOpenAISettings: () => void }
                         <EditorToolButton onClick={() => { setAiMode('tasks'); setAiPanelOpen(true); setWeeklySource(null); }} className="notes-ai-action" active={aiMode === 'tasks'}
                             label="一键生成待办事项" icon={ListTodo} description="根据当前随记生成待办事项。"><span>一键生成待办事项</span></EditorToolButton>
                     </div>
+                    {settingsButton}
                 </section>
             </div>
 

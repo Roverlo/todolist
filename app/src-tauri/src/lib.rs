@@ -72,7 +72,10 @@ fn save_data(data: String) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
 
-    fs::write(path, data).map_err(|e| e.to_string())
+    // Keep the previous snapshot intact if writing a merge (or any save) fails.
+    let temporary = path.with_extension("json.tmp");
+    fs::write(&temporary, data).map_err(|e| e.to_string())?;
+    fs::rename(&temporary, path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

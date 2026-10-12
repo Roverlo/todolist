@@ -27,7 +27,8 @@ export async function checkNotesCommandBar(page, width, { contextual = false } =
     assert.ok(layout.weekly.right <= width && layout.root.x >= 0);
     assert.ok(layout.weekly.right <= layout.tasks.x, 'Weekly report is left of task generation');
     const collapse = await page.getByRole('button', { name: '收起 AI 面板', exact: true }).boundingBox();
-    assert.equal(await page.locator('.sidebar').getByRole('button', { name: '设置', exact: true }).count(), 1, 'Settings have one shared sidebar entry');
+    const settings = await page.getByRole('button', { name: '设置', exact: true }).boundingBox();
+    assert.ok(settings && settings.x + settings.width >= layout.root.right - 16, 'Settings stay at the right edge of the command area');
     const toggleLabel = await page.locator('.notes-ai-toggle span').boundingBox();
     assert.ok(toggleLabel.height < 24 && toggleLabel.x + toggleLabel.width <= collapse.x + collapse.width,
         'Collapse label stays on one line inside its button');

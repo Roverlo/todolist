@@ -159,7 +159,7 @@ export function DownloadPreferences() {
   </fieldset></form>;
 }
 
-export function DownloadCenter() {
+export function DownloadCenter({ settingsButton }: { settingsButton?: React.ReactNode }) {
   const { tasks, filter, settings, busy, error, loaded, request, requestBatch, refresh } = useDownloadStore();
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState<'add' | null>(null);
@@ -192,6 +192,7 @@ export function DownloadCenter() {
   return <section className="download-center" aria-label="下载中心">
     <header className="download-header"><div><h1>下载中心</h1><p>多线程分片下载，充分利用带宽 · 支持断点续传，中断后接着下</p><p className="download-benefits-note">提速效果受带宽和服务器限制（如酒店出口限速）；断点续传需服务器支持。</p></div><div className="download-header-actions">
       <button className="download-primary" disabled={!loaded || busy} onClick={() => setModal('add')}><Plus size={17} />新建下载</button>
+      {settingsButton}
     </div></header>
     {!isTauri() && <div className="download-notice"><CircleAlert size={16} />浏览器预览 · 文件下载在 Windows 桌面版中运行，可先查看界面和设置。</div>}
     {error && <div className="download-notice download-error" role="alert"><CircleAlert size={16} /><span>{error}</span><button disabled={busy} onClick={() => void refresh()}>刷新</button></div>}
@@ -200,9 +201,9 @@ export function DownloadCenter() {
       <label className="download-select-all"><input ref={selectAll} type="checkbox" checked={filtered.length > 0 && selected.length === filtered.length} disabled={busy || !filtered.length} onChange={event => setSelection(new Set(event.target.checked ? filtered.map(task => task.id) : []))} />全选当前列表</label>
       <span className="download-selection-count" role="status">{batchRunning ? '正在处理选中任务…' : `已选 ${selected.length} 项`}</span>
       <div className="download-batch-actions">
-        <button disabled={busy || !resumeCount || !isTauri()} onClick={() => void runBatch('resume', selected.filter(task => canDownloadAction(task, 'resume')))}><Play size={15} />批量开始{resumeCount > 0 ? `（${resumeCount}）` : ''}</button>
-        <button disabled={busy || !pauseCount || !isTauri()} onClick={() => void runBatch('pause', selected.filter(task => canDownloadAction(task, 'pause')))}><Pause size={15} />批量暂停{pauseCount > 0 ? `（${pauseCount}）` : ''}</button>
-        <button disabled={busy || !selected.length || !isTauri()} onClick={() => setRemoving(selected)}><Trash2 size={15} />批量删除{selected.length > 0 ? `（${selected.length}）` : ''}</button>
+        <button disabled={busy || !resumeCount || !isTauri()} onClick={() => void runBatch('resume', selected.filter(task => canDownloadAction(task, 'resume')))}><Play size={15} />批量开始</button>
+        <button disabled={busy || !pauseCount || !isTauri()} onClick={() => void runBatch('pause', selected.filter(task => canDownloadAction(task, 'pause')))}><Pause size={15} />批量暂停</button>
+        <button disabled={busy || !selected.length || !isTauri()} onClick={() => setRemoving(selected)}><Trash2 size={15} />批量删除</button>
       </div>
     </div>
     {feedback && <div className="download-batch-feedback"><div><span role="status">{feedback.message}</span><button className="download-icon" aria-label="关闭批量操作结果" onClick={() => setFeedback(null)}><X size={15} /></button></div>{feedback.errors.length > 0 && <details><summary>查看失败原因</summary><ul>{feedback.errors.map((message, index) => <li key={index}>{message}</li>)}</ul></details>}</div>}

@@ -41,6 +41,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
     const pendingSave = useRef(false);
     const draft = useRef({ title, tags, contentHtml, onSave });
     const noteId = note?.id;
+    const syncedContent = useRef(note?.content);
 
     useEffect(() => {
         if (noteId) onDraftChange?.({ id: noteId, title, content: contentHtml });
@@ -124,6 +125,8 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
         if (!pendingSave.current) return false;
         try {
             const current = draft.current;
+            // Read from the editor directly: a drag can precede React's draft effect.
+            current.contentHtml = editor?.getHTML() ?? current.contentHtml;
             current.onSave(current.title, current.contentHtml, current.tags);
             pendingSave.current = false;
             return true;
@@ -131,7 +134,17 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
             useToastStore.getState().addToast(error instanceof Error ? error.message : '随记保存失败，请重试', 'error');
             return false;
         }
-    }, []);
+    }, [editor]);
+
+    useLayoutEffect(() => {
+        if (!editor || syncedContent.current === note?.content) return;
+        syncedContent.current = note?.content;
+        if (pendingSave.current || note?.content === undefined) return;
+        if (editor.getHTML() !== note.content) editor.commands.setContent(note.content, { emitUpdate: false, parseOptions: { preserveWhitespace: 'full' } });
+        const content = editor.getHTML();
+        draft.current.contentHtml = content;
+        setContentHtml(content);
+    }, [editor, note?.content]);
 
     const handleSave = useCallback(() => {
         if (saveDraft()) {

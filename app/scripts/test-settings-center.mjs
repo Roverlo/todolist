@@ -44,7 +44,10 @@ try {
     }
     for (const view of ['待办事项', '随记中心', '下载中心']) {
         await page.getByTitle(`切换到${view}`, { exact: true }).click();
+        await page.getByRole('button', { name: '设置', exact: true }).waitFor();
         assert.equal(await page.getByRole('button', { name: '设置', exact: true }).count(), 1);
+        const settingsBounds = await page.getByRole('button', { name: '设置', exact: true }).boundingBox();
+        assert.ok(settingsBounds.x > (await page.evaluate(() => innerWidth)) - 150 && settingsBounds.y < 180, `${view}: settings stays at top right`);
         assert.equal(await page.getByRole('button', { name: /^(AI 设置|下载设置|更改主题色)$/ }).count(), 0);
         await open();
         assert.equal(await page.getByRole('tab').count(), 6);

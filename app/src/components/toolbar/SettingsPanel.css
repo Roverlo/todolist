@@ -1,11 +1,10 @@
-.sidebar-settings { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); cursor: pointer; font: inherit; font-size: 12px; }
-.sidebar-settings:hover { color: var(--primary); border-color: var(--primary); }
-.sidebar-collapsed-toggle .sidebar-settings { padding: 6px; margin-top: 12px; }
+.app-settings { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; gap: 7px; height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); cursor: pointer; font: inherit; font-size: 12px; white-space: nowrap; }
+.app-settings:hover { color: var(--primary); border-color: var(--primary); }
 .settings-overlay { align-items: center; padding: 24px; }
 .settings-center { display: flex; flex-direction: column; width: min(1040px, 100%); height: min(760px, calc(100dvh - 48px)); color: var(--text-main); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 24px 60px #0f172a40; overflow: hidden; }
 .settings-center button { cursor: pointer; font: inherit; }
 .settings-center button:disabled { opacity: .5; cursor: not-allowed; }
-.settings-center :focus-visible, .sidebar-settings:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.settings-center :focus-visible, .app-settings:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .settings-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
 .settings-header h2 { margin: 0; font-size: 20px; }
 .settings-header p, .settings-section-heading p { margin: 5px 0 0; font-size: 12px; color: var(--text-subtle); line-height: 1.6; }
@@ -61,9 +60,4 @@
   .settings-center .ai-settings-modal { flex-direction: column !important; height: auto; }
   .settings-center .ai-settings-sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); }
   .settings-center .ai-settings-provider-list { max-height: 150px; }
-}
-
-.settings-compact-entry { display: none; }
-@media (max-width: 840px) {
-  .settings-compact-entry { display: flex; position: fixed; right: 18px; bottom: 18px; z-index: 50; padding: 10px 14px; box-shadow: 0 4px 16px #0f172a22; }
 }

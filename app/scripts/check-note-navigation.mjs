@@ -83,6 +83,7 @@ export async function checkNoteNavigation(page) {
 
     // Search reveals matches even when their month has been collapsed.
     await page.locator('[data-node-id="month-2026-08"]').click();
+    await row(pastId).waitFor({ state: 'detached' });
     assert.equal(await row(pastId).count(), 0);
     await search.fill('导航历史');
     assert.equal(await row(pastId).count(), 1);
@@ -90,6 +91,13 @@ export async function checkNoteNavigation(page) {
     await row(pastId).click({ button: 'right' });
     await page.locator('.context-menu').getByRole('button', { name: '删除', exact: true }).click();
     await page.getByRole('button', { name: '确认删除', exact: true }).click();
+    // Native persistence mirrors each queued snapshot after writing it to disk.
+    await page.waitForFunction(id => {
+        const state = JSON.parse(localStorage.getItem('project-todo-app')).state;
+        const work = state.tags.find(tag => tag.name === '工作');
+        return state.notes.find(note => note.id === id)?.deletedAt
+            && work.count === state.notes.filter(note => !note.deletedAt && note.tags?.includes('工作')).length;
+    }, pastId);
     const deleted = await state();
     const work = deleted.tags.find(tag => tag.name === '工作');
     assert.equal(work.count, deleted.notes.filter(note => !note.deletedAt && note.tags?.includes('工作')).length);

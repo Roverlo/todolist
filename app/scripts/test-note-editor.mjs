@@ -107,7 +107,7 @@ try {
     const noteActions = renameRow().getByRole('button', { name: /^随记操作：/ });
     await noteActions.click();
     const actionLabels = await noteMenu.getByRole('button').allTextContents();
-    assert.deepEqual(actionLabels, ['新建相邻笔记', '重命名', '置顶', '标签设置', '删除']);
+    assert.deepEqual(actionLabels, ['新建相邻笔记', '重命名', '置顶', '标签设置', '合并到其他随记…', '删除']);
     await page.keyboard.press('Escape');
     await noteMenu.waitFor({ state: 'hidden' });
     await renameRow().click({ button: 'right' });
@@ -450,6 +450,11 @@ try {
     for (let i = 0; i < '左侧未选  '.length; i++) await body.press('ArrowRight');
     for (let i = 0; i < '蓝底白字'.length; i++) await body.press('Shift+ArrowRight');
     assert.equal(await page.evaluate(() => window.getSelection().toString()), '蓝底白字');
+    // The native selection observer must catch up before the palette takes focus.
+    await page.waitForFunction(() => {
+        const { doc, selection } = document.querySelector('.ProseMirror').editor.state;
+        return doc.textBetween(selection.from, selection.to) === '蓝底白字';
+    });
     await assertBorderlessSelection();
     assert.deepEqual(await nativeSelectionColors(), lightSelectionColors, 'Identical blue/white source must use a contrasting fill');
     const selectedBox = await body.locator('mark').boundingBox();
@@ -1150,7 +1155,7 @@ try {
     const toolbarHeight = (await page.getByRole('toolbar').boundingBox()).height;
     assert.ok(toolbarHeight <= 86, 'The toolbar should occupy only two compact rows');
     assert.equal(await page.locator('.notes-center-header').count(), 0, 'Editing must not reserve a separate title bar');
-    assert.equal(await page.locator('.sidebar').getByRole('button', { name: '设置', exact: true }).count(), 1, 'Settings use the shared sidebar entry');
+    assert.equal(await page.locator('.notes-command-bar').getByRole('button', { name: '设置', exact: true }).count(), 1, 'Settings stay in the top-right command area');
     assert.equal(await page.getByLabel('表格操作', { exact: true }).count(), 0, 'Table actions should only appear inside a table');
     assert.equal(await page.getByLabel('更多工具', { exact: true }).count(), 0, 'Tools should be directly accessible');
     for (const name of ['插入日期', '查找替换', '清除格式', '引用', '行内代码', '代码块', '分隔线', '未完成在前', '已完成在前']) {

@@ -39,6 +39,7 @@ export function withTaskCompletion(taskItem: TiptapNode) {
             return props => {
                 const view = render(props);
                 const checkbox = (view.dom as HTMLElement).querySelector<HTMLInputElement>(':scope > label input[type="checkbox"]');
+                if (checkbox && !props.editor.isEditable) checkbox.disabled = true;
                 const change = (event: Event) => {
                     // Capture this item's checkbox before the library's single-item handler.
                     // Nested checkbox events also pass through this DOM: leave those to their own item.

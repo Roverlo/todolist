@@ -224,7 +224,7 @@ async function testBatchControls(directory) {
   await page.getByRole('checkbox', { name: `选择 ${first.name}`, exact: true }).check();
   assert.equal(await all.evaluate(node => node.indeterminate), true);
   await all.check();
-  await page.getByRole('button', { name: '批量暂停（2）', exact: true }).click();
+  await page.getByRole('button', { name: '批量暂停', exact: true }).click();
   await page.getByText('暂停成功 2 项', { exact: true }).waitFor();
   let tasks = (await snapshot()).tasks;
   assert.ok([first, second].every(item => tasks.find(task => task.id === item.id).status === 'paused'));
@@ -243,7 +243,7 @@ async function testBatchControls(directory) {
   // Make one resume fail safely, while another selected task can still start.
   // A failed record without a control file exercises the native retry guard.
   await writeFile(path.join(directory, failed.name), 'keep failed target');
-  await page.getByRole('button', { name: '批量开始（3）', exact: true }).click();
+  await page.getByRole('button', { name: '批量开始', exact: true }).click();
   await page.getByText('开始成功 2 项 · 失败 1 项，可重新操作', { exact: true }).waitFor();
   await page.getByText('查看失败原因', { exact: true }).click();
   await page.getByText(/批量操作-失败.zip：.*目标文件已存在/).waitFor();
@@ -251,18 +251,18 @@ async function testBatchControls(directory) {
   assert.equal(await readFile(path.join(directory, failed.name), 'utf8'), 'keep failed target');
   // Pause again before exercising failed and cancelled removals.
   await all.check();
-  await page.getByRole('button', { name: '批量暂停（2）', exact: true }).click();
+  await page.getByRole('button', { name: '批量暂停', exact: true }).click();
   await page.getByText('暂停成功 2 项', { exact: true }).waitFor();
   await all.check();
   await page.screenshot({ path: path.join(output, 'batch-selected.png') });
-  await page.getByRole('button', { name: '批量删除（4）', exact: true }).click();
+  await page.getByRole('button', { name: '批量删除', exact: true }).click();
   const remove = page.getByRole('dialog', { name: '批量删除下载记录', exact: true });
   await remove.getByText(/已下载的文件和续传文件会保留/).waitFor();
   await remove.getByRole('button', { name: '取消', exact: true }).click();
   assert.ok((await snapshot()).tasks.some(task => task.id === first.id));
   const savedHistory = await readFile(history);
   await mkdir(`${history}.tmp`);
-  await page.getByRole('button', { name: '批量删除（4）', exact: true }).click();
+  await page.getByRole('button', { name: '批量删除', exact: true }).click();
   await remove.getByRole('button', { name: '删除 4 项记录', exact: true }).click();
   await page.getByText('删除记录成功 0 项 · 失败 4 项，可重新操作', { exact: true }).waitFor();
   assert.deepEqual(await readFile(history), savedHistory);
@@ -271,7 +271,7 @@ async function testBatchControls(directory) {
   await rmdir(`${history}.tmp`);
   const preserved = [path.join(directory, first.name), path.join(directory, `${first.name}.aria2`), path.join(directory, complete.name), path.join(directory, failed.name)];
   const hashes = await Promise.all(preserved.map(async file => digest(await readFile(file))));
-  await page.getByRole('button', { name: '批量删除（4）', exact: true }).click();
+  await page.getByRole('button', { name: '批量删除', exact: true }).click();
   await remove.getByRole('button', { name: '删除 4 项记录', exact: true }).click();
   await page.getByText('删除记录成功 4 项', { exact: true }).waitFor();
   tasks = (await snapshot()).tasks;
@@ -347,12 +347,26 @@ try {
       useDownloadStore.setState({ favoriteDirectories: ['C:\\下载\\项目资料', 'D:\\安装包', 'D:\\下载\\一个用于验证长目录名称能够完整悬停查看且不会挤压操作按钮的常用资料目录'],
         tasks: ['active', 'waiting', 'paused', 'error', 'complete'].map((status, index) => ({ id: `layout-${index}`, url: 'https://example.com/fixture.zip', name: `界面检查-${status}.zip`, directory: 'C:\\下载\\项目资料', status, total: 1048576, completed: 524288, speed: status === 'active' ? 32768 : 0, error: '', createdAt: 0, finishedAt: null })) });
     });
+    const batchBounds = () => page.locator('.download-batch-toolbar, .download-batch-actions > button, .download-list').evaluateAll(nodes => nodes.map(node => {
+      const { x, y, width, height } = node.getBoundingClientRect(); return { x, y, width, height };
+    }));
+    for (const width of [900, 1100, 1280, 1538, 1920]) {
+      await page.setViewportSize({ width, height: 840 });
+      const beforeSelection = await batchBounds();
+      await page.getByRole('checkbox', { name: '选择 界面检查-active.zip', exact: true }).check();
+      assert.deepEqual(await batchBounds(), beforeSelection, `Single selection must not shift layout at ${width}`);
+      await page.getByRole('checkbox', { name: '全选当前列表', exact: true }).check();
+      assert.deepEqual(await batchBounds(), beforeSelection, `Select all must not shift layout at ${width}`);
+      await page.getByRole('checkbox', { name: '全选当前列表', exact: true }).uncheck();
+      assert.deepEqual(await batchBounds(), beforeSelection, `Deselect must not shift layout at ${width}`);
+    }
+    await page.setViewportSize({ width: 1538, height: 840 });
     await page.getByRole('checkbox', { name: '选择 界面检查-active.zip', exact: true }).check();
     assert.equal(await page.getByRole('checkbox', { name: '全选当前列表', exact: true }).evaluate(node => node.indeterminate), true);
     await page.getByRole('checkbox', { name: '全选当前列表', exact: true }).check();
     await page.getByText('已选 5 项', { exact: true }).waitFor();
-    await page.getByRole('button', { name: '批量开始（2）', exact: true }).waitFor();
-    await page.getByRole('button', { name: '批量暂停（2）', exact: true }).waitFor();
+    await page.getByRole('button', { name: '批量开始', exact: true }).waitFor();
+    await page.getByRole('button', { name: '批量暂停', exact: true }).waitFor();
     await page.screenshot({ path: path.join(output, 'batch-selected.png') });
     await page.getByRole('textbox', { name: '搜索下载文件' }).fill('active');
     await page.getByText('已选 0 项', { exact: true }).waitFor();

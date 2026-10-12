@@ -27,11 +27,13 @@ export const NoteDate = Node.create({
             dom.dataset.weekday = dateWeekday(node.attrs.date);
             dom.textContent = node.attrs.date;
             dom.contentEditable = 'false';
-            dom.tabIndex = 0;
-            dom.setAttribute('role', 'button');
-            dom.setAttribute('aria-haspopup', 'dialog');
-            dom.setAttribute('aria-label', `修改日期 ${node.attrs.date} ${dom.dataset.weekday}`);
-            dom.title = '点击修改日期';
+            if (editor.isEditable) {
+                dom.tabIndex = 0;
+                dom.setAttribute('role', 'button');
+                dom.setAttribute('aria-haspopup', 'dialog');
+                dom.setAttribute('aria-label', `修改日期 ${node.attrs.date} ${dom.dataset.weekday}`);
+                dom.title = '点击修改日期';
+            }
             const edit = () => {
                 const position = getPos();
                 if (!editor.isEditable || typeof position !== 'number') return;

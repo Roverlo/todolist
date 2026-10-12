@@ -18,6 +18,10 @@ const clockOnly = process.argv.includes('--clock-only');
 const server = cdp ? null : await preview({ logLevel: 'error', preview: { host: '127.0.0.1', port: 0, strictPort: false } });
 const browser = cdp ? await chromium.connectOverCDP(`http://127.0.0.1:${cdp}`) : await chromium.launch({ channel: 'msedge', headless: true });
 const page = cdp ? browser.contexts()[0].pages()[0] : await browser.newPage({ viewport: { width: 1280, height: 840 }, timezoneId: 'Asia/Shanghai' });
+if (cdp) {
+    // Use the browser fixture's timezone for simulated dates; leave Windows settings unchanged.
+    await (await page.context().newCDPSession(page)).send('Emulation.setTimezoneOverride', { timezoneId: 'Asia/Shanghai' });
+}
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 await mkdir('ui-check.local', { recursive: true });
