@@ -147,7 +147,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
                     currentMonth={dayjs(currentMonth)}
                     onMonthChange={(date) => setCurrentMonth(date.format('YYYY-MM'))}
                 />
-                <button className="btn btn-primary notes-calendar-create-btn" onClick={onCreateNote}>
+                <button className="btn notes-calendar-create-btn" onClick={onCreateNote}>
                     <Icon name="plus" size={14} />
                     {selectedDate ? `${selectedDate} 新建随记` : '新建随记'}
                 </button>

@@ -369,10 +369,31 @@
   background: white;
 }
 
-.notes-calendar-create-btn {
+.notes-sidebar .notes-calendar-create-btn {
   width: 100%;
+  height: 32px;
   margin-top: 6px;
   justify-content: center;
+  border-color: var(--border-subtle);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.notes-sidebar .notes-calendar-create-btn:hover,
+.notes-sidebar .notes-calendar-create-btn:active {
+  border-color: var(--border);
+  background: var(--primary-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+.notes-sidebar .notes-calendar-create-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
 .notes-filter-summary {
