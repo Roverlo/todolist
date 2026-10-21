@@ -967,7 +967,7 @@ try {
     const draftId = await openNote('<p>草稿初稿</p>', '切换草稿');
     await page.getByPlaceholder('标题（可选）').fill('未等自动保存的标题');
     await body.fill('立刻切换也要保存的正文');
-    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+    await page.locator('.notes-calendar-create-btn').click();
     await page.waitForFunction(id => JSON.parse(localStorage.getItem('project-todo-app')).state.notes
         .find(note => note.id === id)?.content.includes('立刻切换也要保存的正文'), draftId);
     assert.equal((await storedNotes()).find(note => note.id === draftId).title, '未等自动保存的标题');

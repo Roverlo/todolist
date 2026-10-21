@@ -219,36 +219,6 @@
   cursor: not-allowed;
 }
 
-/* 胶囊按钮 - 写今天 (增强版) */
-.notes-toolbar-btn.primary {
-  flex: 1;
-  width: auto;
-  padding: 0 16px;
-  border-radius: 20px;
-  /* 使用渐变背景 */
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  color: white;
-  border: none;
-  font-weight: 700;
-  gap: 8px;
-  font-size: 14px;
-  /* 增加字体大小 */
-  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
-  /* 增加阴影 */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-  /* Prevent text wrapping */
-}
-
-.notes-toolbar-btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.4);
-}
-
-.notes-toolbar-btn.primary:active {
-  transform: translateY(0);
-}
-
 /* ==================== NotesCalendar 样式 - 超紧凑 (160px) ==================== */
 
 .notes-sidebar-calendar-container {
@@ -271,8 +241,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--text-subtle);
@@ -1278,22 +1250,6 @@
   color: var(--primary);
 }
 
-.notes-toolbar-btn.primary {
-  background: var(--primary-soft);
-  color: var(--primary);
-  border-color: transparent;
-  padding: 0 8px;
-  gap: 4px;
-  font-size: 13px;
-  width: 100%;
-  flex: 1;
-}
-
-.notes-toolbar-btn.primary:hover:not(:disabled) {
-  background: var(--primary);
-  color: white;
-}
-
 .notes-toolbar-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -1964,28 +1920,9 @@
 .ai-error-banner svg { flex-shrink: 0; }
 .ai-panel :is(button, input, textarea):focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-.notes-overview-entry { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; margin: 6px 0 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); font: inherit; font-size: 12px; cursor: pointer; }
-.notes-overview-entry > span:last-child { margin-left: auto; font-variant-numeric: tabular-nums; }
-.notes-overview-entry:hover, .notes-overview-entry.active { color: var(--primary); background: var(--primary-soft); border-color: var(--primary); }
-.notes-overview { display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--text-main); }
-.notes-overview-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 4px 0 16px; border-bottom: 1px solid var(--border); }
-.notes-overview-header h1 { margin: 0; font-size: 22px; line-height: 1.4; }
-.notes-overview-header p { margin: 6px 0 0; font-size: 12px; color: var(--text-secondary); }
-.notes-overview-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.notes-overview-meta { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; color: var(--text-secondary); font-size: 12px; }
-.notes-overview-content { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; padding: 0 8px 24px 0; }
-.notes-overview-journal { max-width: 960px; min-height: 100%; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
-.notes-overview-journal .editor-content { min-height: 0; }
-.notes-overview-body.note-editor { height: auto; min-height: 0; padding: 0; flex: initial; overflow: visible; }
-.notes-overview-body.note-editor .ProseMirror.ProseMirror.ProseMirror { min-height: 0; padding: clamp(20px, 3vw, 48px); }
-.notes-overview-body .ProseMirror h2 { scroll-margin-top: 24px; }
-.notes-overview-body .ProseMirror hr { margin: 32px 0; border-color: var(--border); }
-.notes-overview-body .ProseMirror input[type=checkbox]:disabled { cursor: default; }
-.notes-overview-body .note-date-chip { cursor: default; }
-.notes-overview-content[data-show-created="false"] .note-task-created-at,
-.notes-overview-content[data-show-completed="false"] .note-task-completed-at { display: none; }
-.notes-overview-content .note-task-created-at { color: var(--note-task-created-color); }
-.notes-overview-content .note-task-completed-at { color: var(--note-task-completed-color); }
+.notes-overview-entry { width: 100%; flex-shrink: 0; border: 0; background: transparent; text-align: left; font-family: inherit; line-height: inherit; }
+.tree-node[data-note-id], .notes-overview-entry { min-height: 30px; }
+.note-editor-controls { display: contents; }
 .notes-merge-hint { margin: 6px 2px; color: var(--text-secondary); font-size: 11px; line-height: 1.6; }
 .tree-node[data-note-id] { cursor: grab; }
 .tree-node[data-dragging="true"] { opacity: .55; }
@@ -2001,4 +1938,4 @@
 .notes-drag-preview[data-can-merge="true"] > span { color: var(--primary); }
 @keyframes note-merge-complete { from { background: var(--primary-soft); box-shadow: inset 0 0 0 2px var(--primary); } to { box-shadow: inset 0 0 0 2px transparent; } }
 @media (prefers-reduced-motion: reduce) { .tree-node[data-merge-complete="true"] { animation: none; outline: 2px solid var(--primary); outline-offset: -2px; } }
-.notes-overview :focus-visible, .notes-overview-entry:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.notes-overview-entry:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }

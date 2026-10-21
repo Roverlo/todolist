@@ -2,7 +2,6 @@ import { Icon } from '../ui/Icon';
 
 
 interface NotesToolbarProps {
-    onToday: () => void;
     onPrev: () => void;
     onNext: () => void;
     onLocate: () => void;
@@ -12,7 +11,6 @@ interface NotesToolbarProps {
 }
 
 export function NotesToolbar({
-    onToday,
     onPrev,
     onNext,
     onLocate,
@@ -30,15 +28,6 @@ export function NotesToolbar({
                     title="上一篇"
                 >
                     <Icon name="chevronLeft" size={14} />
-                </button>
-
-                <button
-                    className="notes-toolbar-btn primary"
-                    onClick={onToday}
-                    title="新增当日随记"
-                >
-                    <Icon name="plus" size={14} />
-                    <span>新增当日随记</span>
                 </button>
 
                 <button

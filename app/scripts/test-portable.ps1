@@ -76,7 +76,7 @@ try {
     if ($NoteMerge) {
         Push-Location (Split-Path -Parent $PSScriptRoot)
         try {
-            & node (Join-Path $PSScriptRoot 'test-note-merge.mjs') --cdp $nativeDebugPort --data $dataPath --executable $testExe
+            & node (Join-Path $PSScriptRoot 'test-note-merge.mjs') --cdp $nativeDebugPort --data $dataPath --executable $testExe --pid $started.Id
             if ($LASTEXITCODE -ne 0) { throw 'Packaged note merge check failed' }
         } finally { Pop-Location }
     }

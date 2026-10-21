@@ -22,13 +22,14 @@ interface NoteEditorProps {
     onSave: (title: string, content: string, tags?: string[]) => void;
     onCreate?: () => void;
     onDraftChange?: (draft: Pick<Note, 'id' | 'title' | 'content'>) => void;
+    readOnly?: boolean;
 }
 
 export function NoteEditor(props: NoteEditorProps) {
     return <NoteEditorContent key={props.note?.id} {...props} />;
 }
 
-function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditorProps) {
+function NoteEditorContent({ note, onSave, onCreate, onDraftChange, readOnly = false }: NoteEditorProps) {
     const timeSettings = noteTaskTimeSettings(useAppStore(state => state.settings.noteTaskTime));
     const [title, setTitle] = useState(note?.title || '');
     const [tags, setTags] = useState<string[]>(note?.tags || []);
@@ -66,11 +67,12 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
     }, [note?.tags]);
 
     const markChanged = useCallback(() => {
+        if (readOnly) return;
         pendingSave.current = true;
         setRevision(value => value + 1);
         setHasChanges(true);
         setSaveStatus('unsaved');
-    }, []);
+    }, [readOnly]);
 
     useEffect(() => {
         setPortalTarget(document.getElementById('editor-toolbar-portal'));
@@ -78,10 +80,15 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
 
     const editor = useEditor({
         immediatelyRender: false,
+        editable: !readOnly,
         extensions: noteExtensions,
         content: note?.content || '',
         parseOptions: { preserveWhitespace: 'full' },
         editorProps: {
+            handlePaste: () => readOnly,
+            handleDrop: () => readOnly,
+            handleKeyDown: readOnly ? (_view, event) => !['Tab', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)
+                && !((event.ctrlKey || event.metaKey) && ['a', 'c', 'f'].includes(event.key.toLowerCase())) : undefined,
             attributes: {
                 'aria-label': '随记正文', role: 'textbox', 'aria-multiline': 'true',
                 'aria-description': 'Tab 插入空格，列表内调整层级；按 Escape 后可用 Tab 离开编辑区。Ctrl+单击打开链接。',
@@ -122,7 +129,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
     }, [editor]);
 
     const saveDraft = useCallback(() => {
-        if (!pendingSave.current) return false;
+        if (readOnly || !pendingSave.current) return false;
         try {
             const current = draft.current;
             // Read from the editor directly: a drag can precede React's draft effect.
@@ -134,7 +141,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
             useToastStore.getState().addToast(error instanceof Error ? error.message : '随记保存失败，请重试', 'error');
             return false;
         }
-    }, [editor]);
+    }, [editor, readOnly]);
 
     useLayoutEffect(() => {
         if (!editor || syncedContent.current === note?.content) return;
@@ -244,7 +251,8 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
     const taskPercent = taskTotal ? taskCompleted / taskTotal * 100 : 0;
 
     return (
-        <div className="note-editor" data-show-created={timeSettings.showCreated} data-show-completed={timeSettings.showCompleted}
+        <div className="note-editor" data-readonly={readOnly || undefined} role={readOnly ? 'region' : undefined} aria-label={readOnly ? '汇总笔记' : undefined}
+            data-show-created={timeSettings.showCreated} data-show-completed={timeSettings.showCompleted}
             style={{ '--note-task-created-color': timeSettings.createdColor, '--note-task-completed-color': timeSettings.completedColor } as CSSProperties}>
             <div className="note-editor-heading">
                 <input
@@ -252,7 +260,8 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
                     type="text"
                     placeholder="标题（可选）"
                     aria-label="随记标题"
-                    title="修改标题即可重命名随记"
+                    title={readOnly ? '汇总内容随原随记自动更新' : '修改标题即可重命名随记'}
+                    readOnly={readOnly}
                     value={title}
                     onChange={handleTitleChange}
                 />
@@ -277,7 +286,8 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
             </div>
 
             {editor && <RichTextProvider editor={editor}>
-                {portalTarget ? createPortal(<EditorToolbar editor={editor} />, portalTarget) : <EditorToolbar editor={editor} />}
+                {portalTarget ? createPortal(<fieldset className="note-editor-controls" disabled={readOnly}><EditorToolbar editor={editor} /></fieldset>, portalTarget)
+                    : <fieldset className="note-editor-controls" disabled={readOnly}><EditorToolbar editor={editor} /></fieldset>}
                 <div
                 className="note-editor-content-wrapper"
                 onClick={(e) => {
@@ -294,16 +304,17 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
             <div className="note-editor-footer">
                 <div className="note-editor-meta">
                     {/* 标签选择器（胶囊样式） */}
-                    <NoteTagSelector
+                    <fieldset className="note-editor-controls" disabled={readOnly}><NoteTagSelector
                         selectedTags={tags}
                         onChange={handleTagsChange}
-                    />
+                    /></fieldset>
 
                     <span className="note-editor-count" title="正文的字数，不含空格和换行">
                         字数: {charCount}
                     </span>
 
-                    {saveStatus === 'saved' && lastSaved && (
+                    {readOnly && <span className="note-editor-status saved"><Icon name="check" size={12} />自动汇总</span>}
+                    {!readOnly && saveStatus === 'saved' && lastSaved && (
                         <span className="note-editor-status saved">
                             <Icon name="check" size={12} />
                             {formatLastSaved()}
@@ -317,7 +328,7 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
                         </span>
                     )}
 
-                    {note && (
+                    {note && !readOnly && (
                         <span className="note-editor-created">
                             创建于 {new Date(note.createdAt).toLocaleString('zh-CN', {
                                 year: 'numeric',
@@ -354,7 +365,8 @@ function NoteEditorContent({ note, onSave, onCreate, onDraftChange }: NoteEditor
                     <button
                         className="btn btn-primary"
                         onClick={handleSave}
-                        title="Ctrl+S"
+                        disabled={readOnly}
+                        title={readOnly ? '汇总内容随原随记自动更新' : 'Ctrl+S'}
                     >
                         <Icon name="check" size={16} />
                         <span>保存</span>

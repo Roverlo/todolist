@@ -75,19 +75,19 @@ export function NotesCalendar({ selectedDate, onDateSelect, currentMonth, onMont
             {/* 月份导航 */}
             <div className="notes-calendar-header">
                 <button className="notes-calendar-nav-btn" onClick={prevYear} title="上一年">
-                    <Icon name="chevronsLeft" size={16} />
+                    <Icon name="chevronsLeft" size={18} />
                 </button>
                 <button className="notes-calendar-nav-btn" onClick={prevMonth} title="上个月">
-                    <Icon name="chevronLeft" size={16} />
+                    <Icon name="chevronLeft" size={18} />
                 </button>
                 <div className="notes-calendar-title">
                     {currentMonth.format('YYYY年M月')}
                 </div>
                 <button className="notes-calendar-nav-btn" onClick={nextMonth} title="下个月">
-                    <Icon name="chevronRight" size={16} />
+                    <Icon name="chevronRight" size={18} />
                 </button>
                 <button className="notes-calendar-nav-btn" onClick={nextYear} title="下一年">
-                    <Icon name="chevronsRight" size={16} />
+                    <Icon name="chevronsRight" size={18} />
                 </button>
             </div>
 

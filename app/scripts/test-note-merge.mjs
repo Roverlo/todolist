@@ -21,14 +21,14 @@ const fixture = { version: 12, state: {
         note('late', '随记三', now + 3000, '<p>第三篇正文</p>', { tags: ['第三篇'] }),
         note('target', '目标随记', now + 2000, '<p><strong>目标正文</strong></p><table><tbody><tr><td><p>表格内容</p></td></tr></tbody></table>'
             + '<p><time data-type="noteDate" datetime="2028-02-29">2028-02-29</time></p>', { tags: ['目标标签'] }),
-        note('early', '随记一', now + 1000, '<p>最早正文  对齐空格</p><ul data-type="taskList"><li data-type="taskItem" data-checked="true" data-created-at="2026-10-11T12:00:00Z" data-completed-at="2026-10-12T12:00:00Z"><p>已完成待办</p></li></ul>'
+        note('early', '随记一', now + 1000, '<p>最早正文  对齐空格</p><h2>正文自带小节</h2><ul data-type="taskList"><li data-type="taskItem" data-checked="true" data-created-at="2026-10-11T12:00:00Z" data-completed-at="2026-10-12T12:00:00Z"><p>已完成待办</p></li></ul>'
             + '<a data-type="attachment" href="data:text/plain;base64,aGVsbG8=" download="虚构附件.txt" data-size="5" data-mime="text/plain">虚构附件.txt</a><p>末尾正文</p>', { tags: ['来源标签'] }),
         note('trash', '回收站测试', now, '<p>不应汇总的删除内容</p>', { deletedAt: now }),
     ],
 } };
 let server, browser, page, restarted;
 const errors = [];
-const until = async (check, label) => { for (let i = 0; i < 100; i++) { if (await check()) return; await new Promise(resolve => setTimeout(resolve, 100)); } assert.fail(label); };
+const until = async (check, label, attempts = 100) => { for (let i = 0; i < attempts; i++) { if (await check()) return; await new Promise(resolve => setTimeout(resolve, 100)); } assert.fail(label); };
 try {
     if (native) {
         browser = await chromium.connectOverCDP(`http://127.0.0.1:${arg('--cdp')}`);
@@ -50,20 +50,89 @@ try {
     const state = () => page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state);
     const saved = async () => native ? JSON.parse(await readFile(dataPath, 'utf8')).state : await state();
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
-    const overview = page.locator('.notes-overview-entry').getByText('汇总日记', { exact: true });
-    const journal = page.getByRole('region', { name: '汇总日记', exact: true });
-    const summary = journal.locator('.notes-overview-body .ProseMirror');
-    const back = journal.locator('header').getByRole('button', { name: '返回随记', exact: true });
+    const title = page.getByRole('textbox', { name: '随记标题', exact: true });
+    const overview = page.locator('.notes-overview-entry');
+    const journal = page.getByRole('region', { name: '汇总笔记', exact: true });
+    const summary = journal.locator('.ProseMirror[aria-label="随记正文"]');
+    const toolbar = page.getByRole('toolbar');
+    const toolbarShape = () => toolbar.locator('.editor-toolbar-row').evaluateAll(rows => rows.map(row =>
+        [...row.querySelectorAll('button, input, select')].map(control => control.getAttribute('aria-label') || control.getAttribute('title') || control.textContent.trim())));
     const row = id => page.locator(`[data-node-id="note-${id}"]`);
     const preview = page.locator('.notes-drag-preview');
-    const assertJournal = async titles => {
+    const sourceHtml = new Map();
+    const joinedBodies = () => [...sourceHtml.values()].join('<p></p>');
+    const openSource = async id => {
+        const clear = page.getByRole('button', { name: '清除筛选', exact: true });
+        if (await clear.isVisible()) await clear.click();
+        await row(id).click();
+        await until(async () => await body.getAttribute('contenteditable') === 'true', 'A normal row reopens the editable source');
+        assert.equal(await title.evaluate(root => root.readOnly), false);
+        assert.equal(await page.getByRole('button', { name: '保存', exact: true }).isEnabled(), true);
+        assert.equal(await toolbar.evaluate(root => root.closest('fieldset')?.disabled), false);
+    };
+    const assertJournal = async (expectedHtml = joinedBodies()) => {
         await summary.waitFor();
         assert.equal(await journal.count(), 1);
+        assert.equal(await journal.evaluate(root => root.matches('.note-editor[data-readonly="true"]')), true);
         assert.equal(await page.locator('.ProseMirror').count(), 1, 'Journal has exactly one editor');
         assert.equal(await summary.getAttribute('contenteditable'), 'false');
         assert.equal(await summary.evaluate(root => root.editor.isEditable), false);
-        assert.deepEqual(await summary.locator('h2').allTextContents(), titles);
+        await until(async () => await summary.evaluate(root => root.editor.getHTML()) === expectedHtml,
+            'Concatenate only full source bodies with empty paragraphs, without injected titles or dates');
+        assert.equal(await title.inputValue(), '汇总笔记');
+        assert.equal(await title.evaluate(root => root.readOnly), true);
+        assert.equal(await journal.locator('.note-task-summary').isVisible(), true);
+        assert.match(await journal.locator('.note-editor-count').innerText(), /字数:\s*\d+/);
+        assert.equal(await journal.getByRole('button', { name: '保存', exact: true }).isDisabled(), true);
+        assert.equal(await journal.getByTitle('导出为 HTML', { exact: true }).isEnabled(), true);
+        assert.equal(await toolbar.isVisible(), true);
+        assert.deepEqual(await toolbarShape(), normalToolbar, 'The common formatting rows and controls retain their order');
+        assert.equal(await toolbar.evaluate(root => root.closest('fieldset')?.disabled), true);
+        assert.equal(await toolbar.locator('button, input, select').evaluateAll(controls => controls.length > 0 && controls.every(control => control.matches(':disabled'))), true);
+        assert.equal(await page.locator('#notes-ai-panel').isVisible(), true);
+        for (const name of ['一键生成周报', '一键生成待办事项']) {
+            assert.equal(await page.getByRole('button', { name, exact: true }).isEnabled(), true);
+        }
+        assert.equal(await overview.getAttribute('aria-current'), 'page');
+        assert.equal(await page.getByRole('button', { name: '返回随记', exact: true }).count(), 0);
         assert.equal(await journal.getByRole('button', { name: '打开随记', exact: true }).count(), 0);
+    };
+    const assertSidebar = async () => {
+        assert.equal(await page.getByRole('button', { name: '汇总笔记', exact: true }).count(), 1);
+        assert.equal(await overview.evaluate(root => root.classList.contains('tree-node')
+            && root.parentElement.matches('.notes-sidebar-tree') && root.parentElement.firstElementChild === root), true,
+        'Overview is the first ordinary row in the list below tags');
+        assert.equal(await overview.locator('.tree-count').count(), 0);
+        assert.doesNotMatch(await overview.innerText(), /\d/);
+        const sections = ['.notes-search', '.notes-sidebar-calendar-container', '.notes-toolbar', '.notes-tags', '.notes-overview-entry', '.notes-tree'];
+        const boxes = await Promise.all(sections.map(selector => page.locator(selector).boundingBox()));
+        assert.ok(boxes.every(Boolean));
+        for (let i = 1; i < boxes.length; i++) assert.ok(boxes[i].y >= boxes[i - 1].y + boxes[i - 1].height - 1, `${sections[i]} must follow ${sections[i - 1]}`);
+        const style = element => {
+            const computed = getComputedStyle(element);
+            return Object.fromEntries(['fontSize', 'lineHeight', 'paddingTop', 'paddingBottom', 'gap', 'borderRadius', 'marginTop', 'marginBottom', 'borderTopWidth', 'boxShadow'].map(key => [key, computed[key]]));
+        };
+        assert.deepEqual(await overview.evaluate(style), await row('target').evaluate(style), 'Overview uses ordinary row styling without a card border or margins');
+        assert.ok(Math.abs((await overview.boundingBox()).height - (await row('target').boundingBox()).height) <= 1, 'Overview stays the same height as a normal row');
+        assert.deepEqual(await page.locator('.notes-toolbar button').evaluateAll(buttons => buttons.map(button => button.title)), ['上一篇', '下一篇', '在列表中定位当前笔记']);
+        assert.equal(await page.getByRole('button', { name: '新增当日随记', exact: true }).count(), 0);
+        assert.equal(await page.locator('.notes-calendar-create-btn').isVisible(), true);
+        for (const name of ['上一年', '上个月', '下个月', '下一年']) {
+            const button = page.getByTitle(name, { exact: true });
+            const bounds = await button.boundingBox(), icon = await button.locator('svg').boundingBox();
+            assert.ok(bounds && icon);
+            assert.equal(bounds.width, 32, `${name} hit width`);
+            assert.equal(bounds.height, 32, `${name} hit height`);
+            assert.equal(icon.width, 18, `${name} icon width`);
+            assert.equal(icon.height, 18, `${name} icon height`);
+            assert.equal(await button.evaluate(root => {
+                const r = root.getBoundingClientRect();
+                // Sample the edges at their centers; rounded corners need not receive clicks.
+                return [[r.left + 2, r.top + r.height / 2], [r.right - 2, r.top + r.height / 2],
+                    [r.left + r.width / 2, r.top + 2], [r.left + r.width / 2, r.bottom - 2]]
+                    .every(([x, y]) => root.contains(document.elementFromPoint(x, y)));
+            }), true, `${name} is clickable across its hit area`);
+        }
     };
     const append = async (text, paragraph = false) => {
         await body.focus();
@@ -127,12 +196,27 @@ try {
         assert.equal(await page.locator('.notes-tree [data-dragging], .notes-tree [data-merge-target]').count(), 0);
     };
     await body.waitFor({ timeout: 90000 });
+    await toolbar.waitFor();
+    const normalToolbar = await toolbarShape();
     assert.equal(await page.title(), 'app');
     assert.equal(await page.locator('vite-error-overlay').count(), 0);
     const original = (await saved()).notes;
-    await overview.click();
-    const titles = ['随记一', '目标随记', '随记三'];
-    await assertJournal(titles);
+    for (const width of native ? [await page.evaluate(() => innerWidth)] : [1100, 1538]) {
+        if (!native) await page.setViewportSize({ width, height: 900 });
+        await assertSidebar();
+    }
+    for (const note of original.filter(note => !note.deletedAt).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))) {
+        await openSource(note.id);
+        sourceHtml.set(note.id, await body.evaluate(root => root.editor.getHTML()));
+    }
+    await openSource('early');
+    await overview.focus();
+    assert.equal(await overview.evaluate(root => root === document.activeElement), true);
+    await page.keyboard.press('Enter');
+    await assertJournal();
+    assert.deepEqual(await summary.locator('h2').allTextContents(), ['正文自带小节'], 'Keep source headings without adding note-title chapters');
+    await page.getByRole('button', { name: '一键生成待办事项', exact: true }).click();
+    assert.equal(await page.locator('.ai-source-note strong').innerText(), '汇总笔记', 'AI uses the same virtual note');
     assert.equal(await summary.locator('strong').innerText(), '目标正文');
     const summaryText = await summary.textContent();
     assert.ok(summaryText.includes('最早正文  对齐空格'), 'Journal preserves alignment spaces');
@@ -168,38 +252,44 @@ try {
         }
         window.__overviewWrites = [];
     });
+    const diskBeforeReadOnly = native ? await readFile(dataPath, 'utf8') : null;
     try {
+        await title.pressSequentially('title-must-stay-readonly');
         await summary.pressSequentially('journal-must-stay-readonly');
         await summary.press('Control+b');
+        await summary.press('Control+s');
         await checkbox.click({ force: true });
         await page.waitForTimeout(3200); // Exceed the existing editor's 3s autosave debounce.
+        assert.equal(await title.inputValue(), '汇总笔记');
         assert.equal(await summary.evaluate(root => root.editor.getHTML()), summaryHtml);
         assert.deepEqual(await page.evaluate(() => window.__overviewWrites), [], 'Read-only interactions never write storage');
         assert.deepEqual((await saved()).notes, original, 'Summary cannot modify source tasks or records');
+        if (native) assert.equal(await readFile(dataPath, 'utf8'), diskBeforeReadOnly, 'Read-only interaction leaves the full native data file unchanged');
     } finally {
         await page.evaluate(() => { Storage.prototype.setItem = window.__overviewSetItem; window.fetch = window.__overviewFetch; });
     }
     await page.getByPlaceholder('搜索随记...（支持标题和内容）').fill('不存在的筛选');
     await until(async () => await page.locator('.notes-tree [data-note-id]').count() === 0, 'Search filters sidebar rows');
-    await assertJournal(titles);
+    await assertJournal();
     assert.equal(await summary.evaluate(root => root.editor.getHTML()), summaryHtml, 'Search never filters journal content');
     await page.getByPlaceholder('搜索随记...（支持标题和内容）').fill('');
     await page.locator('.notes-tags-header').click();
     await page.locator('.notes-tags-list').getByRole('button', { name: /未分类/ }).click();
     await until(async () => await page.locator('.notes-tree [data-note-id]').count() === 0, 'Tag filters sidebar rows');
-    await assertJournal(titles);
+    await assertJournal();
     assert.equal(await summary.evaluate(root => root.editor.getHTML()), summaryHtml, 'Tags never filter journal content');
     assert.deepEqual((await saved()).notes, original, 'Filters never persist a duplicate journal record');
     await page.locator('.notes-tags-header').click();
-    await back.click();
-    await body.waitFor();
+    await openSource('early');
     assert.equal(await page.getByRole('textbox', { name: '随记标题', exact: true }).inputValue(), '随记一', 'Return reopens the selected note');
     await append('draft-before-overview', true);
-    await overview.click();
-    await assertJournal(titles);
+    sourceHtml.set('early', await body.evaluate(root => root.editor.getHTML()));
+    await overview.focus();
+    await page.keyboard.press('Space');
+    await assertJournal();
     await summary.getByText('draft-before-overview', { exact: true }).waitFor();
     await page.screenshot({ path: join(output, 'overview.png') });
-    await back.click();
+    await openSource('early');
     await append('-source-draft');
     const held = await startPointerDrag('early', 'target');
     await assertPreview(held.point);
@@ -305,12 +395,16 @@ try {
     const choice = await openMergeMenu();
     await choice.getByRole('button', { name: '取消', exact: true }).click();
     assert.deepEqual((await saved()).notes, beforeFailure, 'Menu cancellation leaves both notes unchanged');
+    await openSource('target');
+    const beforeRetryHtml = await body.evaluate(root => root.editor.getHTML());
     await (await openMergeMenu()).getByRole('button', { name: '合并', exact: true }).click();
     await until(async () => (await saved()).notes.find(n => n.id === 'early').deletedAt, 'Immediate retry succeeds');
+    await until(async () => await body.evaluate(root => root.editor.getHTML()) !== beforeRetryHtml, 'Merged source is reflected in the common editor');
+    const finalSummary = await body.evaluate(root => root.editor.getHTML());
     await overview.click();
-    await assertJournal(['目标随记']);
+    await assertJournal(finalSummary);
     assert.ok((await summary.textContent()).includes('第三篇正文'));
-    await back.click();
+    await openSource('target');
     await page.screenshot({ path: join(output, 'merged.png') });
     const expected = (await saved()).notes;
     await page.reload();
@@ -320,11 +414,26 @@ try {
     if (native) {
         const executable = arg('--executable');
         assert.ok(executable?.endsWith('.exe'));
+        const originalPid = Number(arg('--pid'));
+        assert.ok(Number.isInteger(originalPid) && originalPid > 0, 'Native launcher supplies its test process ID');
         await page.evaluate(() => window.__TAURI_INTERNALS__.invoke('plugin:process|exit', { code: 0 })).catch(() => {});
         await browser.close();
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await until(async () => {
+            try { process.kill(originalPid, 0); return false; }
+            catch (error) { if (error.code !== 'ESRCH') throw error; return true; }
+        }, 'Original EXE fully exited before restart', 300);
+        await until(async () => {
+            try { await fetch(`http://127.0.0.1:${arg('--cdp')}/json/version`); return false; }
+            catch { return true; }
+        }, 'Original WebView debugger closed before restart', 300);
         restarted = spawn(executable, [], { cwd: dirname(executable), env: process.env, windowsHide: true, stdio: 'ignore' });
-        await until(async () => { try { return (await fetch(`http://127.0.0.1:${arg('--cdp')}/json/version`)).ok; } catch { return false; } }, 'Restarted EXE');
+        let restartError;
+        restarted.once('error', error => { restartError = error; });
+        await until(async () => {
+            if (restartError) throw restartError;
+            assert.equal(restarted.exitCode, null, `Restarted EXE exited with code ${restarted.exitCode}`);
+            try { return (await fetch(`http://127.0.0.1:${arg('--cdp')}/json/version`)).ok; } catch { return false; }
+        }, 'Restarted EXE', 300);
         browser = await chromium.connectOverCDP(`http://127.0.0.1:${arg('--cdp')}`);
         page = browser.contexts()[0].pages()[0];
         await page.getByRole('textbox', { name: '随记正文', exact: true }).waitFor();
@@ -332,7 +441,7 @@ try {
         assert.ok((await page.getByRole('textbox', { name: '随记正文', exact: true }).innerText()).includes('第三篇正文'));
     }
     assert.deepEqual(errors, []);
-    await writeFile(join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, checks: ['single read-only chronological journal', 'read-only interactions never write storage', 'independent search and tag filters', 'source and target drafts', 'rich text / attachment / task metadata', 'floating preview follows pointer', 'drop hint and stable row bounds', 'temporary merge completion highlight', 'self-drop', 'Escape / outside clears preview', 'reduced-motion drop hint', 'restore', 'failure preserves originals', 'menu cancellation and merge', 'retry', 'reload', ...(native ? ['full EXE restart'] : [])], errors }, null, 2));
+    await writeFile(join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, checks: ['overview is the first ordinary row below tags', 'calendar 32px hit areas and 18px icons', 'Enter / Space open overview', 'single common editor concatenates full chronological bodies without headings added', 'common toolbar / title / statistics / export / AI remain available', 'read-only interactions never write storage', 'independent search and tag filters', 'normal rows reopen editable sources', 'source and target drafts update the virtual note', 'rich text / attachment / task metadata', 'floating preview follows pointer', 'drop hint and stable row bounds', 'temporary merge completion highlight', 'self-drop', 'Escape / outside clears preview', 'reduced-motion drop hint', 'restore', 'failure preserves originals', 'menu cancellation and merge', 'retry', 'reload', ...(native ? ['full EXE restart'] : [])], errors }, null, 2));
     console.log(`PASS: note overview / drag merge / drafts / rich text / failure / retry / reload (${native ? 'native' : 'browser'})`);
 } catch (error) {
     await page?.screenshot({ path: join(output, 'failure.png') }).catch(() => {});

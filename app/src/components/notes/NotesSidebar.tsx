@@ -130,11 +130,6 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
             {/* 搜索框 (置顶) */}
             <NotesSearch />
 
-            <button type="button" className={`notes-overview-entry${noteViewMode === 'overview' ? ' active' : ''}`}
-                aria-current={noteViewMode === 'overview' ? 'page' : undefined} onClick={() => setNoteViewMode('overview')}>
-                <Icon name="note" size={16} /><span>汇总日记</span><span>{notes.filter(note => !note.deletedAt).length}</span>
-            </button>
-
 
 
             <div className="notes-sidebar-calendar-container">
@@ -160,10 +155,6 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
 
             {/* 快捷导航栏 (控制中枢) - 移至日历下方 */}
             <NotesToolbar
-                onToday={() => {
-                    setSelectedDate(dayjs().format('YYYY-MM-DD'));
-                    onCreateNote();
-                }}
                 onPrev={() => {
                     if (!selectedNoteId) return;
                     const index = filteredNotes.findIndex(n => n.id === selectedNoteId);
@@ -204,6 +195,10 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
 
             {/* 树形笔记列表 */}
             <div className="notes-sidebar-tree">
+                <button type="button" className={`tree-node notes-overview-entry${noteViewMode === 'overview' ? ' selected' : ''}`}
+                    aria-current={noteViewMode === 'overview' ? 'page' : undefined} onClick={() => setNoteViewMode('overview')}>
+                    <span className="tree-toggle-spacer" /><span className="tree-icon" aria-hidden="true">📄</span><span className="tree-label">汇总笔记</span>
+                </button>
                 {hasFilters && filteredNotes.length === 0 && <p className="notes-filter-empty">没有符合条件的随记</p>}
                 <NotesTree
                     tree={tree}

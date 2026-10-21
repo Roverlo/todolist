@@ -9,7 +9,6 @@ import { WeeklyReportPanel } from './WeeklyReportPanel';
 import { collectWeeklyNotes, currentReportWeek, type WeeklyReportSource, type ReportPeriod } from '../../utils/weeklyReport';
 import { EditorToolButton } from './EditorToolbarControls';
 import type { Note } from '../../types';
-import { NotesOverview } from './NotesOverview';
 
 export function NotesMain({ onOpenAISettings, settingsButton }: { onOpenAISettings: () => void; settingsButton?: React.ReactNode }) {
     const { notes, updateNote, addNote, refreshNoteTagCounts, selectedNoteId, setSelectedNoteId } = useAppStoreShallow(state => ({
@@ -32,13 +31,23 @@ export function NotesMain({ onOpenAISettings, settingsButton }: { onOpenAISettin
     const [aiPanelOpen, setAiPanelOpen] = useState(true);
     const [draft, setDraft] = useState<Pick<Note, 'id' | 'title' | 'content'> | null>(null);
 
-    const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId) || null, [notes, selectedNoteId]);
-    const weeklyPreview = useMemo(() => collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null, Date.now(), reportPeriod),
+    const isOverview = noteViewMode === 'overview';
+    const activeNote = useMemo<Note | null>(() => {
+        if (!isOverview) return notes.find(note => note.id === selectedNoteId) || null;
+        const all = notes.filter(note => !note.deletedAt).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+        return {
+            id: 'notes-overview', title: '汇总笔记', tags: [],
+            content: all.map(note => note.content).filter(Boolean).join('<p></p>'),
+            createdAt: all[0]?.createdAt ?? 0,
+            updatedAt: all.reduce((latest, note) => Math.max(latest, note.updatedAt), 0),
+        };
+    }, [isOverview, notes, selectedNoteId]);
+    const weeklyPreview = useMemo(() => collectWeeklyNotes(notes, noteViewMode === 'tree' && draft?.id === activeNote?.id ? draft : null, Date.now(), reportPeriod),
         [notes, noteViewMode, draft, activeNote?.id, reportPeriod]);
-    const startWeeklyReport = () => setWeeklySource(collectWeeklyNotes(notes, noteViewMode !== 'trash' && draft?.id === activeNote?.id ? draft : null, Date.now(), reportPeriod));
+    const startWeeklyReport = () => setWeeklySource(collectWeeklyNotes(notes, noteViewMode === 'tree' && draft?.id === activeNote?.id ? draft : null, Date.now(), reportPeriod));
 
     const handleSaveNote = (title: string, content: string, tags?: string[]) => {
-        if (activeNote) {
+        if (activeNote && !isOverview) {
             updateNote(activeNote.id, { title, content, tags });
             refreshNoteTagCounts();
         }
@@ -48,8 +57,6 @@ export function NotesMain({ onOpenAISettings, settingsButton }: { onOpenAISettin
         const newNote = addNote({ title: '', content: '' });
         setSelectedNoteId(newNote.id);
     };
-
-    if (noteViewMode === 'overview') return <NotesOverview settingsButton={settingsButton} />;
 
     return (
         <div className="notes-main-root">
@@ -85,7 +92,7 @@ export function NotesMain({ onOpenAISettings, settingsButton }: { onOpenAISettin
                         {noteViewMode === 'trash' ? (
                             <NotesRecycleBin />
                         ) : (
-                            <NoteEditor note={activeNote} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={setDraft} />
+                            <NoteEditor note={activeNote} readOnly={isOverview} onSave={handleSaveNote} onCreate={handleCreateNote} onDraftChange={isOverview ? undefined : setDraft} />
                         )}
                     </main>
                 </section>

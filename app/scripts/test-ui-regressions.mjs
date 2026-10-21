@@ -4,6 +4,7 @@ import { createServer as createTcpServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { createServer as createViteServer } from 'vite';
+import { selectNoteCalendarDate } from './note-calendar-ui.mjs';
 
 const source = name => readFile(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 const [appSource, closeModalSource] = await Promise.all([
@@ -68,7 +69,7 @@ try {
     }
 
     await page.locator('[title="切换到随记中心"]').click();
-    await page.getByRole('button', { name: '创建新随记' }).click();
+    await page.locator('.notes-calendar-create-btn').click();
 
     const editor = page.locator('.ProseMirror');
     await editor.fill('颜色回归测试');
@@ -99,6 +100,11 @@ try {
         const state = JSON.parse(localStorage.getItem('project-todo-app')).state;
         return state.notes.find(n => n.id === state.selectedNoteId)?.date;
     });
+    assert.equal(await selectedNoteDate(), '2026-09-05', 'The main create action defaults to the test day');
+    const createToday = async () => {
+        await selectNoteCalendarDate(page, '2026-09-05');
+        await page.locator('.notes-calendar-create-btn').click();
+    };
     const createOnDate = async (date, title, createdAt = Date.parse('2026-09-05T04:00:00Z')) => {
         await page.getByRole('button', { name: date, exact: true }).click();
         await page.getByRole('button', { name: `${date} 新建随记`, exact: true }).click();
@@ -160,7 +166,7 @@ try {
     await page.getByTitle('在列表中定位当前笔记', { exact: true }).click();
     assert.equal(await page.getByRole('button', { name: '2027-01-15', exact: true }).getAttribute('aria-pressed'), 'true');
     const beforeToday = await storedNotes();
-    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+    await createToday();
     assert.equal(await selectedNoteDate(), '2026-09-05');
     assert.equal(await page.locator('.notes-calendar-title').innerText(), '2026年9月');
     assert.equal(await page.getByPlaceholder('标题（可选）').inputValue(), '随记01');
@@ -217,20 +223,20 @@ try {
     const download = await downloadPromise;
     assert.match(await readFile(await download.path(), 'utf8'), /所属日期: 2025-12-01/);
 
-    // With no entry for today, the shortcut must create today rather than the selected old day.
-    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+    // Select today through the calendar before creating; the previously selected old day stays intact.
+    await createToday();
     assert.equal(await selectedNoteDate(), '2026-09-05');
     assert.equal(await page.getByPlaceholder('标题（可选）').inputValue(), '随记');
     assert.equal((await storedNotes()).length, 2);
 
     for (let number = 1; number <= 10; number++) {
-        await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+        await createToday();
         await page.waitForFunction(title => document.querySelector('.note-editor-title')?.value === title, `随记${String(number).padStart(2, '0')}`);
     }
     const todayTitles = (await storedNotes()).filter(n => n.date === '2026-09-05').map(n => n.title).sort();
     assert.deepEqual(todayTitles, ['随记', ...Array.from({ length: 10 }, (_, i) => `随记${String(i + 1).padStart(2, '0')}`)]);
     await page.reload();
-    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+    await createToday();
     await page.waitForFunction(() => document.querySelector('.note-editor-title')?.value === '随记11');
     const toolbarFits = await page.locator('.notes-toolbar').evaluate(el => {
         const bounds = el.getBoundingClientRect();
@@ -239,7 +245,7 @@ try {
             return rect.left >= bounds.left && rect.right <= bounds.right;
         });
     });
-    assert.ok(toolbarFits, '新增按钮和原有导航按钮均应完整显示');
+    assert.ok(toolbarFits, '上一篇、下一篇及定位按钮均应完整显示');
 
     const numberedNotes = await page.evaluate(async () => {
         const { useAppStore } = await import('/src/state/appStore.ts');

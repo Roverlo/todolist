@@ -220,7 +220,7 @@ try {
     replies.push({ delay: 15000, payload: { tasks: [{ title: '不应串到下一篇' }] } });
     await generate();
     await until(() => requests.length === 5, 'Missing note-switch request');
-    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+    await page.locator('.notes-calendar-create-btn').click();
     await until(() => requests[4].cancelled, 'Switching notes did not abort the previous request');
     assert.equal(await panel.locator('.task-preview-card').count(), 0);
     console.log('Passed: live drafts, real cancellation, note switching, editable selection, partial save, recurrence, error retry and empty result');

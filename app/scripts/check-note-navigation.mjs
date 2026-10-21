@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { selectNoteCalendarDate } from './note-calendar-ui.mjs';
 
 // Run the same user actions against the browser and the isolated native WebView.
 export async function checkNoteNavigation(page) {
@@ -13,11 +14,13 @@ export async function checkNoteNavigation(page) {
     const save = () => page.getByRole('button', { name: '保存', exact: true }).click();
     if (await clear.isVisible()) await clear.click();
 
-    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+    await selectNoteCalendarDate(page, '2026-09-05');
+    await page.locator('.notes-calendar-create-btn').click();
     await title.fill('导航今日');
     await body.evaluate(root => root.editor.commands.setContent('<p><strong>VISIBLEKEY</strong></p><p>第二段</p><p>&amp;实体字符</p>'));
     await save();
     const todayId = (await state()).selectedNoteId;
+    assert.equal((await state()).notes.find(note => note.id === todayId).date, '2026-09-05', 'Calendar selection and the main create action create today');
     await page.getByTitle('上个月', { exact: true }).click();
     await page.getByRole('button', { name: '2026-08-31', exact: true }).click();
     await page.getByRole('button', { name: '2026-08-31 新建随记', exact: true }).click();
@@ -57,6 +60,7 @@ export async function checkNoteNavigation(page) {
     assert.match(await page.locator('.notes-filter-empty').innerText(), /没有符合条件/);
     await clear.click();
     assert.equal(await search.inputValue(), '');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('project-todo-app')).state.activeNoteTagId === 'all');
     assert.equal((await state()).activeNoteTagId, 'all');
     await search.fill(' visiblekey ');
     assert.equal(await row(todayId).count(), 1, 'Search trims spaces and ignores case');
@@ -65,7 +69,8 @@ export async function checkNoteNavigation(page) {
     await search.fill('&实体字符');
     assert.equal(await row(todayId).count(), 1, 'Search matches decoded visible text');
 
-    await page.getByRole('button', { name: '新增当日随记', exact: true }).click();
+    await selectNoteCalendarDate(page, '2026-09-05');
+    await page.locator('.notes-calendar-create-btn').click();
     const newId = (await state()).selectedNoteId;
     assert.equal(await clear.count(), 0);
     assert.equal(await row(todayId).count(), 1);
