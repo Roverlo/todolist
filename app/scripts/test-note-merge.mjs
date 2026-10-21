@@ -50,8 +50,21 @@ try {
     const state = () => page.evaluate(() => JSON.parse(localStorage.getItem('project-todo-app')).state);
     const saved = async () => native ? JSON.parse(await readFile(dataPath, 'utf8')).state : await state();
     const body = page.getByRole('textbox', { name: '随记正文', exact: true });
-    const overview = page.getByRole('button', { name: /全部随记汇总/ });
+    const overview = page.locator('.notes-overview-entry').getByText('汇总日记', { exact: true });
+    const journal = page.getByRole('region', { name: '汇总日记', exact: true });
+    const summary = journal.locator('.notes-overview-body .ProseMirror');
+    const back = journal.locator('header').getByRole('button', { name: '返回随记', exact: true });
     const row = id => page.locator(`[data-node-id="note-${id}"]`);
+    const preview = page.locator('.notes-drag-preview');
+    const assertJournal = async titles => {
+        await summary.waitFor();
+        assert.equal(await journal.count(), 1);
+        assert.equal(await page.locator('.ProseMirror').count(), 1, 'Journal has exactly one editor');
+        assert.equal(await summary.getAttribute('contenteditable'), 'false');
+        assert.equal(await summary.evaluate(root => root.editor.isEditable), false);
+        assert.deepEqual(await summary.locator('h2').allTextContents(), titles);
+        assert.equal(await journal.getByRole('button', { name: '打开随记', exact: true }).count(), 0);
+    };
     const append = async (text, paragraph = false) => {
         await body.focus();
         await page.waitForFunction(() => document.querySelector('.ProseMirror').editor.view.hasFocus());
@@ -69,34 +82,136 @@ try {
         await body.pressSequentially(text);
         await page.waitForFunction(text => document.querySelector('.ProseMirror').editor.state.doc.textContent.endsWith(text), text);
     };
-    const drag = async (from, into) => {
+    const startPointerDrag = async (from, into) => {
         await row(from).scrollIntoViewIfNeeded();
         await row(into).scrollIntoViewIfNeeded();
-        await row(from).dragTo(row(into));
+        const sourceBox = await row(from).boundingBox(), targetBox = await row(into).boundingBox();
+        assert.ok(sourceBox && targetBox, 'Both drag rows are visible');
+        const point = { x: targetBox.x + targetBox.width / 2, y: targetBox.y + targetBox.height / 2 };
+        await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(point.x, point.y, { steps: 3 });
+        return { sourceBox, targetBox, point };
+    };
+    const drag = async (from, into) => {
+        await startPointerDrag(from, into);
+        await page.mouse.up();
+    };
+    const assertPreview = async (point, target = true) => {
+        await preview.waitFor();
+        assert.equal(await preview.evaluate(root => getComputedStyle(root).position), 'fixed');
+        assert.equal(await preview.evaluate(root => getComputedStyle(root).pointerEvents), 'none');
+        await until(async () => {
+            const text = await preview.innerText();
+            return text.includes('随记一') && (target ? /松开，合并到/.test(text) && text.includes('目标随记') : /拖到另一篇随记，松开合并/.test(text));
+        }, 'Preview identifies the source and the current drop instruction');
+        await until(async () => {
+            const box = await preview.boundingBox();
+            return box && Math.abs(box.x - point.x - 16) <= 1 && Math.abs(box.y - point.y - 16) <= 1;
+        }, 'Preview follows the pointer with a 16px offset');
+    };
+    const assertDropHint = async ({ sourceBox, targetBox }) => {
+        await until(async () => await row('target').getAttribute('data-merge-target') === 'true', 'Target is marked while holding the pointer');
+        assert.equal(await row('early').getAttribute('data-dragging'), 'true');
+        const hint = await row('target').evaluate(root => {
+            const style = getComputedStyle(root);
+            return { outline: style.outlineStyle, width: parseFloat(style.outlineWidth), color: style.outlineColor };
+        });
+        assert.notEqual(hint.outline, 'none', 'Drop target has a visible outline');
+        assert.ok(hint.width > 0 && hint.color !== 'rgba(0, 0, 0, 0)', 'Drop hint does not depend on animation');
+        assert.deepEqual(await row('early').boundingBox(), sourceBox, 'Source row stays in place during drag');
+        assert.deepEqual(await row('target').boundingBox(), targetBox, 'Target row stays in place during drag');
+    };
+    const assertDragCleared = async () => {
+        await preview.waitFor({ state: 'detached' });
+        assert.equal(await page.locator('.notes-tree [data-dragging], .notes-tree [data-merge-target]').count(), 0);
     };
     await body.waitFor({ timeout: 90000 });
     assert.equal(await page.title(), 'app');
     assert.equal(await page.locator('vite-error-overlay').count(), 0);
+    const original = (await saved()).notes;
     await overview.click();
-    assert.deepEqual(await page.locator('.notes-overview-note h2').allTextContents(), ['随记一', '目标随记', '随记三']);
-    assert.equal(await page.locator('.notes-overview-note strong').innerText(), '目标正文');
-    assert.ok((await page.getByRole('article', { name: '随记一', exact: true }).textContent()).includes('最早正文  对齐空格'), 'Overview preserves alignment spaces');
-    assert.equal(await page.locator('.notes-overview-note table').count(), 1);
-    assert.equal(await page.locator('.notes-overview-note [data-type="attachment"]').count(), 1);
-    assert.equal(await page.locator('.notes-overview-note .ProseMirror[contenteditable=true]').count(), 0);
-    const original = (await state()).notes;
-    assert.equal(await page.locator('.notes-overview-note input[type=checkbox]').isDisabled(), true);
-    assert.deepEqual((await state()).notes, original, 'Summary cannot modify source tasks');
+    const titles = ['随记一', '目标随记', '随记三'];
+    await assertJournal(titles);
+    assert.equal(await summary.locator('strong').innerText(), '目标正文');
+    const summaryText = await summary.textContent();
+    assert.ok(summaryText.includes('最早正文  对齐空格'), 'Journal preserves alignment spaces');
+    assert.ok(summaryText.indexOf('最早正文') < summaryText.indexOf('目标正文') && summaryText.indexOf('目标正文') < summaryText.indexOf('第三篇正文'), 'Full bodies follow creation order');
+    for (const text of ['已完成待办', '虚构附件.txt', '末尾正文', '表格内容', '2028-02-29', '第三篇正文']) assert.ok(summaryText.includes(text), `Journal retains ${text}`);
+    assert.ok(!summaryText.includes('不应汇总的删除内容'), 'Journal excludes deleted notes');
+    assert.equal(await summary.locator('table').count(), 1);
+    assert.equal(await summary.locator('[data-type="attachment"]').count(), 1);
+    assert.equal(await summary.locator('time[datetime="2028-02-29"]').count(), 1);
+    const checkbox = summary.locator('input[type=checkbox]');
+    assert.equal(await checkbox.isDisabled(), true);
+    assert.equal(await checkbox.isChecked(), true);
+    assert.deepEqual((await saved()).notes, original, 'Opening the journal never creates or changes records');
+    const summaryHtml = await summary.evaluate(root => root.editor.getHTML());
+    // Navigation can persist view state; interacting with the read-only document must not write.
+    await page.evaluate(async () => {
+        window.__overviewWrites = [];
+        window.__overviewSetItem = Storage.prototype.setItem;
+        window.__overviewFetch = window.fetch;
+        Storage.prototype.setItem = function (key, value) {
+            if (key === 'project-todo-app') window.__overviewWrites.push(key);
+            return window.__overviewSetItem.call(this, key, value);
+        };
+        window.fetch = function (input, options) {
+            if (String(input).endsWith('/save_data')) window.__overviewWrites.push('save_data');
+            return window.__overviewFetch.call(this, input, options);
+        };
+        // Let queued navigation saves settle before counting document interactions.
+        let count = -1;
+        while (count !== window.__overviewWrites.length) {
+            count = window.__overviewWrites.length;
+            await new Promise(resolve => setTimeout(resolve, 400));
+        }
+        window.__overviewWrites = [];
+    });
+    try {
+        await summary.pressSequentially('journal-must-stay-readonly');
+        await summary.press('Control+b');
+        await checkbox.click({ force: true });
+        await page.waitForTimeout(3200); // Exceed the existing editor's 3s autosave debounce.
+        assert.equal(await summary.evaluate(root => root.editor.getHTML()), summaryHtml);
+        assert.deepEqual(await page.evaluate(() => window.__overviewWrites), [], 'Read-only interactions never write storage');
+        assert.deepEqual((await saved()).notes, original, 'Summary cannot modify source tasks or records');
+    } finally {
+        await page.evaluate(() => { Storage.prototype.setItem = window.__overviewSetItem; window.fetch = window.__overviewFetch; });
+    }
     await page.getByPlaceholder('搜索随记...（支持标题和内容）').fill('不存在的筛选');
-    assert.equal(await page.locator('.notes-overview-note').count(), 3, 'Overview is independent of sidebar filters');
-    await page.getByRole('article', { name: '随记一', exact: true }).getByRole('button', { name: '打开随记', exact: true }).click();
+    await until(async () => await page.locator('.notes-tree [data-note-id]').count() === 0, 'Search filters sidebar rows');
+    await assertJournal(titles);
+    assert.equal(await summary.evaluate(root => root.editor.getHTML()), summaryHtml, 'Search never filters journal content');
+    await page.getByPlaceholder('搜索随记...（支持标题和内容）').fill('');
+    await page.locator('.notes-tags-header').click();
+    await page.locator('.notes-tags-list').getByRole('button', { name: /未分类/ }).click();
+    await until(async () => await page.locator('.notes-tree [data-note-id]').count() === 0, 'Tag filters sidebar rows');
+    await assertJournal(titles);
+    assert.equal(await summary.evaluate(root => root.editor.getHTML()), summaryHtml, 'Tags never filter journal content');
+    assert.deepEqual((await saved()).notes, original, 'Filters never persist a duplicate journal record');
+    await page.locator('.notes-tags-header').click();
+    await back.click();
+    await body.waitFor();
+    assert.equal(await page.getByRole('textbox', { name: '随记标题', exact: true }).inputValue(), '随记一', 'Return reopens the selected note');
     await append('draft-before-overview', true);
     await overview.click();
-    await page.getByRole('article', { name: '随记一', exact: true }).getByText('draft-before-overview', { exact: true }).waitFor();
+    await assertJournal(titles);
+    await summary.getByText('draft-before-overview', { exact: true }).waitFor();
     await page.screenshot({ path: join(output, 'overview.png') });
-    await page.getByRole('article', { name: '随记一', exact: true }).getByRole('button', { name: '打开随记', exact: true }).click();
+    await back.click();
     await append('-source-draft');
-    await drag('early', 'target');
+    const held = await startPointerDrag('early', 'target');
+    await assertPreview(held.point);
+    await assertDropHint(held);
+    const moved = { x: held.point.x + 8, y: held.point.y + 2 };
+    await page.mouse.move(moved.x, moved.y);
+    await assertPreview(moved);
+    await assertDropHint(held);
+    await page.mouse.up();
+    const completed = page.locator('[data-node-id="note-target"][data-merge-complete="true"]');
+    await completed.waitFor();
+    await assertDragCleared();
     await until(async () => (await saved()).notes.find(n => n.id === 'early').deletedAt, 'Source moved only after merge save');
     await page.getByRole('textbox', { name: '随记标题', exact: true }).inputValue().then(value => assert.equal(value, '目标随记'));
     let merged = (await saved()).notes.find(n => n.id === 'target');
@@ -106,6 +221,7 @@ try {
     assert.match(merged.content, /data-type="attachment"/);
     assert.deepEqual([...merged.tags].sort(), ['来源标签', '目标标签']);
     assert.equal(merged.createdAt, now + 2000, 'Target identity stays unchanged');
+    await completed.waitFor({ state: 'detached' });
     await append('target-unsaved-draft', true);
     await drag('late', 'target');
     await until(async () => (await saved()).notes.find(n => n.id === 'late').deletedAt, 'Second merge');
@@ -124,18 +240,27 @@ try {
     await row('target').click();
     await until(async () => !(await saved()).notes.find(n => n.id === 'early').deletedAt, 'Restored source');
     const beforeFailure = (await saved()).notes;
-    const sourceBox = await row('early').boundingBox(), targetBox = await row('target').boundingBox();
-    const startPointerDrag = async (x, y) => {
-        await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
-        await page.mouse.down();
-        await page.mouse.move(x, y, { steps: 1 });
-    };
-    await startPointerDrag(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
-    await page.keyboard.press('Escape');
-    await page.mouse.up();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    try {
+        assert.equal(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), true);
+        const reduced = await startPointerDrag('early', 'target');
+        await assertPreview(reduced.point);
+        await assertDropHint(reduced);
+        await page.keyboard.press('Escape');
+        await assertDragCleared();
+    } finally {
+        await page.mouse.up();
+        await page.emulateMedia({ reducedMotion: null });
+    }
     assert.deepEqual((await saved()).notes, beforeFailure, 'Escape cancels an in-progress drag');
-    await startPointerDrag((await page.evaluate(() => innerWidth)) / 2, 10);
+    const leaving = await startPointerDrag('early', 'target');
+    await assertPreview(leaving.point);
+    const outside = { x: (await page.evaluate(() => innerWidth)) / 2, y: 10 };
+    await page.mouse.move(outside.x, outside.y);
+    await assertPreview(outside, false);
+    assert.equal(await page.locator('.notes-tree [data-merge-target]').count(), 0, 'Outside drag clears target highlight');
     await page.mouse.up();
+    await assertDragCleared();
     assert.deepEqual((await saved()).notes, beforeFailure, 'Releasing outside note rows changes nothing');
     const blocker = dataPath && dataPath.replace(/\.json$/, '.json.tmp');
     if (native) {
@@ -183,8 +308,9 @@ try {
     await (await openMergeMenu()).getByRole('button', { name: '合并', exact: true }).click();
     await until(async () => (await saved()).notes.find(n => n.id === 'early').deletedAt, 'Immediate retry succeeds');
     await overview.click();
-    assert.equal(await page.locator('.notes-overview-note').count(), 1);
-    await page.getByRole('article', { name: '目标随记', exact: true }).getByRole('button', { name: '打开随记', exact: true }).click();
+    await assertJournal(['目标随记']);
+    assert.ok((await summary.textContent()).includes('第三篇正文'));
+    await back.click();
     await page.screenshot({ path: join(output, 'merged.png') });
     const expected = (await saved()).notes;
     await page.reload();
@@ -206,7 +332,7 @@ try {
         assert.ok((await page.getByRole('textbox', { name: '随记正文', exact: true }).innerText()).includes('第三篇正文'));
     }
     assert.deepEqual(errors, []);
-    await writeFile(join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, checks: ['read-only chronological overview', 'independent filters', 'source and target drafts', 'rich text / attachment / task metadata', 'self-drop', 'Escape / outside cancels drag', 'restore', 'failure preserves originals', 'menu cancellation and merge', 'retry', 'reload', ...(native ? ['full EXE restart'] : [])], errors }, null, 2));
+    await writeFile(join(output, 'result.json'), JSON.stringify({ result: 'PASS', native, checks: ['single read-only chronological journal', 'read-only interactions never write storage', 'independent search and tag filters', 'source and target drafts', 'rich text / attachment / task metadata', 'floating preview follows pointer', 'drop hint and stable row bounds', 'temporary merge completion highlight', 'self-drop', 'Escape / outside clears preview', 'reduced-motion drop hint', 'restore', 'failure preserves originals', 'menu cancellation and merge', 'retry', 'reload', ...(native ? ['full EXE restart'] : [])], errors }, null, 2));
     console.log(`PASS: note overview / drag merge / drafts / rich text / failure / retry / reload (${native ? 'native' : 'browser'})`);
 } catch (error) {
     await page?.screenshot({ path: join(output, 'failure.png') }).catch(() => {});

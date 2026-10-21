@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type HTMLAttributes } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '../ui/Icon';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
@@ -46,9 +47,12 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
     const toggleNotePin = useAppStore((state) => state.toggleNotePin);
     const notes = useAppStore((state) => state.notes);
     const [draggedId, setDraggedId] = useState<string | null>(null);
+    const dragPreview = useRef<HTMLDivElement>(null);
+    const dragPosition = useRef({ x: 0, y: 0 });
     const pointerDrag = useRef<{ sourceId: string; x: number; y: number; active: boolean } | null>(null);
     const suppressDragClick = useRef(false);
     const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+    const [mergedId, setMergedId] = useState<string | null>(null);
     const merging = useRef(false);
     const mergeProgress = useRef<HTMLDialogElement>(null);
     const [mergeChoice, setMergeChoice] = useState<{ sourceId: string; targetId: string } | null>(null);
@@ -61,9 +65,15 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
 
     useEffect(() => { if (mergeChoice) mergeChoiceDialog.current?.showModal(); }, [mergeChoice]);
     useEffect(() => {
+        if (!mergedId) return;
+        const timer = window.setTimeout(() => setMergedId(null), 800);
+        return () => window.clearTimeout(timer);
+    }, [mergedId]);
+    useEffect(() => {
         const cancel = (event: KeyboardEvent) => { if (event.key === 'Escape') resetDrag(); };
         window.addEventListener('keydown', cancel);
-        return () => window.removeEventListener('keydown', cancel);
+        window.addEventListener('blur', resetDrag);
+        return () => { window.removeEventListener('keydown', cancel); window.removeEventListener('blur', resetDrag); };
     }, [resetDrag]);
 
     const merge = async (sourceId: string, targetId: string) => {
@@ -84,6 +94,7 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
             store.setNoteTreeNodeExpanded(`month-${date.slice(0, 7)}`, true);
             if (target.isPinned) store.setNoteTreeNodeExpanded('pinned-group', true);
             store.setSelectedNoteId(targetId);
+            setMergedId(targetId);
             useToastStore.getState().addToast(`已合并到“${target.title || '未命名随记'}”，来源随记已移入回收站`, 'success');
         } catch (error) {
             useToastStore.getState().addToast(`合并失败，两篇原文已保留：${error instanceof Error ? error.message : String(error)}`, 'error', 8000);
@@ -102,11 +113,13 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
         draggable: false,
         'data-dragging': node.noteId === draggedId || undefined,
         'data-merge-target': node.noteId === dropTargetId || undefined,
+        'data-merge-complete': node.noteId === mergedId || undefined,
         // Capture the pointer: very short Windows drags can finish before native drop fires.
         onPointerDown: event => {
             if (event.button !== 0) return;
             suppressDragClick.current = false;
             if (merging.current || !node.noteId || (event.target as Element).closest('button')) return;
+            setMergedId(null);
             pointerDrag.current = { sourceId: node.noteId, x: event.clientX, y: event.clientY, active: false };
             event.currentTarget.setPointerCapture(event.pointerId);
         },
@@ -117,6 +130,12 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
             drag.active = true;
             suppressDragClick.current = true;
             event.preventDefault();
+            dragPosition.current = {
+                x: Math.max(8, Math.min(event.clientX + 16, window.innerWidth - 276)),
+                y: Math.max(8, Math.min(event.clientY + 16, window.innerHeight - 100)),
+            };
+            // Move the floating layer directly; the note rows keep their original positions.
+            if (dragPreview.current) dragPreview.current.style.transform = `translate3d(${dragPosition.current.x}px, ${dragPosition.current.y}px, 0)`;
             setDraggedId(drag.sourceId);
             const targetId = dropTarget(event.currentTarget, event.clientX, event.clientY);
             setDropTargetId(targetId === drag.sourceId ? null : targetId);
@@ -316,7 +335,12 @@ export function NotesTree({ tree, selectedNoteId, onNodeClick, onCreateNote }: N
                 )}
             </div>
 
-            <p className="notes-merge-hint">拖到另一篇随记即可合并 · 按创建时间排列</p>
+            <p className="notes-merge-hint">拖到另一篇随记，松开合并</p>
+            {draggedId && createPortal(<div ref={dragPreview} className="notes-drag-preview" role="status"
+                data-can-merge={!!dropTargetId} style={{ transform: `translate3d(${dragPosition.current.x}px, ${dragPosition.current.y}px, 0)` }}>
+                <div className="notes-drag-title"><Icon name="note" size={16} /><strong>{notes.find(note => note.id === draggedId)?.title || '未命名随记'}</strong></div>
+                <span>{dropTargetId ? `松开，合并到“${notes.find(note => note.id === dropTargetId)?.title || '未命名随记'}”` : '拖到另一篇随记，松开合并'}</span>
+            </div>, document.body)}
             <dialog ref={mergeProgress} className="note-rename-dialog" aria-label="正在合并随记" onCancel={event => event.preventDefault()}>
                 <p role="status">正在保存合并内容…</p>
             </dialog>

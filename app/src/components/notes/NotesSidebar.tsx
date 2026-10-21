@@ -132,7 +132,7 @@ export function NotesSidebar({ selectedNoteId, onSelectNote, onCreateNote }: Not
 
             <button type="button" className={`notes-overview-entry${noteViewMode === 'overview' ? ' active' : ''}`}
                 aria-current={noteViewMode === 'overview' ? 'page' : undefined} onClick={() => setNoteViewMode('overview')}>
-                <Icon name="note" size={16} /><span>全部随记汇总</span><span>{notes.filter(note => !note.deletedAt).length}</span>
+                <Icon name="note" size={16} /><span>汇总日记</span><span>{notes.filter(note => !note.deletedAt).length}</span>
             </button>
 
 
